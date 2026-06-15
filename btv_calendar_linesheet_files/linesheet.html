@@ -12133,18 +12133,8 @@ async function saveProductGroup(){
 
 
 
-  var __btvRemoteWhileEditing = !!window._btvLsSkippedRemoteWhileDirty;
-  var __btvVersionConflict = false;
-  if (typeof window.btvCheckVersionConflict === 'function') {
-    __btvVersionConflict = await window.btvCheckVersionConflict('btv_linesheet_products');
-  }
-  if (__btvRemoteWhileEditing || __btvVersionConflict) {
-    var __btvProceed = confirm(
-      'Linesheet data was updated by a teammate while this form was open.\n\n' +
-      'Saving now will reload the latest master list first, then apply this product form so other products are preserved.\n\n' +
-      'Click OK to save, or Cancel to review first.'
-    );
-    if (!__btvProceed) return;
+  // Silently merge in any remote changes that arrived while this form was open.
+  if (window._btvLsSkippedRemoteWhileDirty) {
     try {
       var __btvLatestProducts = localStorage.getItem('btv_linesheet_products');
       if (__btvLatestProducts) products = JSON.parse(__btvLatestProducts);
@@ -18357,7 +18347,7 @@ function _btvLsUpdateColabBar(users) {
   var html = '<span style="color:#22c55e;font-weight:700;">● ' + users.length + ' other' + (users.length > 1 ? 's' : '') + ' online</span><br>';
   users.forEach(function(u) {
     var name = (u.email || '').split('@')[0];
-    var loc  = u.item ? (u.field ? ' · editing ' + (u.field.replace('f_','')) : ' · viewing product') : ' · browsing';
+    var loc  = u.item ? ((u.field || u.dirty) ? ' · editing product' : ' · viewing product') : ' · browsing';
     html += '<span style="color:#555;font-size:10px;">' + name + loc + '</span><br>';
   });
   bar.innerHTML = html;
@@ -18401,57 +18391,58 @@ function _btvLsRenderCoEditBar(groupId) {
   var html = '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-right:4px;flex-shrink:0;">Also here:</span>';
   editors.forEach(function(u) {
     var name = u.email.split('@')[0];
-    var fLabel = u.field ? ' · ' + _btvLsFieldLabel(u.field) : '';
-    html += '<span style="background:' + _btvEmailColor(u.email) + ';color:#fff;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600;" title="' + u.email + '">' + name + fLabel + '</span>';
+    var status = (u.field || u.dirty) ? ' · editing' : ' · viewing';
+    html += '<span style="background:' + _btvEmailColor(u.email) + ';color:#fff;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600;" title="' + u.email + '">' + name + status + '</span>';
   });
   bar.innerHTML = html;
 }
 
-// Apply per-field locks: disable each input that a teammate is currently focused on.
+// Apply product-level lock: if any peer is actively editing (field focused or dirty),
+// disable the entire product form for this user until the peer saves or discards.
 function _btvLsApplyFieldLocks(groupId) {
   if (!groupId) return;
   var allUsers = typeof window.btvGetOnlineUsers === 'function' ? window.btvGetOnlineUsers() : [];
   var itemId = 'ls::group::' + groupId;
-  var fieldHolders = {};
-  allUsers.forEach(function(u) { if (u.item === itemId && u.field) fieldHolders[u.field] = u.email; });
-  console.log('[BTV FL] applyFieldLocks gid=' + groupId + ' itemId=' + itemId + ' allUsers=' + JSON.stringify(allUsers.map(function(u){return{email:u.email,item:u.item,field:u.field};})) + ' fieldHolders=' + JSON.stringify(fieldHolders));
-  var formEls = document.querySelectorAll('#view-form [data-field-key]');
-  console.log('[BTV FL] #view-form [data-field-key] found ' + formEls.length + ' elements');
-  formEls.forEach(function(el) {
-    if (el.type === 'hidden') return;
-    var fk = el.dataset.fieldKey;
-    var holder = fieldHolders[fk];
-    var badge = el.parentElement ? el.parentElement.querySelector('.btv-fl-badge[data-fk="' + fk + '"]') : null;
-    if (holder) {
-      var isFocused = (document.activeElement === el);
-      if (isFocused) {
-        // Current user is already in this field — don't kick them out, show conflict warning
-        el.style.outline = '2px solid #ef4444';
-        el.title = '⚠️ ' + holder.split('@')[0] + ' is also editing this field';
-      } else {
-        console.log('[BTV FL] LOCKING field ' + fk + ' for holder ' + holder);
-        el.disabled = true;
-        el.style.outline = '2px solid #e6a817';
-        el.title = '🔒 ' + holder.split('@')[0] + ' is editing this field';
-      }
-      if (!badge) {
-        badge = document.createElement('span');
-        badge.className = 'btv-fl-badge';
-        badge.dataset.fk = fk;
-        badge.style.cssText = 'display:inline-block;margin-left:6px;font-size:9px;font-weight:700;border-radius:10px;padding:1px 7px;vertical-align:middle;';
-        el.insertAdjacentElement('afterend', badge);
-      }
-      badge.style.background = isFocused ? '#ef4444' : '#e6a817';
-      badge.style.color = '#fff';
-      badge.title = holder;
-      badge.textContent = (isFocused ? '⚠️ ' : '🔒 ') + holder.split('@')[0];
-    } else {
-      if (!el.readOnly) el.disabled = false;
-      el.style.outline = '';
-      el.title = '';
-      if (badge) badge.remove();
-    }
+
+  // Peers in this product who are actively editing (focused on a field) or have unsaved changes
+  var editors = allUsers.filter(function(u) { return u.item === itemId && (u.field || u.dirty); });
+  var isLocked = editors.length > 0;
+
+  // Remove any leftover per-field badges from the old mechanism
+  document.querySelectorAll('.btv-fl-badge').forEach(function(b) { b.remove(); });
+
+  // Lock or unlock every editable input in the form as a unit
+  document.querySelectorAll('#view-form [data-field-key]').forEach(function(el) {
+    if (el.type === 'hidden' || el.readOnly) return;
+    el.disabled = isLocked;
+    el.style.outline = '';
+    el.title = '';
   });
+
+  // Also lock/unlock the save button
+  var saveBtn = document.querySelector('button[onclick="saveProductGroup()"]');
+  if (saveBtn) {
+    saveBtn.disabled = isLocked;
+    saveBtn.title = isLocked ? '🔒 Locked while another user is editing' : '';
+  }
+
+  // Show or hide the product lock banner
+  var banner = document.getElementById('btv-form-lock-banner');
+  if (isLocked) {
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'btv-form-lock-banner';
+      banner.style.cssText = 'margin-bottom:12px;padding:10px 14px;background:#fef3c7;border:1.5px solid #e6a817;border-radius:4px;font-size:12px;color:#78350f;display:flex;align-items:center;gap:8px;';
+      var fv = document.getElementById('view-form');
+      if (fv) fv.insertBefore(banner, fv.firstChild);
+    }
+    var names = editors.map(function(u) { return u.email.split('@')[0]; }).join(', ');
+    banner.innerHTML = '🔒 <strong>' + names + '</strong> is editing this product — wait for them to save or discard before editing';
+    banner.style.display = 'flex';
+  } else {
+    if (banner) banner.style.display = 'none';
+  }
+
   _btvLsRenderCoEditBar(groupId);
 }
 
@@ -18494,6 +18485,8 @@ var _btvFormDirty = false;
 
 function _btvSetDirty(isDirty) {
   _btvFormDirty = isDirty;
+  // Broadcast so peers immediately see the product lock change
+  if (typeof window.btvBroadcastDirty === 'function') window.btvBroadcastDirty(isDirty);
   var ind = document.getElementById('btv-unsaved-ind');
   if (isDirty) {
     if (!ind) {
@@ -18669,7 +18662,7 @@ window.btvReloadAndRender = function() {
           setInterval(_dispatch, 2000);           // heartbeat: refresh UI every 2 s
           setInterval(function () {               // re-track every 30 s to keep alive
             if (typeof _btvLsSetSharedLaunchLock === 'function') _btvLsSetSharedLaunchLock(window._btvCurrentLaunchItem);
-            if (_ch) _ch.track({ email: _email, item: _item, field: _field, launchItem: window._btvCurrentLaunchItem || null, ts: Date.now() });
+            if (_ch) _ch.track({ email: _email, item: _item, field: _field, dirty: !!(window._btvFormDirty), launchItem: window._btvCurrentLaunchItem || null, ts: Date.now() });
           }, 30000);
         } else {
           console.log('[BTV LS Presence] Status:', status);
@@ -18693,11 +18686,12 @@ window.btvReloadAndRender = function() {
       if (k === _uid) return;
       var arr = state[k] || [];
       if (arr.length) {
-        var merged = { email: null, item: null, field: null, launchItem: null, lastField: null };
+        var merged = { email: null, item: null, field: null, dirty: false, launchItem: null, lastField: null };
         arr.forEach(function(p) {
           if (p.email) merged.email = p.email;
           if (p.item) merged.item = p.item;
           if (p.field) merged.field = p.field;
+          if (p.dirty) merged.dirty = true;
           if (p.launchItem) merged.launchItem = p.launchItem;
           if (p.lastField) merged.lastField = p.lastField;
         });
@@ -18711,7 +18705,7 @@ window.btvReloadAndRender = function() {
     console.log('[BTV LS] btvSetEditing called, _ch=', !!_ch, 'itemId=', itemId);
     if (!_ch) return;
     _item  = itemId; _field = null;
-    await _ch.track({ email: _email, item: itemId, field: null, launchItem: window._btvCurrentLaunchItem || null, ts: Date.now() });
+    await _ch.track({ email: _email, item: itemId, field: null, dirty: false, launchItem: window._btvCurrentLaunchItem || null, ts: Date.now() });
     console.log('[BTV LS] btvSetEditing tracked OK');
   };
 
@@ -18720,7 +18714,7 @@ window.btvReloadAndRender = function() {
     _item  = null; _field = null;
     if (typeof _btvLsClearSharedLaunchLock === 'function') _btvLsClearSharedLaunchLock(window._btvCurrentLaunchItem);
     window._btvCurrentLaunchItem = null;
-    await _ch.track({ email: _email, item: null, field: null, launchItem: null, ts: Date.now() });
+    await _ch.track({ email: _email, item: null, field: null, dirty: false, launchItem: null, ts: Date.now() });
   };
 
   window.btvTrackField = async function (groupId, fieldKey) {
@@ -18737,7 +18731,7 @@ window.btvReloadAndRender = function() {
     }
     if (groupId) window._btvCurrentLaunchItem = _btvLsGetCalendarLaunchItem(groupId);
     if (typeof _btvLsSetSharedLaunchLock === 'function') _btvLsSetSharedLaunchLock(window._btvCurrentLaunchItem);
-    await _ch.track({ email: _email, item: _item, field: _field, launchItem: window._btvCurrentLaunchItem || null, ts: Date.now(), lastField: _lastField });
+    await _ch.track({ email: _email, item: _item, field: _field, dirty: !!(window._btvFormDirty), launchItem: window._btvCurrentLaunchItem || null, ts: Date.now(), lastField: _lastField });
   };
 
   // Capture the typed value of a field into _lastField immediately (called on focusout
@@ -18749,6 +18743,13 @@ window.btvReloadAndRender = function() {
     if (el && el.type !== 'hidden') {
       _lastField = { key: fieldKey, val: el.value, ts: Date.now() };
     }
+  };
+
+  // Broadcast a dirty-state change immediately so peers see the product lock update
+  // without waiting for the next field focus/blur cycle.
+  window.btvBroadcastDirty = async function(isDirty) {
+    if (!_ch) return;
+    await _ch.track({ email: _email, item: _item, field: _field, dirty: !!isDirty, launchItem: window._btvCurrentLaunchItem || null, ts: Date.now(), lastField: _lastField });
   };
 
 

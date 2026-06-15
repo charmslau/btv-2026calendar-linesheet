@@ -13615,15 +13615,21 @@ function _bindPubButtons() {
 
 function _btvLoadPublished() {
   if (!window._btvSb) return;
-  var yr = parseInt(((window._btvStorageKey||'').match(/calendar-(\d{4})-/)||[])[1]||'0');
-  window._btvSb.from('public_calendar_entries')
-    .select('entry_id').eq('year', yr)
-    .then(function(res) {
-      if (res.error) { console.warn('[BTV] _btvLoadPublished error:', res.error.message); return; }
-      _publishedIds = new Set((res.data || []).map(function(r) { return r.entry_id; }));
-      try { localStorage.setItem(_PUB_IDS_LS_KEY, JSON.stringify(Array.from(_publishedIds))); } catch(e){}
-      render();
-    });
+  // Guard: only query when authenticated — an unauthenticated RLS response returns
+  // data:[] (no error), which would overwrite the localStorage cache with an empty
+  // array and make every Live button revert to Publish on the next refresh.
+  window._btvSb.auth.getSession().then(function(sessionRes) {
+    if (!sessionRes.data || !sessionRes.data.session) return;
+    var yr = parseInt(((window._btvStorageKey||'').match(/calendar-(\d{4})-/)||[])[1]||'0');
+    window._btvSb.from('public_calendar_entries')
+      .select('entry_id').eq('year', yr)
+      .then(function(res) {
+        if (res.error) { console.warn('[BTV] _btvLoadPublished error:', res.error.message); return; }
+        _publishedIds = new Set((res.data || []).map(function(r) { return r.entry_id; }));
+        try { localStorage.setItem(_PUB_IDS_LS_KEY, JSON.stringify(Array.from(_publishedIds))); } catch(e){}
+        render();
+      });
+  });
 }
 
 async function btvTogglePublish(entryId, weekId, section) {
