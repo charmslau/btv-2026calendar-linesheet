@@ -8201,6 +8201,8 @@ function computeSmartDiff(previousState, currentState){
 
     if(!msg) return;
 
+    if(!grouped[group]) grouped[group] = [];
+
     if(!grouped[group].includes(msg)) grouped[group].push(msg);
 
   }
@@ -9220,8 +9222,10 @@ function render(){
             const isEnd   = cov[cov.length-1] === w.id;
             const spanCls = (isStart && isEnd) ? '' : (isStart ? 'md-start' : (isEnd ? 'md-end' : 'md-mid'));
             const topPx   = _laneOf[idx] * _trackH;
+            const mdPubOn = !!md.publishedToCal;
+            const mdPubBtn = isStart ? `<button class="pub-btn${mdPubOn?' pub-on':''}" onclick="window.btvToggleMarkdownPublish('${md.id}',event)" style="margin-top:4px" title="${mdPubOn?'Remove from BTV Calendar':'Push to BTV Calendar'}">${mdPubOn?'✔ Live':'↑ Publish'}</button>` : '';
             html += `<div class="markdown-track" style="position:absolute;top:${topPx}px;left:0;right:0"><div class="markdown-bubble-span ${spanCls}" onclick="openMarkdownEditor('${md.id}')" style="cursor:pointer">` +
-              (isStart ? `<div class="markdown-title">${esc(md.title||'')}</div><div>${fmtDDMMM(md.startDate)}→${fmtDDMMM(md.endDate)}</div>` : '') +
+              (isStart ? `<div class="markdown-title">${esc(md.title||'')}</div><div>${fmtDDMMM(md.startDate)}→${fmtDDMMM(md.endDate)}</div>${mdPubBtn}` : '') +
               `</div></div>`;
           }
         });
@@ -10064,6 +10068,14 @@ window.openMarkdownEditor = function(id){
 }
 
 
+
+window.btvToggleMarkdownPublish = function(mdId, ev){
+  if(ev) ev.stopPropagation();
+  if(!markdownState[mdId]) return;
+  markdownState[mdId].publishedToCal = !markdownState[mdId].publishedToCal;
+  saveMarkdownState(markdownState);
+  render();
+};
 
 function actions(existing, sectionKey){
 

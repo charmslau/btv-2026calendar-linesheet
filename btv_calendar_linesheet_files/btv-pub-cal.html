@@ -128,7 +128,7 @@ thead .corner { z-index:8; }
 .bg-restocks{ background:var(--restocks); }
 .bg-events  { background:var(--events); color:#2d2d2d; }
 
-.wk     { width:196px; min-width:196px; padding:6px; text-align:center; background:var(--wkA); }
+.wk     { width:255px; min-width:255px; padding:6px; text-align:center; background:var(--wkA); }
 .wk.alt { background:var(--wkB); }
 
 .cell {
@@ -237,7 +237,7 @@ thead .corner { z-index:8; }
 .entry.cat-lf .entry-title,.entry.cat-lf .entry-date,
 .entry.cat-pets .entry-title,.entry.cat-pets .entry-date { color:inherit; }
 
-/* ── Markdown row ────────────────────────────────────────────────────────── */
+/* ── Markdown row (matches management calendar exactly) ──────────────────── */
 .markdown-span-cell {
   padding:0 !important; background:transparent !important;
   vertical-align:top !important; position:relative !important;
@@ -248,9 +248,6 @@ thead .corner { z-index:8; }
   background:rgba(255,247,223,.9); padding:4px 10px;
   font-size:12px; line-height:1.15;
 }
-.markdown-bubble-span.md-start { margin-right:0; padding-right:2px; border-right:none; }
-.markdown-bubble-span.md-mid   { margin:2px 0; padding:0 4px; border-left:none; border-right:none; }
-.markdown-bubble-span.md-end   { margin-left:0; padding-left:4px; border-left:none; }
 .markdown-title { font-weight:700; }
 .markdown-rowhead { font-size:12px !important; line-height:1.2 !important; }
 
@@ -307,6 +304,7 @@ thead .corner { z-index:8; }
 }
 .popup-table tr:last-child td { border-bottom:none; }
 .popup-cat-row td { font-weight:700; background:#f5f3ef; color:#555; font-size:10px; letter-spacing:.05em; text-transform:uppercase; }
+.popup-table td img { border:1px solid #e0dbd4; background:#f7f6f4; }
 .popup-footer {
   padding:10px 20px; border-top:1px solid var(--grid);
   font-size:12px; color:var(--muted); background:#f5f3ef;
@@ -364,6 +362,7 @@ var _year    = 2026;
 var _sb      = null;
 var _loaded  = false;
 var _entryMap = {};     // entry_id → row (for popup)
+var _lsMap   = {};      // productName.toLowerCase() → {hscode, productImg, workflowStatus, selectedForLinesheet}
 var _rtChannel = null;  // realtime channel
 var _debounceTimer = null;
 
@@ -449,6 +448,16 @@ function globalCategoryClass(entry){
 }
 function liveBadge(){ return '<span class="live-badge">&#10003; Live</span>'; }
 
+function countItems(str){
+  return String(str||'').split(/[,;]/).map(function(s){return s.trim();}).filter(Boolean).length;
+}
+function countLineSkus(l){ return countItems(l && l.colour); }
+function countEntrySkus(e){
+  var total = 0;
+  (e.lines||[]).forEach(function(l){ total += countLineSkus(l); });
+  return total;
+}
+
 // ── Entry card renderers ──────────────────────────────────────────────────────
 
 function renderGlobal(e, entryId){
@@ -478,7 +487,7 @@ function renderGlobal(e, entryId){
         '<div class="entry-title">'+esc(e.launchTitle||'')+'</div></div></div>'+
       liveBadge()+
     '</div>'+groups+
-    '<div class="entry-info"><span class="label">SKUs:</span> '+esc(e.skuCount||0)+'</div>'+
+    '<div class="entry-info"><span class="label">SKUs:</span> '+(countEntrySkus(e)||Number(e.skuCount||0))+'</div>'+
     '<div class="entry-info"><span class="label">Mkt:</span> '+mkts+'</div>'+
     '</div></div>';
 }
@@ -573,6 +582,17 @@ function renderEntry(row){
 
 // ── Popup ─────────────────────────────────────────────────────────────────────
 
+function _lsStatusBadge(ls){
+  if(!ls) return '<span style="color:#aaa;font-size:11px">—</span>';
+  if(ls.selectedForLinesheet && ls.workflowStatus==='approved')
+    return '<span style="background:#2a6e2a;color:#fff;font-size:10px;padding:2px 6px;font-weight:700">Approved</span>';
+  if(ls.workflowStatus==='published')
+    return '<span style="background:#4a8eb5;color:#fff;font-size:10px;padding:2px 6px;font-weight:700">Published</span>';
+  if(ls.selectedForLinesheet)
+    return '<span style="background:#f5c842;color:#333;font-size:10px;padding:2px 6px;font-weight:700">Selected</span>';
+  return '<span style="background:#e0dbd4;color:#555;font-size:10px;padding:2px 6px;font-weight:700">Draft</span>';
+}
+
 function openPopup(entryId){
   var row = _entryMap[entryId]; if(!row) return;
   var e   = row.entry_data||{};
@@ -596,42 +616,61 @@ function openPopup(entryId){
   document.getElementById('popupSection').textContent = SECTION_LABELS[sec]||sec;
   document.getElementById('popupMeta').textContent = [dateStr, 'Live'].filter(Boolean).join('  ·  ');
 
-  // Body
   var body = '';
   var totalSkus = 0;
 
   if(sec==='global'){
-    var grouped = {};
-    (e.lines||[]).forEach(function(l){
-      if(!(l.category||l.productName||l.colour||l.size||l.price)) return;
-      var c = l.category||'Other'; if(!grouped[c]) grouped[c]=[]; grouped[c].push(l);
+    // ── Products linesheet view ──────────────────────────────────────────────
+    var validLines = (e.lines||[]).filter(function(l){
+      return l.category||l.productName||l.colour||l.size||l.price;
     });
     body += '<div class="popup-section-hd">Products</div>';
     body += '<table class="popup-table"><thead><tr>'+
-      '<th>Category</th><th>Product</th><th>Color</th><th style="text-align:right">Price</th>'+
+      '<th style="width:70px">Photo</th>'+
+      '<th>Category / Product</th>'+
+      '<th>Colours</th>'+
+      '<th>HS Code</th>'+
+      '<th style="text-align:right">Price</th>'+
+      '<th style="text-align:center">SKUs</th>'+
+      '<th style="text-align:center">Linesheet</th>'+
       '</tr></thead><tbody>';
-    Object.keys(grouped).forEach(function(cat){
-      grouped[cat].forEach(function(l, li){
-        var skuCount = Number(l.skuCount)||1; totalSkus += skuCount;
-        body += '<tr>';
-        if(li===0) body += '<td rowspan="'+grouped[cat].length+'" style="font-weight:700;vertical-align:top">'+esc(cat)+'</td>';
-        body += '<td>'+esc(l.productName||'—')+'</td>'+
-          '<td>'+esc(l.colour||'')+(l.size?' / '+esc(l.size):'')+'</td>'+
-          '<td style="text-align:right">'+(l.price?'$'+esc(l.price):'—')+'</td>'+
-          '</tr>';
-      });
+    validLines.forEach(function(l){
+      var key = (l.productName||'').toLowerCase();
+      var ls  = _lsMap[key];
+      var img = ls && ls.productImg ? '<img src="'+esc(ls.productImg)+'" style="max-width:60px;max-height:70px;display:block;object-fit:contain" onerror="this.style.display=\'none\'">' : '<span style="color:#bbb;font-size:11px">No photo</span>';
+      var hs  = (ls && ls.hscode) ? esc(ls.hscode) : '—';
+      var skuCount = countLineSkus(l); totalSkus += skuCount;
+      body += '<tr>'+
+        '<td style="text-align:center;padding:4px">'+img+'</td>'+
+        '<td><div style="font-weight:700;font-size:11px;color:#888;margin-bottom:2px">'+esc(l.category||'')+'</div>'+esc(l.productName||'—')+'</td>'+
+        '<td style="font-size:12px">'+esc(l.colour||'—')+'</td>'+
+        '<td style="font-size:11px;color:#666">'+hs+'</td>'+
+        '<td style="text-align:right">'+(l.price?'$'+esc(l.price):'—')+'</td>'+
+        '<td style="text-align:center;font-weight:700">'+skuCount+'</td>'+
+        '<td style="text-align:center">'+_lsStatusBadge(ls)+'</td>'+
+        '</tr>';
     });
     body += '</tbody></table>';
-    body += '<div class="popup-section-hd">Launch Details</div>';
-    body += '<div class="popup-info-row">'+
-      '<span class="popup-lbl">Launch Markets:</span><span class="popup-val">'+esc((e.noLaunchMarkets||[]).join(', ')||'—')+'</span></div>';
+
+    // ── Markets & Channels ───────────────────────────────────────────────────
+    body += '<div class="popup-section-hd">Markets &amp; Channels</div>';
     if(e.noLaunchChannelsCollapsed&&e.noLaunchChannelsCollapsed.length){
-      body += '<div class="popup-info-row">'+
-        '<span class="popup-lbl">Launch Channels:</span><span class="popup-val">'+
-        (e.noLaunchChannelsCollapsed||[]).map(function(x){
-          return esc(x.market)+': '+(x.stores&&x.stores.length?x.stores.join(', '):'—');
-        }).join(' | ')+'</span></div>';
+      body += '<table class="popup-table"><thead><tr><th>Market</th><th>Channels / Stores</th></tr></thead><tbody>';
+      e.noLaunchChannelsCollapsed.forEach(function(x){
+        body += '<tr><td style="white-space:nowrap;font-weight:700">'+esc(x.market)+'</td>'+
+          '<td>'+(x.stores&&x.stores.length?esc(x.stores.join(', ')):'—')+'</td></tr>';
+      });
+      body += '</tbody></table>';
+    } else if((e.noLaunchMarkets||[]).length){
+      body += '<table class="popup-table"><thead><tr><th>Market</th></tr></thead><tbody>';
+      (e.noLaunchMarkets||[]).forEach(function(m){
+        body += '<tr><td>'+esc(m)+'</td></tr>';
+      });
+      body += '</tbody></table>';
+    } else {
+      body += '<div class="popup-info-row"><span class="popup-lbl">Markets:</span><span class="popup-val">—</span></div>';
     }
+
     if(e.launchStatus==='delay'){
       body += '<div class="popup-info-row">'+
         '<span class="popup-lbl">Status:</span><span class="popup-val" style="color:#c43030;font-weight:700">Delay Flagged</span></div>';
@@ -641,31 +680,44 @@ function openPopup(entryId){
           (e.delayMarkets||[]).map(function(x){return esc(x.market)+' ETA '+fmtDDMMM(x.eta);}).join(', ')+'</span></div>';
       }
     }
-    if(e.skuCount) totalSkus = Number(e.skuCount);
+    if(!totalSkus && e.skuCount) totalSkus = Number(e.skuCount);
 
   } else if(sec==='china'||sec==='sea'||sec==='nea'){
     var colour = e.colour||(e.colorSize&&!e.colorSize.includes(' / ')?e.colorSize:(e.colorSize||'').split(' / ')[0])||'';
     var size   = e.size||(e.colorSize&&e.colorSize.includes(' / ')?e.colorSize.split(' / ').slice(1).join(' / '):'')||'';
+    var key2   = (e.productTitle||'').toLowerCase();
+    var ls2    = _lsMap[key2];
     body += '<div class="popup-section-hd">Product</div>';
     body += '<table class="popup-table"><thead><tr>'+
-      '<th>Type</th><th>Product</th><th>Color / Size</th><th style="text-align:right">Price</th>'+
+      '<th style="width:70px">Photo</th><th>Type</th><th>Product</th><th>Color / Size</th>'+
+      '<th>HS Code</th><th style="text-align:right">Price</th><th>Linesheet</th>'+
       '</tr></thead><tbody><tr>'+
+      '<td style="text-align:center;padding:4px">'+(ls2&&ls2.productImg?'<img src="'+esc(ls2.productImg)+'" style="max-width:60px;max-height:70px;display:block;object-fit:contain" onerror="this.style.display=\'none\'">':'<span style="color:#bbb;font-size:11px">No photo</span>')+'</td>'+
       '<td>'+esc(e.optionType||'—')+'</td>'+
       '<td>'+esc(e.productTitle||'—')+'</td>'+
       '<td>'+esc(colour)+(size?' / '+esc(size):'')+'</td>'+
+      '<td style="font-size:11px;color:#666">'+(ls2&&ls2.hscode?esc(ls2.hscode):'—')+'</td>'+
       '<td style="text-align:right">'+(e.price?'$'+esc(e.price):'—')+'</td>'+
+      '<td>'+_lsStatusBadge(ls2)+'</td>'+
       '</tr></tbody></table>';
     body += '<div class="popup-section-hd">Markets &amp; Channels</div>';
-    body += '<div class="popup-info-row">'+
-      '<span class="popup-lbl">Markets:</span><span class="popup-val">'+
-      ((e.allMarkets||false)?'All':esc((e.countries||[]).join(', ')||'—'))+'</span></div>';
+    if((e.countries||[]).length){
+      body += '<table class="popup-table"><thead><tr><th>Market</th>'+(sec!=='china'?'<th>Stores</th>':'')+'</tr></thead><tbody>';
+      if(e.allMarkets){
+        body += '<tr><td colspan="'+(sec!=='china'?'2':'1')+'">All Markets</td></tr>';
+      } else {
+        (e.countries||[]).forEach(function(m){
+          body += '<tr><td>'+esc(m)+'</td>'+(sec!=='china'?'<td>'+esc((e.stores||[]).join(', ')||'—')+'</td>':'')+'</tr>';
+        });
+      }
+      body += '</tbody></table>';
+    } else {
+      body += '<div class="popup-info-row"><span class="popup-lbl">Markets:</span><span class="popup-val">'+
+        ((e.allMarkets||false)?'All':'—')+'</span></div>';
+    }
     if(e.startDate){
       body += '<div class="popup-info-row">'+
         '<span class="popup-lbl">Dates:</span><span class="popup-val">'+esc(e.startDate)+(e.endDate?' → '+esc(e.endDate):'')+'</span></div>';
-    }
-    if(sec==='nea'||sec==='sea'){
-      var stores = (e.stores||[]).join(', ');
-      if(stores) body += '<div class="popup-info-row"><span class="popup-lbl">Stores:</span><span class="popup-val">'+esc(stores)+'</span></div>';
     }
     if(e.optionType==='GWP'&&e.mechanics){
       body += '<div class="popup-info-row"><span class="popup-lbl">Mechanics:</span><span class="popup-val">'+esc(e.mechanics)+'</span></div>';
@@ -676,11 +728,19 @@ function openPopup(entryId){
     var lines2 = (e.lines&&e.lines.length)?e.lines:[{productTitle:e.productTitle||'',colour:'',colors:e.colors||''}];
     body += '<div class="popup-section-hd">Restock Lines</div>';
     body += '<table class="popup-table"><thead><tr>'+
-      '<th>Product</th><th>Color</th>'+
+      '<th style="width:70px">Photo</th><th>Product</th><th>Color</th><th>HS Code</th><th>Linesheet</th>'+
       '</tr></thead><tbody>';
     lines2.forEach(function(l){
       var col = l.colour||(l.colors&&!l.colors.includes(' / ')?l.colors:(l.colors||'').split(' / ')[0])||'';
-      body += '<tr><td>'+esc(l.productTitle||'—')+'</td><td>'+esc(col)+'</td></tr>';
+      var lsk = (l.productTitle||'').toLowerCase();
+      var lsl = _lsMap[lsk];
+      body += '<tr>'+
+        '<td style="text-align:center;padding:4px">'+(lsl&&lsl.productImg?'<img src="'+esc(lsl.productImg)+'" style="max-width:60px;max-height:70px;display:block;object-fit:contain" onerror="this.style.display=\'none\'">':'<span style="color:#bbb;font-size:11px">No photo</span>')+'</td>'+
+        '<td>'+esc(l.productTitle||'—')+'</td>'+
+        '<td>'+esc(col)+'</td>'+
+        '<td style="font-size:11px;color:#666">'+(lsl&&lsl.hscode?esc(lsl.hscode):'—')+'</td>'+
+        '<td>'+_lsStatusBadge(lsl)+'</td>'+
+        '</tr>';
     });
     body += '</tbody></table>';
     body += '<div class="popup-section-hd">Details</div>';
@@ -741,17 +801,45 @@ function _debouncedReload(){
 function loadCalendar(){
   if(!_sb) return;
   _entryMap = {};
+  _lsMap = {};
   var tbl = document.getElementById('calTable');
   tbl.innerHTML = '<tbody><tr><td class="msg-cell">Loading&hellip;</td></tr></tbody>';
 
-  // Fetch entries AND markdowns in parallel
+  // Fetch entries, markdowns AND linesheet products in parallel
   var entriesPromise = _sb.from('public_calendar_entries').select('*').eq('year', _year);
   var mdKey = 'calendar-'+_year+'-markdown-bars-v1';
   var mdPromise = _sb.from('app_state').select('value').eq('key', mdKey).maybeSingle();
+  var lsPromise = _sb.from('app_state').select('value').eq('key', 'btv_linesheet_products').maybeSingle();
 
-  Promise.all([entriesPromise, mdPromise]).then(function(results){
+  Promise.all([entriesPromise, mdPromise, lsPromise]).then(function(results){
     var entriesRes = results[0];
     var mdRes      = results[1];
+    var lsRes      = results[2];
+
+    // Build linesheet product lookup map (name → {hscode, productImg, workflowStatus, selectedForLinesheet})
+    _lsMap = {};
+    try {
+      var lsProducts = (lsRes && lsRes.data && lsRes.data.value) ? lsRes.data.value : [];
+      if(Array.isArray(lsProducts)){
+        lsProducts.forEach(function(p){
+          var key = (p.name||'').toLowerCase();
+          if(key && !_lsMap[key]){
+            _lsMap[key] = {
+              hscode: p.hscode||p.hscode10||'',
+              productImg: p.productImg||p.lookbookImg||'',
+              workflowStatus: p.workflowStatus||'draft',
+              selectedForLinesheet: !!p.selectedForLinesheet
+            };
+          } else if(key && _lsMap[key]){
+            // Prefer approved over draft; prefer entries with images
+            if(!_lsMap[key].productImg && (p.productImg||p.lookbookImg))
+              _lsMap[key].productImg = p.productImg||p.lookbookImg||'';
+            if(!_lsMap[key].hscode && (p.hscode||p.hscode10))
+              _lsMap[key].hscode = p.hscode||p.hscode10||'';
+          }
+        });
+      }
+    } catch(ex){ console.warn('[BTV] linesheet map build error', ex); }
 
     if(entriesRes.error){
       tbl.innerHTML = '<tbody><tr><td class="msg-cell" style="color:#c00">Error: '+esc(entriesRes.error.message)+'</td></tr></tbody>';
@@ -776,8 +864,9 @@ function loadCalendar(){
     var visibleIds = weeks.map(function(w){ return w.id; });
 
     // Build spanning markdown lane data (same algorithm as management calendar)
+    // Only show markdowns that have been published to BTV Calendar
     var _trackH = 44;
-    var allMds  = Object.values(mdState||{}).filter(function(md){ return md&&md.startDate&&md.endDate; });
+    var allMds  = Object.values(mdState||{}).filter(function(md){ return md&&md.startDate&&md.endDate&&md.publishedToCal; });
     // which weeks each markdown spans (in visible set)
     var mdWeeks = allMds.map(function(md){
       return weekIdsInRange(md.startDate, md.endDate, weeks).filter(function(id){ return visibleIds.indexOf(id)>=0; });
