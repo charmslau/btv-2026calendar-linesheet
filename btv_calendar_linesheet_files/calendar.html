@@ -2616,7 +2616,7 @@
 
   .markdown-bubble-span{
 
-    position:relative;margin:2px 6px;min-height:38px;
+    position:relative;margin:2px 6px;min-height:64px;
 
     border:1.5px solid #d8b231;border-radius:10px;
 
@@ -8899,29 +8899,23 @@ function renderRegional(entry){
 
         <div class="group">
 
-          <div class="cat">${esc(entry.category || entry.optionType || "")}</div>
-
-          <div>
-
-            <div class="prod">
-
-              <div class="prod-top">
-
-                <div class="prod-name">${esc(entry.productTitle || "—")}</div>
-
-                <div class="prod-price">${entry.price ? "$" + esc(entry.price) : ""}</div>
-
-              </div>
-
-              <div class="prod-meta">${esc(colour)}</div><div class="prod-size prod-meta">${esc(size)}</div>
-
-            </div>
-
-          </div>
+          ${(function(){
+            const lines = (entry.lines && entry.lines.length)
+              ? entry.lines
+              : [{ productTitle: entry.productTitle||'', category: entry.category||'', colour: colour, size: size, price: entry.price||'' }];
+            return lines.map(function(ln){
+              return '<div><div class="prod"><div class="prod-top">' +
+                '<div class="prod-name">' + esc(ln.productTitle||'—') + '</div>' +
+                '<div class="prod-price">' + (ln.price ? '$'+esc(ln.price) : '') + '</div>' +
+                '</div>' +
+                (ln.category ? '<div class="cat" style="font-size:9px;margin-bottom:2px">'+esc(ln.category)+'</div>' : '') +
+                '<div class="prod-meta">' + esc(ln.colour||'') + '</div>' +
+                '<div class="prod-size prod-meta">' + esc(ln.size||'') + '</div>' +
+                '</div></div>';
+            }).join('');
+          })()}
 
         </div>
-
-        <div class="entry-info"><span class="label">Type:</span> ${esc(entry.optionType || "—")}</div>
 
         <div class="entry-info"><span class="label">Markets:</span> ${marketStr}</div>
 
@@ -9199,7 +9193,7 @@ function render(){
     // Pre-compute the minimum vertical lane for each markdown so that
     // non-overlapping markdowns share lane 0 (slim row) while overlapping
     // ones stack, and multi-week pills stay connected across cells.
-    const _trackH = 44;
+    const _trackH = 72;
     const _laneOf = _visibleMds.map(function(md, idx){
       const mdWeeks = weekIdsInRange(md.startDate, md.endDate).filter(function(id){ return _mdWeekIdx[id] !== undefined; });
       let maxAbove = 0;
@@ -9543,6 +9537,117 @@ function buildGlobalForm(existing, weekId){
 
 }
 
+function renderRegionalProductRow(line, i){
+  const cats = loadAdminConfig().categories || GLOBAL_CATEGORIES;
+  return `
+    <details class="product-editor line-wrap" open data-regional-line-wrap data-i="${i}">
+      <summary class="product-line-summary">
+        <span class="product-line-summary-main">
+          <span class="product-line-summary-text">${esc(line.productTitle || ('Product ' + (i + 1)))}</span>
+        </span>
+        <span class="product-line-actions">
+          <button type="button" data-regional-move="up" data-i="${i}" title="Move up">↑</button>
+          <button type="button" data-regional-move="down" data-i="${i}" title="Move down">↓</button>
+          <button type="button" data-regional-duplicate data-i="${i}" title="Duplicate">⊕</button>
+          <button type="button" class="product-line-delete" data-regional-delete data-i="${i}" title="Delete">×</button>
+        </span>
+      </summary>
+      <div class="inline-four">
+        <div>
+          <label class="product-label">Category<span class="team-badge merch">Merch</span></label>
+          <select class="regional-category" data-i="${i}">
+            <option value="">— Select —</option>
+            ${cats.map(c => `<option value="${c}" ${line.category===c?"selected":""}>${c}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label class="product-label">Product Title<span class="team-badge design">Design</span></label>
+          <input class="regional-product-title" data-i="${i}" type="text" value="${esc(line.productTitle || "")}">
+        </div>
+        <div>
+          <label class="product-label">Price<span class="team-badge merch">Merch</span></label>
+          <input class="regional-price" data-i="${i}" type="text" inputmode="decimal" value="${esc(line.price || "")}">
+        </div>
+      </div>
+      <div class="field-gap">
+        <label class="product-label">Colour / Variant<span class="team-badge design">Design</span></label>
+        <textarea class="regional-colour" data-i="${i}" rows="2">${esc(line.colour || "")}</textarea>
+      </div>
+      <div class="field-gap">
+        <label class="product-label">Size<span class="team-badge design">Design</span></label>
+        <textarea class="regional-size" data-i="${i}" rows="2">${esc(line.size || "")}</textarea>
+      </div>
+    </details>
+  `;
+}
+
+function getCurrentRegionalProductLines(){
+  return Array.from(document.querySelectorAll('.regional-category')).map(function(sel){
+    const i = sel.getAttribute('data-i');
+    return {
+      category:     sel.value,
+      productTitle: (document.querySelector('.regional-product-title[data-i="'+i+'"]')?.value||'').trim(),
+      colour:       (document.querySelector('.regional-colour[data-i="'+i+'"]')?.value||'').trim(),
+      size:         (document.querySelector('.regional-size[data-i="'+i+'"]')?.value||'').trim(),
+      price:        (document.querySelector('.regional-price[data-i="'+i+'"]')?.value||'').trim()
+    };
+  });
+}
+
+function bindRegionalDynamicRows(){
+  const container = e('regionalProductRows');
+  if(!container) return;
+
+  const addBtn = e('addRegionalProductRowBtn');
+  if(addBtn && !addBtn.dataset.bound){
+    addBtn.dataset.bound = 'true';
+    addBtn.onclick = function(){
+      const lines = getCurrentRegionalProductLines();
+      lines.push({});
+      container.innerHTML = lines.map(function(ln,idx){ return renderRegionalProductRow(ln, idx); }).join('');
+      bindRegionalDynamicRows();
+    };
+  }
+
+  container.querySelectorAll('[data-regional-move]').forEach(function(btn){
+    btn.onclick = function(ev){ ev.stopPropagation();
+      const dir = btn.getAttribute('data-regional-move');
+      const i = parseInt(btn.getAttribute('data-i'));
+      const lines = getCurrentRegionalProductLines();
+      if(dir === 'up' && i > 0){ const tmp=lines[i-1]; lines[i-1]=lines[i]; lines[i]=tmp; }
+      else if(dir === 'down' && i < lines.length-1){ const tmp=lines[i+1]; lines[i+1]=lines[i]; lines[i]=tmp; }
+      else return;
+      container.innerHTML = lines.map(function(ln,idx){ return renderRegionalProductRow(ln, idx); }).join('');
+      bindRegionalDynamicRows();
+    };
+  });
+
+  container.querySelectorAll('[data-regional-duplicate]').forEach(function(btn){
+    btn.onclick = function(ev){ ev.stopPropagation();
+      const i = parseInt(btn.getAttribute('data-i'));
+      const lines = getCurrentRegionalProductLines();
+      lines.splice(i+1, 0, Object.assign({}, lines[i]));
+      container.innerHTML = lines.map(function(ln,idx){ return renderRegionalProductRow(ln, idx); }).join('');
+      bindRegionalDynamicRows();
+    };
+  });
+
+  container.querySelectorAll('[data-regional-delete]').forEach(function(btn){
+    btn.onclick = function(ev){ ev.stopPropagation();
+      const i = parseInt(btn.getAttribute('data-i'));
+      const lines = getCurrentRegionalProductLines();
+      if(lines.length <= 1){
+        container.innerHTML = renderRegionalProductRow({}, 0);
+        bindRegionalDynamicRows();
+        return;
+      }
+      lines.splice(i, 1);
+      container.innerHTML = lines.map(function(ln,idx){ return renderRegionalProductRow(ln, idx); }).join('');
+      bindRegionalDynamicRows();
+    };
+  });
+}
+
 function buildRegionalForm(section, existing, weekId){
 
   const markets = section === "nea" ? ["CN","JP"] : ["SG","ID","TH","PH"];
@@ -9553,10 +9658,12 @@ function buildRegionalForm(section, existing, weekId){
 
   markets.forEach(mkt => { channelsByMarket[mkt] = getActiveStores(mkt, refDate); });
 
-
-
+  // Build initial product lines (backward compat: single product → array)
   const existingColour = existing?.colour || (existing?.colorSize ? existing.colorSize.split(' / ')[0] : '') || '';
   const existingSize   = existing?.size   || (existing?.colorSize && existing.colorSize.includes(' / ') ? existing.colorSize.split(' / ').slice(1).join(' / ') : '') || '';
+  const existingLines  = (existing?.lines && existing.lines.length)
+    ? existing.lines
+    : [{ productTitle: existing?.productTitle || '', category: existing?.category || '', colour: existingColour, size: existingSize, price: existing?.price || '' }];
 
   return `
 
@@ -9569,6 +9676,14 @@ function buildRegionalForm(section, existing, weekId){
           <option value="brand" ${(!existing?.keyLevel || existing?.keyLevel==="brand")?"selected":""}>🟡 Brand</option>
           <option value="revenue" ${existing?.keyLevel==="revenue"?"selected":""}>🔵 Revenue</option>
           <option value="both" ${existing?.keyLevel==="both"?"selected":""}>🟢 Both</option>
+        </select>
+      </div>
+
+      <div class="field span4"><label>Type<span class="team-badge merch">Merch</span></label>
+        <select id="optionType">
+          <option value="Country Exclusive" ${existing?.optionType==="Country Exclusive"?"selected":""}>Country Exclusive</option>
+          <option value="Store Exclusive" ${existing?.optionType==="Store Exclusive"?"selected":""}>Store Exclusive</option>
+          <option value="GWP" ${existing?.optionType==="GWP"?"selected":""}>GWP</option>
         </select>
       </div>
 
@@ -9590,78 +9705,11 @@ function buildRegionalForm(section, existing, weekId){
 
       <div class="field span12">
 
-        <label>Product Details</label>
+        <label>Products<span class="team-badge merch">Merch</span></label>
 
-        <div class="product-details">
+        <div id="regionalProductRows">${existingLines.map((line, i) => renderRegionalProductRow(line, i)).join('')}</div>
 
-          <div class="inline-two">
-
-            <div>
-
-              <label>Category<span class="team-badge design">Design</span></label>
-
-              <select id="regionalCategory">
-                <option value="">— Select —</option>
-                ${(loadAdminConfig().categories||GLOBAL_CATEGORIES).map(c => `<option value="${c}" ${existing?.category===c?"selected":""}>${c}</option>`).join("")}
-              </select>
-
-            </div>
-
-            <div>
-
-              <label>Type<span class="team-badge merch">Merch</span></label>
-
-              <select id="optionType">
-
-                <option value="Country Exclusive" ${existing?.optionType==="Country Exclusive"?"selected":""}>Country Exclusive</option>
-
-                <option value="Store Exclusive" ${existing?.optionType==="Store Exclusive"?"selected":""}>Store Exclusive</option>
-
-                <option value="GWP" ${existing?.optionType==="GWP"?"selected":""}>GWP</option>
-
-              </select>
-
-            </div>
-
-          </div>
-
-          <div class="inline-two">
-
-            <div>
-
-              <label>Product Title<span class="team-badge design">Design</span></label>
-
-              <input id="productTitle" type="text" value="${esc(existing?.productTitle || "")}">
-
-            </div>
-
-            <div>
-
-              <label>Price<span class="team-badge merch">Merch</span></label>
-
-              <input id="price" type="number" step="0.01" value="${esc(existing?.price || "")}">
-
-            </div>
-
-          </div>
-
-          <div class="field-gap">
-
-            <label>Colour / Variant<span class="team-badge design">Design</span></label>
-
-            <textarea id="regionalColour" rows="2">${esc(existingColour)}</textarea>
-
-          </div>
-
-          <div class="field-gap">
-
-            <label>Size<span class="team-badge design">Design</span></label>
-
-            <textarea id="regionalSize" rows="2">${esc(existingSize)}</textarea>
-
-          </div>
-
-        </div>
+        <button type="button" id="addRegionalProductRowBtn" class="add-line-btn" style="margin-top:6px">+ Add Product</button>
 
       </div>
 
@@ -10801,6 +10849,8 @@ window.openEditor = function(section, weekId, entryId){
 
   if(section === "nea" || section === "sea"){
 
+    bindRegionalDynamicRows();
+
     bindAllToggle(section + "AllMarkets", "countries");
 
     document.querySelectorAll('[data-region-all]').forEach(allBox => {
@@ -11047,17 +11097,15 @@ window.openEditor = function(section, weekId, entryId){
 
       payload.countries = payload.allMarkets ? [] : selectedMarkets;
 
-      payload.productTitle = e("productTitle").value.trim();
+      payload.lines = getCurrentRegionalProductLines().filter(function(x){ return x.category || x.productTitle || x.colour || x.size || x.price; });
 
-      payload.category = (e("regionalCategory") ? e("regionalCategory").value : "");
-
-      payload.colour = e("regionalColour").value.trim();
-
-      payload.size = e("regionalSize").value.trim();
-
-      payload.colorSize = payload.colour + (payload.size ? ' / ' + payload.size : '');
-
-      payload.price = e("price").value.trim();
+      // Backward-compat single-product fields (first line)
+      payload.productTitle = (payload.lines[0] || {}).productTitle || "";
+      payload.category     = (payload.lines[0] || {}).category || "";
+      payload.colour       = (payload.lines[0] || {}).colour || "";
+      payload.size         = (payload.lines[0] || {}).size || "";
+      payload.colorSize    = payload.colour + (payload.size ? ' / ' + payload.size : '');
+      payload.price        = (payload.lines[0] || {}).price || "";
 
       if(payload.optionType === "GWP"){
 
@@ -11166,6 +11214,18 @@ window.openEditor = function(section, weekId, entryId){
     state[section][targetWeekId].push(payload);
 
     saveState(state);
+
+    // If this entry was already Live, keep it in sync with the public calendar
+    if (_publishedIds.has(payload.id) && window._btvSb) {
+      var _liveYr = parseInt(((window._btvStorageKey||'').match(/calendar-(\d{4})-/)||[])[1]||'0');
+      window._btvSb.from('public_calendar_entries').upsert({
+        entry_id: payload.id, year: _liveYr, week_id: targetWeekId, section: section,
+        entry_data: payload, published_by: window._btvSyncEmail || '',
+        published_at: new Date().toISOString()
+      }, { onConflict: 'entry_id,year' }).then(function(res){
+        if(res.error) console.warn('[BTV] Live update failed:', res.error.message);
+      });
+    }
 
     // Track changes in BTV Linesheet KPI Dashboard
 

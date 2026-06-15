@@ -244,10 +244,14 @@ thead .corner { z-index:8; }
 }
 .markdown-track { min-height:44px; position:relative; }
 .markdown-bubble-span {
-  position:relative; margin:3px 8px; border:2px dashed #8f7f67;
-  background:rgba(255,247,223,.9); padding:4px 10px;
-  font-size:12px; line-height:1.15;
+  position:relative; margin:2px 6px; min-height:38px;
+  border:1.5px solid #d8b231; border-radius:10px;
+  background:#f5df73; padding:4px 8px; font-size:10px; line-height:1.3;
+  word-break:break-word;
 }
+.markdown-bubble-span.md-start { border-radius:999px 0 0 999px; margin-right:0; padding-right:2px; border-right:none; }
+.markdown-bubble-span.md-mid   { border-radius:0; margin:2px 0; padding:0 4px; border-left:none; border-right:none; }
+.markdown-bubble-span.md-end   { border-radius:0 999px 999px 0; margin-left:0; padding-left:4px; border-left:none; }
 .markdown-title { font-weight:700; }
 .markdown-rowhead { font-size:12px !important; line-height:1.2 !important; }
 
