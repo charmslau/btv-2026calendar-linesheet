@@ -72,15 +72,7 @@
 
 
 
-  html,body{height:100%;overflow:hidden}
-
-  .app{padding:12px;height:100%;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden}
-
-  .view-panel:not(.hidden){flex:1;min-height:0;overflow:auto}
-
-  #calendarView:not(.hidden){overflow:hidden;display:flex;flex-direction:column}
-
-  #calendarView:not(.hidden) .table-wrap{flex:1;max-height:none!important;overflow:auto;min-height:0}
+  .app{padding:12px}
 
   .page-title{
 
@@ -238,7 +230,7 @@
 
     background:var(--panel);
 
-    max-height:calc(100vh - 185px)
+    max-height:calc(100vh - 220px)
 
   }
 
@@ -1149,7 +1141,7 @@
 
   body.locked .app{display:none}
 
-  body.unlocked .app{display:flex}
+  body.unlocked .app{display:block}
 
   #plannerLock{
 
@@ -10291,28 +10283,7 @@ render();
 
 // ---- BTV Teams Notifications ----
 
-var BTV_MGMT_WEBHOOK_URL = (function(){ try{ return localStorage.getItem('btvMgmtWebhook')||'https://defaultdf870fcb9b7a466b99dd3a74cbd76a.d1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/05e3654a9bd84fa3a0949743b9e3ee57/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=0Q1_30CfTZ0XSsnSyj3v1gH1Lig_KmF3b9HPIMSbNOA'; }catch(e){ return 'https://defaultdf870fcb9b7a466b99dd3a74cbd76a.d1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/05e3654a9bd84fa3a0949743b9e3ee57/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=0Q1_30CfTZ0XSsnSyj3v1gH1Lig_KmF3b9HPIMSbNOA'; }
-  window.btvSetPublishedIds = function(ids) { _publishedIds = new Set(ids); render(); };
-  window.btvIsPublished  = function(id)  { return _publishedIds.has(id); };
-  window.btvAddPublished = function(id)  { _publishedIds.add(id); };
-  window.btvDelPublished = function(id)  { _publishedIds.delete(id); };
-  window.btvLoadPublished = function() {
-    if (!window._btvSb) return;
-    var yr = parseInt(((window._btvStorageKey||'').match(/calendar-(\d{4})-/)||[])[1]||'0');
-    window._btvSb.from('public_calendar_entries')
-      .select('entry_id').eq('year', yr)
-      .then(function(res){
-        if (res.error) {
-          console.error('[BTV Publish] Load error:', res.error.message);
-          if (res.error.message && res.error.message.includes('does not exist')) {
-            console.error('[BTV Publish] Table missing — run supabase-setup.sql sections 7-8 in Supabase SQL Editor.');
-          }
-          return;
-        }
-        if(window.btvSetPublishedIds) window.btvSetPublishedIds((res.data||[]).map(function(r){ return r.entry_id; }));
-      });
-  };
-})();
+var BTV_MGMT_WEBHOOK_URL = (function(){ try{ return localStorage.getItem('btvMgmtWebhook')||'https://defaultdf870fcb9b7a466b99dd3a74cbd76a.d1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/05e3654a9bd84fa3a0949743b9e3ee57/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=0Q1_30CfTZ0XSsnSyj3v1gH1Lig_KmF3b9HPIMSbNOA'; }catch(e){ return 'https://defaultdf870fcb9b7a466b99dd3a74cbd76a.d1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/05e3654a9bd84fa3a0949743b9e3ee57/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=0Q1_30CfTZ0XSsnSyj3v1gH1Lig_KmF3b9HPIMSbNOA'; }})();
 
 function btvNotifyChange(url, source, product, field, fromVal, toVal){
 
@@ -10386,9 +10357,7 @@ function btvSendTeamsSummary(url, message){
 
     };
 
-    fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
-      .then(function(r){ if(!r.ok) console.warn('[BTV Webhook] Server returned', r.status, r.statusText); })
-      .catch(function(err){ console.warn('[BTV Webhook] POST failed:', err); if(typeof showToast==='function') showToast('\u26a0\ufe0f Webhook failed: ' + (err.message||err), 6000); });
+    fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).catch(function(err){ console.warn('BTV Calendar Teams summary webhook failed', err); });
 
   }catch(e){ console.warn('BTV Calendar Teams summary webhook error', e); }
 
@@ -10455,12 +10424,7 @@ function btvConfigCalWebhook(){
   v = (v || '').trim();
   try{ localStorage.setItem('btvMgmtWebhook', v); }catch(e){}
   BTV_MGMT_WEBHOOK_URL = v;
-  if(v) {
-    var doTest = window.confirm('Webhook saved. Send a test message now?');
-    if(doTest) btvSendTeamsSummary(v, '**BTV Calendar Webhook Test**\n' + new Date().toLocaleString('en-SG') + '\nWebhook is connected successfully.');
-  } else {
-    alert('Calendar webhook disabled.');
-  }
+  alert(v ? 'Calendar webhook saved.' : 'Calendar webhook disabled.');
 }
 function btvConfigWebhook(key,label){
   btvConfigCalWebhook();
@@ -12194,30 +12158,15 @@ e("saveVersionBtn").addEventListener("click", () => { try {
 
   renderDashboard();
 
-  if (BTV_MGMT_WEBHOOK_URL) {
+  if (BTV_MGMT_WEBHOOK_URL && flat.length > 0) {
     btvSendTeamsSummary(BTV_MGMT_WEBHOOK_URL, teamsText);
   }
 
   _btvHasUnsavedChanges = false;
-  // Visual feedback: flash the button green
-  var _svBtn = e("saveVersionBtn");
-  if (_svBtn) {
-    var _svOrig = _svBtn.textContent;
-    _svBtn.textContent = '✔ Saved';
-    _svBtn.style.background = '#2a6e2a';
-    setTimeout(function(){ _svBtn.textContent = _svOrig; _svBtn.style.background = '#111'; }, 2500);
-  }
-  console.log('[BTV] Version saved:', label);
+  alert(`Saved: ${label}`);
 
 } catch(err) {
   console.error('[BTV] Save Version error:', err);
-  var _svBtn2 = e("saveVersionBtn");
-  if (_svBtn2) {
-    var _svOrig2 = _svBtn2.textContent;
-    _svBtn2.textContent = '✖ Failed';
-    _svBtn2.style.background = '#c0392b';
-    setTimeout(function(){ _svBtn2.textContent = _svOrig2; _svBtn2.style.background = '#111'; }, 3000);
-  }
   alert('Save Version failed: ' + (err && err.message ? err.message : String(err)));
 }});
 
@@ -12446,7 +12395,6 @@ window.btvReloadAndRender = function() {
   if (e("globalMarketingView")) renderGlobalMarketingView();
   if (e("marketMarketingView")) renderMarketMarketingView();
   if (typeof _btvCalApplyLockBadges === 'function') _btvCalApplyLockBadges();
-  _btvLoadPublished();
 };
 window.loadAdminConfig = loadAdminConfig;
 window.saveAdminConfig = saveAdminConfig;
@@ -13553,21 +13501,13 @@ function _bindPubButtons() {
 // _publishedIds declared early (after STORAGE_KEY) to avoid render-time TypeError
 
 function _btvLoadPublished() {
-  if (window.btvLoadPublished) { window.btvLoadPublished(); return; }
   if (!window._btvSb) return;
   var yr = parseInt(((window._btvStorageKey||'').match(/calendar-(\d{4})-/)||[])[1]||'0');
   window._btvSb.from('public_calendar_entries')
     .select('entry_id').eq('year', yr)
     .then(function(res) {
-      if (res.error) {
-        console.error('[BTV Publish] Failed to load published IDs:', res.error.message);
-        if (res.error.message && res.error.message.includes('does not exist')) {
-          console.error('[BTV Publish] Table "public_calendar_entries" missing — run supabase-setup.sql sections 7-8 in Supabase SQL Editor.');
-        }
-        return;
-      }
-      var ids = (res.data||[]).map(function(r){ return r.entry_id; });
-      if (window.btvSetPublishedIds) window.btvSetPublishedIds(ids);
+      _publishedIds = new Set((res.data || []).map(function(r) { return r.entry_id; }));
+      render();
     });
 }
 
@@ -13578,11 +13518,11 @@ async function btvTogglePublish(entryId, weekId, section) {
   var entry = ((_st[section] || {})[weekId] || []).find(function(e) { return e.id === entryId; });
   if (!entry) return;
 
-  if (window.btvIsPublished(entryId)) {
+  if (_publishedIds.has(entryId)) {
     var { error } = await window._btvSb.from('public_calendar_entries')
       .delete().eq('entry_id', entryId).eq('year', yr);
     if (error) { alert('Error removing from public calendar: ' + error.message); return; }
-    window.btvDelPublished(entryId);
+    _publishedIds.delete(entryId);
   } else {
     var { error } = await window._btvSb.from('public_calendar_entries')
       .upsert({
@@ -13592,11 +13532,11 @@ async function btvTogglePublish(entryId, weekId, section) {
         published_at: new Date().toISOString()
       }, { onConflict: 'entry_id,year' });
     if (error) { alert('Error publishing to public calendar: ' + error.message); return; }
-    window.btvAddPublished(entryId);
+    _publishedIds.add(entryId);
   }
   // Update all buttons for this entry without full re-render
   document.querySelectorAll('[data-entry-id="' + entryId + '"] .pub-btn').forEach(function(btn) {
-    var on = window.btvIsPublished(entryId);
+    var on = _publishedIds.has(entryId);
     btn.classList.toggle('pub-on', on);
     btn.textContent = on ? '\u2714 Live' : '\u2191 Publish';
     btn.title = on ? 'Remove from public calendar' : 'Publish to public calendar';
