@@ -174,4 +174,62 @@ end;
 $$;
 
 
+-- ── 7. Viewer / Editor permission columns ────────────────────
+-- These let admins set per-user edit access for each module.
+-- can_access_* controls visibility; can_edit_* controls write access.
+
+alter table public.user_profiles
+  add column if not exists can_access_creative boolean not null default true,
+  add column if not exists can_edit_cal        boolean not null default true,
+  add column if not exists can_edit_creative   boolean not null default true,
+  add column if not exists can_edit_ls         boolean not null default true;
+
+
+-- ── 8. BTV Calendar access column ────────────────────────────
+-- Separate permission for the read-only BTV Calendar tab.
+-- Managed independently from BTV Management Calendar access.
+
+alter table public.user_profiles
+  add column if not exists can_access_pub_cal boolean not null default true;
+
+
+-- ── 9. public_calendar_entries ───────────────────────────────
+-- Stores entries that have been marked "Live" in the BTV
+-- Management Calendar, making them visible in the BTV Calendar.
+
+create table if not exists public.public_calendar_entries (
+  id           bigserial    primary key,
+  entry_id     text         not null,
+  year         int          not null,
+  week_id      text         not null,
+  section      text         not null,
+  entry_data   jsonb        not null default '{}',
+  published_by text,
+  published_at timestamptz  not null default now(),
+  unique (entry_id, year)
+);
+
+alter table public.public_calendar_entries enable row level security;
+
+drop policy if exists "btv_pub_cal_select" on public.public_calendar_entries;
+drop policy if exists "btv_pub_cal_insert" on public.public_calendar_entries;
+drop policy if exists "btv_pub_cal_update" on public.public_calendar_entries;
+drop policy if exists "btv_pub_cal_delete" on public.public_calendar_entries;
+
+create policy "btv_pub_cal_select" on public.public_calendar_entries
+  for select to authenticated using (true);
+
+create policy "btv_pub_cal_insert" on public.public_calendar_entries
+  for insert to authenticated with check (true);
+
+create policy "btv_pub_cal_update" on public.public_calendar_entries
+  for update to authenticated using (true);
+
+create policy "btv_pub_cal_delete" on public.public_calendar_entries
+  for delete to authenticated using (true);
+
+grant all on public.public_calendar_entries to authenticated;
+grant usage, select on sequence public.public_calendar_entries_id_seq to authenticated;
+
+
 -- ── Done! ─────────────────────────────────────────────────────
