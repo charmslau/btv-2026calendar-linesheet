@@ -18457,11 +18457,21 @@ function _btvLsApplyFieldLocks(groupId) {
 
 // Event delegation: when any tracked field is focused/blurred, update presence.
 // Uses window._btvCurrentGroupId (window-scoped) as the authoritative product reference.
+//
+// Race-condition fix: when moving from field A → field B, focusout(A) and
+// focusin(B) fire back-to-back. Without debounce both launch concurrent
+// _ch.track() calls; whichever resolves last wins — often the "null" from
+// focusout, making peers think no field is locked.
+// Fix: focusin cancels the pending null-release timer, so only one
+// _ch.track() fires per transition. _lastField is captured immediately on
+// focusout (before the timer) so peers still receive the typed value.
+var _btvFieldBlurTimer = null;
 document.addEventListener('focusin', function(e) {
   var fk = e.target.dataset && e.target.dataset.fieldKey;
   if (!fk) return;
   var gid = window._btvCurrentGroupId;
   if (!gid) return;
+  clearTimeout(_btvFieldBlurTimer);   // cancel any pending null-release
   if (typeof window.btvTrackField === 'function') window.btvTrackField(gid, fk);
 });
 document.addEventListener('focusout', function(e) {
@@ -18469,7 +18479,14 @@ document.addEventListener('focusout', function(e) {
   if (!fk) return;
   var gid = window._btvCurrentGroupId;
   if (!gid) return;
-  if (typeof window.btvTrackField === 'function') window.btvTrackField(gid, null);
+  // Capture the value immediately so it's ready for the next focusin broadcast
+  if (typeof window.btvCaptureLastField === 'function') window.btvCaptureLastField(fk);
+  // Delay the null-release; focusin on next field will cancel this timer
+  clearTimeout(_btvFieldBlurTimer);
+  var _gid = gid;
+  _btvFieldBlurTimer = setTimeout(function() {
+    if (typeof window.btvTrackField === 'function') window.btvTrackField(_gid, null);
+  }, 150);
 });
 
 // ── Unsaved changes tracking ──────────────────────────────────────────────
@@ -18707,24 +18724,31 @@ window.btvReloadAndRender = function() {
   };
 
   window.btvTrackField = async function (groupId, fieldKey) {
-    console.log('[BTV LS] btvTrackField called, groupId=', groupId, 'field=', fieldKey, '_ch=', !!_ch);
     if (!_ch) return;
     var prevField = _field; // capture before we overwrite it
     _item  = groupId ? 'ls::group::' + groupId : null;
     _field = fieldKey || null;
-    // When leaving a field (fieldKey=null), capture the value for peer sync
+    // When leaving a field via the debounced null path, re-capture value as fallback
     if (!fieldKey && prevField) {
       var leftEl = document.querySelector('#view-form [data-field-key="' + prevField + '"]');
       if (leftEl && leftEl.type !== 'hidden') {
         _lastField = { key: prevField, val: leftEl.value, ts: Date.now() };
-        console.log('[BTV LS] btvTrackField captured lastField:', JSON.stringify(_lastField));
-      } else {
-        console.log('[BTV LS] btvTrackField: leftEl NOT FOUND for prevField=' + prevField);
       }
     }
     if (groupId) window._btvCurrentLaunchItem = _btvLsGetCalendarLaunchItem(groupId);
     if (typeof _btvLsSetSharedLaunchLock === 'function') _btvLsSetSharedLaunchLock(window._btvCurrentLaunchItem);
     await _ch.track({ email: _email, item: _item, field: _field, launchItem: window._btvCurrentLaunchItem || null, ts: Date.now(), lastField: _lastField });
+  };
+
+  // Capture the typed value of a field into _lastField immediately (called on focusout
+  // before the debounce timer fires). This value is then piggybacked on the next
+  // focusin broadcast so peers receive it even when moving quickly between fields.
+  window.btvCaptureLastField = function(fieldKey) {
+    if (!fieldKey) return;
+    var el = document.querySelector('#view-form [data-field-key="' + fieldKey + '"]');
+    if (el && el.type !== 'hidden') {
+      _lastField = { key: fieldKey, val: el.value, ts: Date.now() };
+    }
   };
 
 
