@@ -78,9 +78,9 @@
 
   .view-panel:not(.hidden){flex:1;min-height:0;overflow:auto}
 
-  #calendarView{overflow:hidden!important;display:flex!important;flex-direction:column}
+  #calendarView:not(.hidden){overflow:hidden;display:flex;flex-direction:column}
 
-  #calendarView .table-wrap{flex:1;max-height:none!important;overflow:auto;min-height:0}
+  #calendarView:not(.hidden) .table-wrap{flex:1;max-height:none!important;overflow:auto;min-height:0}
 
   .page-title{
 
@@ -12199,10 +12199,25 @@ e("saveVersionBtn").addEventListener("click", () => { try {
   }
 
   _btvHasUnsavedChanges = false;
-  alert(`Saved: ${label}`);
+  // Visual feedback: flash the button green
+  var _svBtn = e("saveVersionBtn");
+  if (_svBtn) {
+    var _svOrig = _svBtn.textContent;
+    _svBtn.textContent = '✔ Saved';
+    _svBtn.style.background = '#2a6e2a';
+    setTimeout(function(){ _svBtn.textContent = _svOrig; _svBtn.style.background = '#111'; }, 2500);
+  }
+  console.log('[BTV] Version saved:', label);
 
 } catch(err) {
   console.error('[BTV] Save Version error:', err);
+  var _svBtn2 = e("saveVersionBtn");
+  if (_svBtn2) {
+    var _svOrig2 = _svBtn2.textContent;
+    _svBtn2.textContent = '✖ Failed';
+    _svBtn2.style.background = '#c0392b';
+    setTimeout(function(){ _svBtn2.textContent = _svOrig2; _svBtn2.style.background = '#111'; }, 3000);
+  }
   alert('Save Version failed: ' + (err && err.message ? err.message : String(err)));
 }});
 
