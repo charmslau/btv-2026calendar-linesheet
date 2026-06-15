@@ -231,5 +231,19 @@ create policy "btv_pub_cal_delete" on public.public_calendar_entries
 grant all on public.public_calendar_entries to authenticated;
 grant usage, select on sequence public.public_calendar_entries_id_seq to authenticated;
 
+-- Enable realtime so BTV Calendar auto-refreshes when Live is toggled
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'public_calendar_entries'
+  ) then
+    alter publication supabase_realtime add table public.public_calendar_entries;
+  end if;
+end;
+$$;
+
 
 -- ── Done! ─────────────────────────────────────────────────────

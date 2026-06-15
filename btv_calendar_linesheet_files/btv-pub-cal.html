@@ -6,6 +6,7 @@
 <title>BTV Calendar</title>
 <style>
 
+/* ── Variables (identical to management calendar) ─────────────────────────── */
 :root{
   --bg:#f7f6f4;
   --panel:#ffffff;
@@ -20,190 +21,301 @@
   --events:#edecea;
   --wkA:#ffffff;
   --wkB:#f3f2f0;
+  --btn:#f0efed;
+  --delay:#DB6256;
+  --delay-border:#b03020;
 }
 
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden}
-body{
-  font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+/* ── BTV Brand Aesthetic (same as management calendar) ───────────────────── */
+*, *::before, *::after { box-sizing:border-box; border-radius:0 !important; }
+body, button, input, select, textarea {
+  font-family:'Everett','Helvetica Neue',Helvetica,Arial,sans-serif;
+}
+
+html, body { height:100%; overflow:hidden; margin:0; }
+body {
   background:var(--bg);
   color:var(--text);
+  font-size:13px;
   display:flex;
   flex-direction:column;
 }
 
-.app{
-  display:flex;
-  flex-direction:column;
-  height:100%;
-  overflow:hidden;
-}
+.app { display:flex; flex-direction:column; height:100%; overflow:hidden; }
 
 /* ── Toolbar ─────────────────────────────────────────────────────────────── */
-.toolbar{
+.toolbar {
   flex-shrink:0;
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  align-items:center;
-  background:rgba(246,241,232,.97);
+  position:sticky; top:0; z-index:20;
+  display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  background:rgba(247,246,244,.97);
   backdrop-filter:blur(8px);
   border:1px solid var(--grid);
-  border-radius:14px;
+  border-radius:0 !important;
   padding:10px 14px;
   margin:10px 12px 8px;
 }
-.toolbar-title{
-  font-size:15px;
-  font-weight:700;
-  letter-spacing:.01em;
-  color:#3a3530;
+.toolbar-title {
+  font-size:14px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; color:#3a3530;
 }
-.view-only-badge{
-  font-size:10px;
-  font-weight:800;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-  background:#f0ede7;
-  border:1px solid #c5bfb5;
-  color:#787470;
+.view-only-badge {
+  font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  background:#f0ede7; border:1px solid #c5bfb5; color:#787470;
   padding:3px 9px;
-  border-radius:999px;
 }
-.yr-tabs{display:flex;gap:4px;margin-left:auto}
-.yr-tab{
-  padding:4px 14px;border:1px solid var(--grid);border-radius:20px;
-  font-family:inherit;font-size:12px;font-weight:700;background:#fff;
-  color:#888;cursor:pointer;letter-spacing:.04em;
+.yr-tabs { display:flex; gap:4px; margin-left:auto; }
+.yr-tab {
+  padding:4px 14px; border:1px solid var(--grid);
+  font-family:inherit; font-size:12px; font-weight:700;
+  background:#fff; color:#888; cursor:pointer; letter-spacing:.04em;
   transition:background .12s,color .12s,border-color .12s;
 }
-.yr-tab.active{background:#3a3530;color:#fff;border-color:#3a3530}
-.yr-tab:hover:not(.active){background:#f4f2ef}
-.refresh-btn{
-  padding:4px 12px;border:1px solid var(--grid);border-radius:8px;
-  font-family:inherit;font-size:12px;font-weight:600;
-  background:#fff;color:#555;cursor:pointer;
+.yr-tab.active  { background:#3a3530; color:#fff; border-color:#3a3530; }
+.yr-tab:hover:not(.active) { background:#f4f2ef; }
+.refresh-btn {
+  padding:4px 12px; border:1px solid var(--grid);
+  font-family:inherit; font-size:12px; font-weight:600;
+  background:var(--btn); color:#555; cursor:pointer;
 }
-.refresh-btn:hover{background:#f4f2ef}
+.refresh-btn:hover { background:#e8e7e5; }
 
 /* ── Table container ─────────────────────────────────────────────────────── */
-.table-outer{
-  flex:1;
-  min-height:0;
-  overflow:auto;
+.table-outer {
+  flex:1; min-height:0; overflow:auto;
   margin:0 12px 12px;
   border:1px solid var(--grid);
-  border-radius:16px;
   background:var(--panel);
 }
-
-table{
-  border-collapse:separate;
-  border-spacing:0;
-  min-width:100%;
-  width:max-content;
+table {
+  border-collapse:separate; border-spacing:0;
+  min-width:100%; width:max-content;
 }
-th,td{
+th, td {
   border-right:1px solid var(--grid);
   border-bottom:1px solid var(--grid);
   vertical-align:top;
 }
-thead th{
-  background:#e8e2d8;
-  text-align:center;
-  padding:8px 6px;
-  font-weight:600;
-  position:sticky;
-  z-index:4;
+thead th {
+  background:#eceae7;
+  text-align:center; padding:8px 6px; font-weight:600;
+  position:sticky; z-index:4;
 }
-thead tr:nth-child(1) th{top:0}
-thead tr:nth-child(2) th{top:36px}
-thead tr:nth-child(3) th{top:72px}
-thead tr:nth-child(4) th{top:108px}
+thead tr:nth-child(1) th { top:0; }
+thead tr:nth-child(2) th { top:36px; }
+thead tr:nth-child(3) th { top:72px; }
+thead tr:nth-child(4) th { top:108px; }
 
-.corner{
-  position:sticky;left:0;z-index:6;
-  background:#e8e2d8;text-align:left;
-  width:138px;min-width:138px;max-width:138px;
-  padding:8px 10px;white-space:nowrap;
+.corner {
+  position:sticky; left:0; z-index:6;
+  background:#eceae7; text-align:left;
+  width:138px; min-width:138px; max-width:138px;
+  padding:8px 10px; white-space:nowrap;
 }
-thead .corner{z-index:8}
+thead .corner { z-index:8; }
 
-.rowhead{
-  position:sticky;left:0;z-index:5;
-  width:138px;min-width:138px;max-width:138px;
-  padding:12px;font-weight:600;
-  white-space:normal;word-break:break-word;
-  text-align:left;font-size:18px;line-height:1.15;color:#fff;
+.rowhead {
+  position:sticky; left:0; z-index:5;
+  width:138px; min-width:138px; max-width:138px;
+  padding:12px; font-weight:600;
+  white-space:normal; word-break:break-word;
+  text-align:left; font-size:18px; line-height:1.15; color:#fff;
 }
-.bg-global{background:var(--global);color:#2d2d2d}
-.bg-nea{background:var(--nea)}
-.bg-sea{background:var(--sea)}
-.bg-china{background:var(--china)}
-.bg-restocks{background:var(--restocks)}
-.bg-events{background:var(--events);color:#2d2d2d}
+.bg-global  { background:var(--global); color:#2d2d2d; }
+.bg-nea     { background:var(--nea); }
+.bg-sea     { background:var(--sea); }
+.bg-china   { background:var(--china); }
+.bg-restocks{ background:var(--restocks); }
+.bg-events  { background:var(--events); color:#2d2d2d; }
 
-.wk{
-  width:196px;min-width:196px;
-  padding:6px;text-align:center;background:var(--wkA);
-}
-.wk.alt{background:var(--wkB)}
+.wk     { width:196px; min-width:196px; padding:6px; text-align:center; background:var(--wkA); }
+.wk.alt { background:var(--wkB); }
 
-.cell{
-  min-height:120px;display:flex;flex-direction:column;gap:8px;align-items:stretch;
+.cell {
+  min-height:180px; display:flex; flex-direction:column;
+  gap:8px; align-items:stretch;
 }
 
 /* ── Entry card ──────────────────────────────────────────────────────────── */
-.entry{
-  background:#fffdfa;border:1px solid var(--grid);
-  border-radius:18px;padding:12px;text-align:left;
-  position:relative;transition:box-shadow .15s,transform .15s;
+.entry {
+  background:#ffffff; border:1px solid var(--grid);
+  padding:12px; text-align:left; position:relative;
+  cursor:pointer;
+  transition:box-shadow .15s, transform .15s;
 }
-.entry:hover{
-  z-index:15;box-shadow:0 10px 28px rgba(0,0,0,.16);transform:translateY(-1px);
+.entry:hover {
+  z-index:15; box-shadow:0 8px 24px rgba(0,0,0,.12); transform:translateY(-1px);
 }
-.entry.delay{background:#DB6256;border-color:#b03020}
+.entry.delay { background:var(--delay); border-color:var(--delay-border); }
 .entry.delay .entry-title,.entry.delay .entry-date,.entry.delay .cat,
 .entry.delay .prod-name,.entry.delay .prod-price,.entry.delay .prod-meta,
-.entry.delay .label,.entry.delay .muted{color:#111!important}
+.entry.delay .label,.entry.delay .muted { color:#111 !important; }
 
-.entry-preview{overflow:hidden}
-.entry:hover .entry-preview{overflow:visible}
+.entry-preview { max-height:150px; overflow:hidden; }
+.entry:hover .entry-preview { max-height:none; overflow:visible; }
 
-.title-row{display:flex;gap:8px;align-items:flex-start;justify-content:space-between;margin-bottom:4px}
-.title-left{display:flex;gap:10px;align-items:flex-start;min-width:0}
+.title-row {
+  display:flex; gap:8px; align-items:flex-start;
+  justify-content:space-between; margin-bottom:4px;
+}
+.title-left {
+  display:flex; gap:10px; align-items:flex-start; min-width:0;
+}
+.dot {
+  width:14px; height:14px; border:1px solid rgba(0,0,0,.15);
+  margin-top:6px; flex:0 0 auto;
+}
+.dot.high   { background:#c92323; }
+.dot.medium { background:#f2a114; }
+.dot.low    { background:#f2d148; }
+.dot.brand  { background:#f2d148; }
 
-.dot{width:14px;height:14px;border-radius:50%;margin-top:6px;border:1px solid rgba(0,0,0,.15);flex:0 0 auto}
-.dot.high{background:#c92323}
-.dot.medium{background:#f2a114}
-.dot.low{background:#f2d148}
-.dot.brand{background:#b8a689}
-
-.entry-title{font-weight:600;line-height:1.15;font-size:13px;white-space:normal;word-break:break-word;overflow:hidden}
-.entry-date{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:4px;line-height:1.05}
-
-.live-badge{
-  display:inline-block;flex-shrink:0;margin-top:2px;
-  font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
-  background:#2a6e2a;color:#fff;padding:2px 8px;border-radius:6px;white-space:nowrap;
+.entry-title {
+  font-weight:600; line-height:1.15; font-size:13px;
+  white-space:normal; word-break:break-word; overflow:hidden;
+}
+.entry-date {
+  font-size:13px; color:var(--muted); font-weight:600;
+  margin-bottom:4px; line-height:1.05;
 }
 
-.group{display:grid;grid-template-columns:64px 1fr;gap:12px;margin-top:10px}
-.cat{font-weight:600;font-size:10px}
+.live-badge {
+  display:inline-block; flex-shrink:0; margin-top:2px;
+  font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+  background:#2a6e2a; color:#fff; padding:2px 8px; white-space:nowrap;
+}
 
-.prod{margin-bottom:10px}
-.prod-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-.prod-name{font-weight:600;min-width:0;flex:1 1 auto;line-height:1.15;font-size:12px;white-space:normal;word-break:break-word;overflow:hidden}
-.prod-price{white-space:nowrap;font-weight:600;flex:0 0 auto;font-size:12px}
-.prod-meta{white-space:pre-line;margin-top:2px;line-height:1.08;font-size:12px}
+.group { display:grid; grid-template-columns:64px 1fr; gap:12px; margin-top:10px; }
+.cat   { font-weight:600; font-size:10px; }
 
-.label{font-weight:600;font-size:12px}
-.muted{color:var(--muted)}
-.entry-info{font-size:12px;margin-top:4px;line-height:1.3}
+.prod          { margin-bottom:10px; }
+.prod-top      { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+.prod-name     { font-weight:600; min-width:0; flex:1 1 auto; line-height:1.15; font-size:12px; white-space:normal; word-break:break-word; overflow:hidden; }
+.prod-price    { white-space:nowrap; font-weight:600; flex:0 0 auto; font-size:12px; }
+.prod-meta     { white-space:pre-line; margin-top:2px; line-height:1.08; font-size:12px; }
+
+.label      { font-weight:600; font-size:12px; }
+.muted      { color:var(--muted); }
+.entry-info { font-size:12px; margin-top:4px; line-height:1.3; }
+.launch-status { margin-top:12px; padding-top:8px; font-size:12px; line-height:1.08; }
+
+/* ── Category colour coding (same as management calendar) ─────────────────── */
+.entry.cat-bags {
+  border-color:#7f5a3a !important;
+  box-shadow:inset 0 0 0 1px rgba(127,90,58,.2);
+  color:#7f5a3a;
+}
+.entry.cat-mrtw,.entry.cat-wrtw,.entry.cat-krtw {
+  border-color:#6fa8c2 !important;
+  box-shadow:inset 0 0 0 1px rgba(111,168,194,.2);
+  color:#2f7ea0;
+}
+.entry.cat-acc,.entry.cat-eyewear,.entry.cat-footwear,.entry.cat-lf,.entry.cat-pets {
+  border-color:#7f7f7f !important;
+  box-shadow:inset 0 0 0 1px rgba(127,127,127,.2);
+  color:#676767;
+}
+.entry.cat-bags,
+.entry.cat-mrtw,.entry.cat-wrtw,.entry.cat-krtw,
+.entry.cat-acc,.entry.cat-eyewear,.entry.cat-footwear,.entry.cat-lf,.entry.cat-pets {
+  border-width:3px !important;
+}
+.entry.cat-bags::before,
+.entry.cat-mrtw::before,.entry.cat-wrtw::before,.entry.cat-krtw::before,
+.entry.cat-acc::before,.entry.cat-eyewear::before,.entry.cat-footwear::before,
+.entry.cat-lf::before,.entry.cat-pets::before {
+  content:""; position:absolute; left:0; top:0; right:0; height:6px;
+  background:currentColor; opacity:.95;
+}
+.entry.cat-bags .entry-title,.entry.cat-bags .entry-date,
+.entry.cat-mrtw .entry-title,.entry.cat-mrtw .entry-date,
+.entry.cat-wrtw .entry-title,.entry.cat-wrtw .entry-date,
+.entry.cat-krtw .entry-title,.entry.cat-krtw .entry-date,
+.entry.cat-acc .entry-title,.entry.cat-acc .entry-date,
+.entry.cat-eyewear .entry-title,.entry.cat-eyewear .entry-date,
+.entry.cat-footwear .entry-title,.entry.cat-footwear .entry-date,
+.entry.cat-lf .entry-title,.entry.cat-lf .entry-date,
+.entry.cat-pets .entry-title,.entry.cat-pets .entry-date { color:inherit; }
+
+/* ── Markdown row ────────────────────────────────────────────────────────── */
+.markdown-span-cell {
+  padding:0 !important; background:transparent !important;
+  vertical-align:top !important; position:relative !important;
+}
+.markdown-track { min-height:44px; position:relative; }
+.markdown-bubble-span {
+  position:relative; margin:3px 8px; border:2px dashed #8f7f67;
+  background:rgba(255,247,223,.9); padding:4px 10px;
+  font-size:12px; line-height:1.15;
+}
+.markdown-bubble-span.md-start { margin-right:0; padding-right:2px; border-right:none; }
+.markdown-bubble-span.md-mid   { margin:2px 0; padding:0 4px; border-left:none; border-right:none; }
+.markdown-bubble-span.md-end   { margin-left:0; padding-left:4px; border-left:none; }
+.markdown-title { font-weight:700; }
+.markdown-rowhead { font-size:12px !important; line-height:1.2 !important; }
 
 /* ── Status / empty ─────────────────────────────────────────────────────── */
-.msg-cell{padding:40px 20px;text-align:center;color:#aaa;font-size:13px}
-.empty-section td{background:#fafaf9}
+.msg-cell { padding:40px 20px; text-align:center; color:#aaa; font-size:13px; }
+
+/* ── Entry detail popup ──────────────────────────────────────────────────── */
+.popup-backdrop {
+  display:none; position:fixed; inset:0; z-index:500;
+  background:rgba(0,0,0,.38); align-items:flex-start;
+  justify-content:center; padding:18px; overflow:auto;
+}
+.popup-backdrop.show { display:flex; }
+.popup-card {
+  width:min(720px,100%); background:#fbf8f1;
+  border:1px solid var(--grid); padding:0; margin:auto;
+  box-shadow:0 12px 48px rgba(0,0,0,.18);
+  position:relative;
+}
+.popup-header {
+  display:flex; align-items:flex-start; justify-content:space-between;
+  gap:12px; padding:16px 20px 12px; border-bottom:1px solid var(--grid);
+  background:#f0ede7;
+}
+.popup-title  { font-size:18px; font-weight:700; letter-spacing:.01em; color:#111; line-height:1.2; }
+.popup-meta   { font-size:12px; color:var(--muted); margin-top:4px; }
+.popup-close  {
+  flex-shrink:0; padding:4px 10px; border:1px solid #c8c5c0;
+  background:#fff; color:#555; font-size:18px; line-height:1;
+  cursor:pointer; align-self:flex-start;
+}
+.popup-close:hover { background:#e8e7e5; }
+.popup-body   { padding:16px 20px; }
+.popup-section-hd {
+  font-size:10px; font-weight:800; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--muted);
+  margin:14px 0 6px; padding-bottom:4px;
+  border-bottom:1px solid var(--grid);
+}
+.popup-section-hd:first-child { margin-top:0; }
+.popup-table {
+  width:100%; border-collapse:collapse; font-size:12px;
+}
+.popup-table th {
+  text-align:left; font-size:10px; font-weight:700;
+  letter-spacing:.06em; text-transform:uppercase;
+  color:var(--muted); padding:5px 8px;
+  border-bottom:1px solid var(--grid);
+  background:#f5f3ef;
+}
+.popup-table td {
+  padding:6px 8px; border-bottom:1px solid #ede9e3;
+  vertical-align:top; line-height:1.35;
+}
+.popup-table tr:last-child td { border-bottom:none; }
+.popup-cat-row td { font-weight:700; background:#f5f3ef; color:#555; font-size:10px; letter-spacing:.05em; text-transform:uppercase; }
+.popup-footer {
+  padding:10px 20px; border-top:1px solid var(--grid);
+  font-size:12px; color:var(--muted); background:#f5f3ef;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.popup-sku-count { font-weight:700; color:#111; }
+.popup-info-row  { display:grid; grid-template-columns:140px 1fr; gap:4px 12px; margin-bottom:6px; }
+.popup-lbl       { font-weight:600; font-size:12px; }
+.popup-val       { font-size:12px; color:#333; }
 
 </style>
 </head>
@@ -218,7 +330,7 @@ thead .corner{z-index:8}
       <button class="yr-tab active" id="yr2026" onclick="setYear(2026)">2026</button>
       <button class="yr-tab"        id="yr2027" onclick="setYear(2027)">2027</button>
     </div>
-    <button class="refresh-btn" onclick="loadCalendar()">&#8635; Refresh</button>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadCalendar()">&#8635; Refresh</button>
   </div>
 
   <div class="table-outer">
@@ -229,12 +341,34 @@ thead .corner{z-index:8}
 
 </div>
 
+<!-- Entry detail popup -->
+<div class="popup-backdrop" id="entryPopup" onclick="handleBackdropClick(event)">
+  <div class="popup-card" id="entryPopupCard">
+    <div class="popup-header">
+      <div>
+        <div class="popup-title" id="popupTitle"></div>
+        <div class="popup-meta"  id="popupMeta"></div>
+      </div>
+      <button class="popup-close" onclick="closePopup()">&#x2715;</button>
+    </div>
+    <div class="popup-body" id="popupBody"></div>
+    <div class="popup-footer">
+      <span id="popupSection" style="font-weight:600"></span>
+      <span class="popup-sku-count" id="popupSkuCount"></span>
+    </div>
+  </div>
+</div>
+
 <script>
-var _year   = 2026;
-var _sb     = null;
-var _loaded = false;
+var _year    = 2026;
+var _sb      = null;
+var _loaded  = false;
+var _entryMap = {};     // entry_id → row (for popup)
+var _rtChannel = null;  // realtime channel
+var _debounceTimer = null;
 
 var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var MONTHS_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 var SECTIONS = [
   {key:'global',         label:'Global',               cls:'bg-global'},
@@ -246,41 +380,38 @@ var SECTIONS = [
   {key:'store_openings', label:'Store Openings',       cls:'bg-global'},
 ];
 
+var SECTION_LABELS = {};
+SECTIONS.forEach(function(s){ SECTION_LABELS[s.key] = s.label; });
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function esc(v){
   return String(v==null?'':v)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-
 function fmtDDMMM(v){
   if(!v) return '';
   var d = new Date(v+'T00:00:00');
-  if(isNaN(d.getTime())) return v;
+  if(isNaN(d.getTime())) return String(v);
   return String(d.getDate()).padStart(2,'0')+'-'+MONTHS[d.getMonth()];
 }
-
 function dayName(v){
   if(!v) return '';
   var d = new Date(v+'T00:00:00');
   if(isNaN(d.getTime())) return '';
   return d.toLocaleDateString('en-US',{weekday:'short'});
 }
-
 function weekRangeLabel(a,b){
   return String(a.getDate()).padStart(2,'0')+'-'+MONTHS[a.getMonth()]+
     ' to '+String(b.getDate()).padStart(2,'0')+'-'+MONTHS[b.getMonth()];
 }
-
 function mondayOnOrBefore(date){
   var d = new Date(date); var day=(d.getDay()+6)%7;
   d.setDate(d.getDate()-day); d.setHours(0,0,0,0); return d;
 }
-
 function addDays(date,n){
   var d = new Date(date); d.setDate(d.getDate()+n); return d;
 }
-
 function buildWeeks(yr){
   var start = new Date(yr+'-01-01T00:00:00');
   var end   = new Date(yr+'-12-31T00:00:00');
@@ -292,36 +423,39 @@ function buildWeeks(yr){
     if(wkEnd>=start && cur<=end){
       out.push({
         id:    cur.toISOString().slice(0,10),
-        start: new Date(cur),
-        end:   new Date(wkEnd),
+        start: new Date(cur), end: new Date(wkEnd),
         month: MONTHS[anchor.getMonth()],
-        quarter: 'Q'+(Math.floor(anchor.getMonth()/3)+1)
+        quarter:'Q'+(Math.floor(anchor.getMonth()/3)+1)
       });
     }
     cur = addDays(cur,7);
   }
-  out.forEach(function(w,i){ w.weekOfYear = i+1; });
+  out.forEach(function(w,i){ w.weekOfYear=i+1; });
   return out;
 }
-
-// ── Entry renderers (read-only) ───────────────────────────────────────────────
-
+function weekIdsInRange(startISO, endISO, weeks){
+  var a = new Date(startISO+'T00:00:00');
+  var b = new Date(endISO+'T00:00:00');
+  if(isNaN(a.getTime())||isNaN(b.getTime())) return [];
+  return weeks.filter(function(w){ return !(w.end<a||w.start>b); }).map(function(w){ return w.id; });
+}
 function dotCls(entry){
   var k = entry.keyLevel||'brand';
   return {high:'high',medium:'medium',low:'low',brand:'brand'}[k]||'brand';
 }
-
-function liveBadge(){
-  return '<span class="live-badge">&#10003; Live</span>';
+function globalCategoryClass(entry){
+  var firstCat = ((entry.lines||[]).find(function(x){return x.category;})||{}).category||'';
+  return firstCat ? 'cat-'+firstCat.toLowerCase() : '';
 }
+function liveBadge(){ return '<span class="live-badge">&#10003; Live</span>'; }
 
-function renderGlobal(e){
+// ── Entry card renderers ──────────────────────────────────────────────────────
+
+function renderGlobal(e, entryId){
   var grouped = {};
   (e.lines||[]).forEach(function(l){
     if(!(l.category||l.productName||l.colour||l.size||l.price)) return;
-    var c = l.category||'';
-    if(!grouped[c]) grouped[c]=[];
-    grouped[c].push(l);
+    var c = l.category||''; if(!grouped[c]) grouped[c]=[]; grouped[c].push(l);
   });
   var groups = Object.keys(grouped).map(function(cat){
     return '<div class="group"><div class="cat">'+esc(cat)+'</div><div>'+
@@ -330,49 +464,37 @@ function renderGlobal(e){
           '<div class="prod-name">'+esc(l.productName||'')+'</div>'+
           '<div class="prod-price">'+(l.price?'$'+esc(l.price):'')+'</div>'+
           '</div><div class="prod-meta">'+esc(l.colour||'')+'</div></div>';
-      }).join('')+
-    '</div></div>';
+      }).join('')+'</div></div>';
   }).join('');
-  var delay = (e.launchStatus==='delay'&&(e.delayMarkets||[]).length)
-    ? '<div class="entry-info"><span class="label">Delay Mkt:</span> '+
-      (e.delayMarkets||[]).map(function(x){return esc(x.market)+' '+fmtDDMMM(x.eta);}).join(', ')+'</div>'
-    : '';
   var mkts = (e.noLaunchMarkets||[]).length ? esc((e.noLaunchMarkets).join(', ')) : '—';
-  return '<div class="entry'+(e.launchStatus==='delay'?' delay':'')+'">'+
-    '<div class="entry-preview">'+
+  var catCls = globalCategoryClass(e);
+  var hasCat = catCls ? ' style="padding-top:18px"' : '';
+  return '<div class="entry'+(e.launchStatus==='delay'?' delay':'')+(catCls?' '+catCls:'')+'"'+
+    ' onclick="openPopup(\''+esc(entryId)+'\')" title="Click for details">'+
+    '<div class="entry-preview"'+hasCat+'>'+
     '<div class="title-row">'+
-      '<div class="title-left">'+
-        '<div class="dot '+dotCls(e)+'"></div>'+
-        '<div>'+
-          '<div class="entry-date">'+fmtDDMMM(e.launchDate)+(e.launchDate?' ('+dayName(e.launchDate)+')':'')+'</div>'+
-          '<div class="entry-title">'+esc(e.launchTitle||'')+'</div>'+
-        '</div>'+
-      '</div>'+
+      '<div class="title-left"><div class="dot '+dotCls(e)+'"></div>'+
+        '<div><div class="entry-date">'+fmtDDMMM(e.launchDate)+(e.launchDate?' ('+dayName(e.launchDate)+')':'')+'</div>'+
+        '<div class="entry-title">'+esc(e.launchTitle||'')+'</div></div></div>'+
       liveBadge()+
-    '</div>'+
-    groups+
-    '<div class="entry-info"><span class="label">No. of SKUs:</span> '+esc(e.skuCount||0)+'</div>'+
-    '<div class="entry-info"><span class="label">Launch (Mkt):</span> '+mkts+'</div>'+
-    delay+
+    '</div>'+groups+
+    '<div class="entry-info"><span class="label">SKUs:</span> '+esc(e.skuCount||0)+'</div>'+
+    '<div class="entry-info"><span class="label">Mkt:</span> '+mkts+'</div>'+
     '</div></div>';
 }
 
-function renderRegional(e){
+function renderRegional(e, entryId){
   var displayDate = e.launchDate||e.startDateISO||'';
   var dateStr = displayDate ? fmtDDMMM(displayDate)+' ('+dayName(displayDate)+')' : (e.startDate||'');
   var displayTitle = e.launchTitle||e.optionType||'';
-  var marketStr = (e.allMarkets||false) ? 'All' : esc((e.countries||[]).join(', ')||'—');
+  var marketStr = (e.allMarkets||false)?'All':esc((e.countries||[]).join(', ')||'—');
   var colour = e.colour||(e.colorSize&&!e.colorSize.includes(' / ')?e.colorSize:(e.colorSize||'').split(' / ')[0])||'';
-  return '<div class="entry">'+
+  return '<div class="entry" onclick="openPopup(\''+esc(entryId)+'\')" title="Click for details">'+
     '<div class="entry-preview">'+
     '<div class="title-row">'+
-      '<div class="title-left">'+
-        '<div class="dot '+dotCls(e)+'"></div>'+
-        '<div>'+
-          '<div class="entry-date">'+dateStr+'</div>'+
-          '<div class="entry-title">'+esc(displayTitle)+'</div>'+
-        '</div>'+
-      '</div>'+
+      '<div class="title-left"><div class="dot '+dotCls(e)+'"></div>'+
+        '<div><div class="entry-date">'+dateStr+'</div>'+
+        '<div class="entry-title">'+esc(displayTitle)+'</div></div></div>'+
       liveBadge()+
     '</div>'+
     '<div class="group"><div class="cat">'+esc(e.optionType||'')+'</div>'+
@@ -380,66 +502,58 @@ function renderRegional(e){
       '<div class="prod-name">'+esc(e.productTitle||'—')+'</div>'+
       '<div class="prod-price">'+(e.price?'$'+esc(e.price):'')+'</div>'+
     '</div><div class="prod-meta">'+esc(colour)+'</div></div></div></div>'+
-    '<div class="entry-info"><span class="label">Markets:</span> '+marketStr+'</div>'+
+    '<div class="entry-info"><span class="label">Mkts:</span> '+marketStr+'</div>'+
     '</div></div>';
 }
 
-function renderRestock(e){
+function renderRestock(e, entryId){
   var displayDate = e.etaISO||'';
   var dateStr = displayDate ? 'ETA '+fmtDDMMM(displayDate)+' ('+dayName(displayDate)+')' : (e.eta?'ETA '+e.eta:'');
-  var lines = (e.lines&&e.lines.length) ? e.lines : [{productTitle:e.productTitle||'',colour:'',colors:e.colors||''}];
+  var lines = (e.lines&&e.lines.length)?e.lines:[{productTitle:e.productTitle||'',colour:'',colors:e.colors||''}];
   var displayTitle = lines.length>1
     ? lines.map(function(l){return l.productTitle;}).filter(Boolean).join(', ')
     : (lines[0].productTitle||e.productTitle||'');
-  var marketStr = (e.allMarkets||false) ? 'All Markets' : esc((e.markets||[]).join(', ')||'—');
+  var marketStr = (e.allMarkets||false)?'All Markets':esc((e.markets||[]).join(', ')||'—');
   var lineHTML = lines.filter(function(l){return l.productTitle||l.colour||l.colors;}).map(function(l){
     var col = l.colour||(l.colors&&!l.colors.includes(' / ')?l.colors:(l.colors||'').split(' / ')[0])||'';
     return '<div class="prod"><div class="prod-top"><div class="prod-name">'+esc(l.productTitle||'—')+'</div></div>'+
       '<div class="prod-meta">'+esc(col)+'</div></div>';
   }).join('');
-  return '<div class="entry">'+
+  return '<div class="entry" onclick="openPopup(\''+esc(entryId)+'\')" title="Click for details">'+
     '<div class="entry-preview">'+
     '<div class="title-row">'+
-      '<div class="title-left">'+
-        '<div class="dot '+dotCls(e)+'"></div>'+
-        '<div>'+
-          '<div class="entry-date">'+dateStr+'</div>'+
-          '<div class="entry-title">'+esc(displayTitle)+'</div>'+
-        '</div>'+
-      '</div>'+
+      '<div class="title-left"><div class="dot '+dotCls(e)+'"></div>'+
+        '<div><div class="entry-date">'+dateStr+'</div>'+
+        '<div class="entry-title">'+esc(displayTitle)+'</div></div></div>'+
       liveBadge()+
     '</div>'+
     '<div class="group"><div class="cat">Restock</div><div>'+lineHTML+'</div></div>'+
-    '<div class="entry-info"><span class="label">Markets:</span> '+marketStr+'</div>'+
+    '<div class="entry-info"><span class="label">Mkts:</span> '+marketStr+'</div>'+
     '</div></div>';
 }
 
-function renderStoreOpening(e){
-  return '<div class="entry">'+
+function renderStoreOpening(e, entryId){
+  return '<div class="entry" onclick="openPopup(\''+esc(entryId)+'\')" title="Click for details">'+
     '<div class="entry-preview">'+
     '<div class="title-row">'+
-      '<div>'+
-        '<div class="entry-title">'+esc(e.storeName||'')+'</div>'+
-        '<div class="entry-date">'+(e.targetOpenDate?'Target '+fmtDDMMM(e.targetOpenDate):'')+'</div>'+
-      '</div>'+
+      '<div><div class="entry-title">'+esc(e.storeName||'')+'</div>'+
+      '<div class="entry-date">'+(e.targetOpenDate?'Target '+fmtDDMMM(e.targetOpenDate):'')+'</div></div>'+
       liveBadge()+
     '</div>'+
     '<div class="entry-info"><span class="label">Market:</span> '+esc(e.market||'—')+'</div>'+
-    '<div class="entry-info"><span class="label">Store Size:</span> '+esc(e.storeSize||'—')+'</div>'+
+    '<div class="entry-info"><span class="label">Size:</span> '+esc(e.storeSize||'—')+'</div>'+
     '</div></div>';
 }
 
-function renderEvent(e){
-  return '<div class="entry">'+
+function renderEvent(e, entryId){
+  return '<div class="entry" onclick="openPopup(\''+esc(entryId)+'\')" title="Click for details">'+
     '<div class="entry-preview">'+
     '<div class="title-row">'+
-      '<div>'+
-        '<div class="entry-title">'+esc(e.title||'')+'</div>'+
-        '<div class="entry-date">'+(e.startDate||'')+(e.endDate?' to '+e.endDate:'')+'</div>'+
-      '</div>'+
+      '<div><div class="entry-title">'+esc(e.title||'')+'</div>'+
+      '<div class="entry-date">'+(e.startDate||'')+(e.endDate?' → '+e.endDate:'')+'</div></div>'+
       liveBadge()+
     '</div>'+
-    '<div class="entry-info"><span class="label">Markets:</span> '+(e.allMarkets?'All':esc((e.markets||[]).join(', ')||'—'))+'</div>'+
+    '<div class="entry-info"><span class="label">Mkts:</span> '+(e.allMarkets?'All':esc((e.markets||[]).join(', ')||'—'))+'</div>'+
     (e.notes?'<div class="entry-info">'+esc(e.notes)+'</div>':'')+
     '</div></div>';
 }
@@ -447,13 +561,166 @@ function renderEvent(e){
 function renderEntry(row){
   var e   = row.entry_data||{};
   var sec = row.section||'global';
-  if(sec==='global')         return renderGlobal(e);
-  if(sec==='china'||sec==='sea'||sec==='nea') return renderRegional(e);
-  if(sec==='restocks')       return renderRestock(e);
-  if(sec==='store_openings') return renderStoreOpening(e);
-  if(sec==='events')         return renderEvent(e);
-  return renderGlobal(e);
+  var id  = row.entry_id||row.id||'';
+  _entryMap[id] = row;
+  if(sec==='global')         return renderGlobal(e, id);
+  if(sec==='china'||sec==='sea'||sec==='nea') return renderRegional(e, id);
+  if(sec==='restocks')       return renderRestock(e, id);
+  if(sec==='store_openings') return renderStoreOpening(e, id);
+  if(sec==='events')         return renderEvent(e, id);
+  return renderGlobal(e, id);
 }
+
+// ── Popup ─────────────────────────────────────────────────────────────────────
+
+function openPopup(entryId){
+  var row = _entryMap[entryId]; if(!row) return;
+  var e   = row.entry_data||{};
+  var sec = row.section||'global';
+
+  // Title + meta
+  var title = e.launchTitle||e.title||e.storeName||e.productTitle||'(Untitled)';
+  var dateStr = '';
+  if(sec==='global'||sec==='china'||sec==='sea'||sec==='nea'){
+    var d = e.launchDate||e.startDateISO||e.startDate||'';
+    if(d) dateStr = fmtDDMMM(d)+' ('+dayName(d)+')';
+  } else if(sec==='restocks'){
+    var d2 = e.etaISO||''; dateStr = d2 ? 'ETA '+fmtDDMMM(d2) : (e.eta?'ETA '+e.eta:'');
+  } else if(sec==='events'){
+    dateStr = (e.startDate||'')+(e.endDate?' → '+e.endDate:'');
+  } else if(sec==='store_openings'){
+    dateStr = e.targetOpenDate ? 'Target '+fmtDDMMM(e.targetOpenDate) : '';
+  }
+
+  document.getElementById('popupTitle').textContent = title;
+  document.getElementById('popupSection').textContent = SECTION_LABELS[sec]||sec;
+  document.getElementById('popupMeta').textContent = [dateStr, 'Live'].filter(Boolean).join('  ·  ');
+
+  // Body
+  var body = '';
+  var totalSkus = 0;
+
+  if(sec==='global'){
+    var grouped = {};
+    (e.lines||[]).forEach(function(l){
+      if(!(l.category||l.productName||l.colour||l.size||l.price)) return;
+      var c = l.category||'Other'; if(!grouped[c]) grouped[c]=[]; grouped[c].push(l);
+    });
+    body += '<div class="popup-section-hd">Products</div>';
+    body += '<table class="popup-table"><thead><tr>'+
+      '<th>Category</th><th>Product</th><th>Color</th><th style="text-align:right">Price</th>'+
+      '</tr></thead><tbody>';
+    Object.keys(grouped).forEach(function(cat){
+      grouped[cat].forEach(function(l, li){
+        var skuCount = Number(l.skuCount)||1; totalSkus += skuCount;
+        body += '<tr>';
+        if(li===0) body += '<td rowspan="'+grouped[cat].length+'" style="font-weight:700;vertical-align:top">'+esc(cat)+'</td>';
+        body += '<td>'+esc(l.productName||'—')+'</td>'+
+          '<td>'+esc(l.colour||'')+(l.size?' / '+esc(l.size):'')+'</td>'+
+          '<td style="text-align:right">'+(l.price?'$'+esc(l.price):'—')+'</td>'+
+          '</tr>';
+      });
+    });
+    body += '</tbody></table>';
+    body += '<div class="popup-section-hd">Launch Details</div>';
+    body += '<div class="popup-info-row">'+
+      '<span class="popup-lbl">Launch Markets:</span><span class="popup-val">'+esc((e.noLaunchMarkets||[]).join(', ')||'—')+'</span></div>';
+    if(e.noLaunchChannelsCollapsed&&e.noLaunchChannelsCollapsed.length){
+      body += '<div class="popup-info-row">'+
+        '<span class="popup-lbl">Launch Channels:</span><span class="popup-val">'+
+        (e.noLaunchChannelsCollapsed||[]).map(function(x){
+          return esc(x.market)+': '+(x.stores&&x.stores.length?x.stores.join(', '):'—');
+        }).join(' | ')+'</span></div>';
+    }
+    if(e.launchStatus==='delay'){
+      body += '<div class="popup-info-row">'+
+        '<span class="popup-lbl">Status:</span><span class="popup-val" style="color:#c43030;font-weight:700">Delay Flagged</span></div>';
+      if((e.delayMarkets||[]).length){
+        body += '<div class="popup-info-row">'+
+          '<span class="popup-lbl">Delay Markets:</span><span class="popup-val">'+
+          (e.delayMarkets||[]).map(function(x){return esc(x.market)+' ETA '+fmtDDMMM(x.eta);}).join(', ')+'</span></div>';
+      }
+    }
+    if(e.skuCount) totalSkus = Number(e.skuCount);
+
+  } else if(sec==='china'||sec==='sea'||sec==='nea'){
+    var colour = e.colour||(e.colorSize&&!e.colorSize.includes(' / ')?e.colorSize:(e.colorSize||'').split(' / ')[0])||'';
+    var size   = e.size||(e.colorSize&&e.colorSize.includes(' / ')?e.colorSize.split(' / ').slice(1).join(' / '):'')||'';
+    body += '<div class="popup-section-hd">Product</div>';
+    body += '<table class="popup-table"><thead><tr>'+
+      '<th>Type</th><th>Product</th><th>Color / Size</th><th style="text-align:right">Price</th>'+
+      '</tr></thead><tbody><tr>'+
+      '<td>'+esc(e.optionType||'—')+'</td>'+
+      '<td>'+esc(e.productTitle||'—')+'</td>'+
+      '<td>'+esc(colour)+(size?' / '+esc(size):'')+'</td>'+
+      '<td style="text-align:right">'+(e.price?'$'+esc(e.price):'—')+'</td>'+
+      '</tr></tbody></table>';
+    body += '<div class="popup-section-hd">Markets &amp; Channels</div>';
+    body += '<div class="popup-info-row">'+
+      '<span class="popup-lbl">Markets:</span><span class="popup-val">'+
+      ((e.allMarkets||false)?'All':esc((e.countries||[]).join(', ')||'—'))+'</span></div>';
+    if(e.startDate){
+      body += '<div class="popup-info-row">'+
+        '<span class="popup-lbl">Dates:</span><span class="popup-val">'+esc(e.startDate)+(e.endDate?' → '+esc(e.endDate):'')+'</span></div>';
+    }
+    if(sec==='nea'||sec==='sea'){
+      var stores = (e.stores||[]).join(', ');
+      if(stores) body += '<div class="popup-info-row"><span class="popup-lbl">Stores:</span><span class="popup-val">'+esc(stores)+'</span></div>';
+    }
+    if(e.optionType==='GWP'&&e.mechanics){
+      body += '<div class="popup-info-row"><span class="popup-lbl">Mechanics:</span><span class="popup-val">'+esc(e.mechanics)+'</span></div>';
+    }
+    totalSkus = 1;
+
+  } else if(sec==='restocks'){
+    var lines2 = (e.lines&&e.lines.length)?e.lines:[{productTitle:e.productTitle||'',colour:'',colors:e.colors||''}];
+    body += '<div class="popup-section-hd">Restock Lines</div>';
+    body += '<table class="popup-table"><thead><tr>'+
+      '<th>Product</th><th>Color</th>'+
+      '</tr></thead><tbody>';
+    lines2.forEach(function(l){
+      var col = l.colour||(l.colors&&!l.colors.includes(' / ')?l.colors:(l.colors||'').split(' / ')[0])||'';
+      body += '<tr><td>'+esc(l.productTitle||'—')+'</td><td>'+esc(col)+'</td></tr>';
+    });
+    body += '</tbody></table>';
+    body += '<div class="popup-section-hd">Details</div>';
+    body += '<div class="popup-info-row"><span class="popup-lbl">Markets:</span><span class="popup-val">'+
+      ((e.allMarkets||false)?'All Markets':esc((e.markets||[]).join(', ')||'—'))+'</span></div>';
+    var etaD = e.etaISO||'';
+    if(etaD) body += '<div class="popup-info-row"><span class="popup-lbl">ETA:</span><span class="popup-val">'+fmtDDMMM(etaD)+' ('+dayName(etaD)+')</span></div>';
+    totalSkus = lines2.length;
+
+  } else if(sec==='store_openings'){
+    body += '<div class="popup-section-hd">Store Details</div>';
+    body += '<div class="popup-info-row"><span class="popup-lbl">Market:</span><span class="popup-val">'+esc(e.market||'—')+'</span></div>';
+    body += '<div class="popup-info-row"><span class="popup-lbl">Store Size:</span><span class="popup-val">'+esc(e.storeSize||'—')+'</span></div>';
+    if(e.storeAddress) body += '<div class="popup-info-row"><span class="popup-lbl">Address:</span><span class="popup-val">'+esc(e.storeAddress)+'</span></div>';
+    body += '<div class="popup-info-row"><span class="popup-lbl">Target Opening:</span><span class="popup-val">'+
+      (e.targetOpenDate?fmtDDMMM(e.targetOpenDate)+' ('+dayName(e.targetOpenDate)+')':'—')+'</span></div>';
+
+  } else if(sec==='events'){
+    body += '<div class="popup-section-hd">Event Details</div>';
+    body += '<div class="popup-info-row"><span class="popup-lbl">Dates:</span><span class="popup-val">'+
+      esc(e.startDate||'—')+(e.endDate?' → '+esc(e.endDate):'')+'</span></div>';
+    body += '<div class="popup-info-row"><span class="popup-lbl">Markets:</span><span class="popup-val">'+
+      ((e.allMarkets||false)?'All':esc((e.markets||[]).join(', ')||'—'))+'</span></div>';
+    if(e.anthemIncluded!==undefined) body += '<div class="popup-info-row"><span class="popup-lbl">Anthem Included:</span><span class="popup-val">'+
+      (e.anthemIncluded?'Yes':'No')+'</span></div>';
+    if(e.notes) body += '<div class="popup-section-hd">Notes</div><div>'+esc(e.notes)+'</div>';
+  }
+
+  document.getElementById('popupBody').innerHTML = body;
+  document.getElementById('popupSkuCount').textContent = totalSkus ? 'Total SKUs: '+totalSkus : '';
+  document.getElementById('entryPopup').classList.add('show');
+}
+
+function closePopup(){
+  document.getElementById('entryPopup').classList.remove('show');
+}
+function handleBackdropClick(ev){
+  if(ev.target===document.getElementById('entryPopup')) closePopup();
+}
+document.addEventListener('keydown',function(ev){ if(ev.key==='Escape') closePopup(); });
 
 // ── Main render ───────────────────────────────────────────────────────────────
 
@@ -461,99 +728,179 @@ function setYear(yr){
   _year = yr;
   document.getElementById('yr2026').classList.toggle('active', yr===2026);
   document.getElementById('yr2027').classList.toggle('active', yr===2027);
+  closePopup();
   loadCalendar();
+  _setupRealtime(); // re-subscribe with new year markdown key
+}
+
+function _debouncedReload(){
+  clearTimeout(_debounceTimer);
+  _debounceTimer = setTimeout(loadCalendar, 1200);
 }
 
 function loadCalendar(){
+  if(!_sb) return;
+  _entryMap = {};
   var tbl = document.getElementById('calTable');
-  if(!_sb){
-    tbl.innerHTML = '<tbody><tr><td class="msg-cell">Waiting for connection&hellip;</td></tr></tbody>';
-    return;
-  }
   tbl.innerHTML = '<tbody><tr><td class="msg-cell">Loading&hellip;</td></tr></tbody>';
 
-  _sb.from('public_calendar_entries')
-    .select('*')
-    .eq('year', _year)
-    .then(function(res){
-      if(res.error){
-        tbl.innerHTML = '<tbody><tr><td class="msg-cell" style="color:#c00">Error: '+esc(res.error.message)+'</td></tr></tbody>';
-        return;
-      }
-      var rows = res.data||[];
+  // Fetch entries AND markdowns in parallel
+  var entriesPromise = _sb.from('public_calendar_entries').select('*').eq('year', _year);
+  var mdKey = 'calendar-'+_year+'-markdown-bars-v1';
+  var mdPromise = _sb.from('app_state').select('value').eq('key', mdKey).maybeSingle();
 
-      // Group: section → week_id → rows[]
-      var bySecWeek = {};
-      SECTIONS.forEach(function(s){ bySecWeek[s.key]={}; });
-      rows.forEach(function(row){
-        var sec = row.section||'global';
-        var wid = row.week_id;
-        if(!bySecWeek[sec]) bySecWeek[sec]={};
-        if(!bySecWeek[sec][wid]) bySecWeek[sec][wid]=[];
-        bySecWeek[sec][wid].push(row);
-      });
+  Promise.all([entriesPromise, mdPromise]).then(function(results){
+    var entriesRes = results[0];
+    var mdRes      = results[1];
 
-      var weeks = buildWeeks(_year);
+    if(entriesRes.error){
+      tbl.innerHTML = '<tbody><tr><td class="msg-cell" style="color:#c00">Error: '+esc(entriesRes.error.message)+'</td></tr></tbody>';
+      return;
+    }
 
-      // Build quarter/month spanning header
-      var quarterRuns=[], monthRuns=[];
-      weeks.forEach(function(w){
-        var q = quarterRuns[quarterRuns.length-1];
-        if(!q||q.label!==w.quarter) quarterRuns.push({label:w.quarter,count:1});
-        else q.count++;
-        var m = monthRuns[monthRuns.length-1];
-        if(!m||m.label!==w.month) monthRuns.push({label:w.month,count:1});
-        else m.count++;
-      });
+    var rows       = entriesRes.data||[];
+    var mdState    = (mdRes.data && mdRes.data.value) ? mdRes.data.value : {};
 
-      var html = '<thead>';
-      html += '<tr><th class="corner">Quarter</th>'+
-        quarterRuns.map(function(r){
-          return '<th colspan="'+r.count+'">'+r.label.replace('Q','Quarter ')+'</th>';
-        }).join('')+'</tr>';
-      html += '<tr><th class="corner">Month</th>'+
-        monthRuns.map(function(r){
-          return '<th colspan="'+r.count+'">'+r.label+' '+_year+'</th>';
-        }).join('')+'</tr>';
-      html += '<tr><th class="corner">Week</th>'+
-        weeks.map(function(w,i){
-          return '<th class="wk '+(i%2?'alt':'')+'">Wk '+w.weekOfYear+'</th>';
-        }).join('')+'</tr>';
-      html += '<tr><th class="corner">Date</th>'+
-        weeks.map(function(w,i){
-          return '<th class="wk '+(i%2?'alt':'')+'">'+weekRangeLabel(w.start,w.end)+'</th>';
-        }).join('')+'</tr>';
-      html += '</thead><tbody>';
-
-      // Section rows
-      SECTIONS.forEach(function(sec){
-        var secData = bySecWeek[sec.key]||{};
-        html += '<tr><th class="rowhead '+sec.cls+'">'+esc(sec.label)+'</th>';
-        weeks.forEach(function(w,i){
-          var cellRows = secData[w.id]||[];
-          html += '<td class="wk '+(i%2?'alt':'')+'"><div class="cell">';
-          cellRows.forEach(function(row){ html += renderEntry(row); });
-          html += '</div></td>';
-        });
-        html += '</tr>';
-      });
-
-      html += '</tbody>';
-      tbl.innerHTML = html;
+    // Group entries: section → week_id → rows[]
+    var bySecWeek = {};
+    SECTIONS.forEach(function(s){ bySecWeek[s.key]={}; });
+    rows.forEach(function(row){
+      var sec = row.section||'global';
+      var wid = row.week_id;
+      if(!bySecWeek[sec]) bySecWeek[sec]={};
+      if(!bySecWeek[sec][wid]) bySecWeek[sec][wid]=[];
+      bySecWeek[sec][wid].push(row);
     });
+
+    var weeks = buildWeeks(_year);
+    var visibleIds = weeks.map(function(w){ return w.id; });
+
+    // Build spanning markdown lane data (same algorithm as management calendar)
+    var _trackH = 44;
+    var allMds  = Object.values(mdState||{}).filter(function(md){ return md&&md.startDate&&md.endDate; });
+    // which weeks each markdown spans (in visible set)
+    var mdWeeks = allMds.map(function(md){
+      return weekIdsInRange(md.startDate, md.endDate, weeks).filter(function(id){ return visibleIds.indexOf(id)>=0; });
+    });
+    // week → set of md indices
+    var mdWeekIdx = {};
+    weeks.forEach(function(w){ mdWeekIdx[w.id]=new Set(); });
+    allMds.forEach(function(md, idx){
+      mdWeeks[idx].forEach(function(wid){ if(mdWeekIdx[wid]) mdWeekIdx[wid].add(idx); });
+    });
+    // lane assignment
+    var laneOf = allMds.map(function(md, idx){
+      var covWeeks = mdWeeks[idx].filter(function(id){ return mdWeekIdx[id]!==undefined; });
+      var maxAbove = 0;
+      covWeeks.forEach(function(wid){
+        var above = 0;
+        for(var j=0;j<idx;j++){ if(mdWeekIdx[wid]&&mdWeekIdx[wid].has(j)) above++; }
+        if(above>maxAbove) maxAbove=above;
+      });
+      return maxAbove;
+    });
+    var maxLane  = laneOf.length ? Math.max.apply(null,laneOf) : 0;
+    var cellH    = (maxLane+1)*_trackH;
+    var hasMds   = allMds.length > 0;
+
+    // Build quarter/month header spans
+    var quarterRuns=[], monthRuns=[];
+    weeks.forEach(function(w){
+      var q = quarterRuns[quarterRuns.length-1];
+      if(!q||q.label!==w.quarter) quarterRuns.push({label:w.quarter,count:1}); else q.count++;
+      var m = monthRuns[monthRuns.length-1];
+      if(!m||m.label!==w.month) monthRuns.push({label:w.month,count:1}); else m.count++;
+    });
+
+    var html = '<thead>';
+    html += '<tr><th class="corner">Quarter</th>'+
+      quarterRuns.map(function(r){ return '<th colspan="'+r.count+'">'+r.label.replace('Q','Quarter ')+'</th>'; }).join('')+'</tr>';
+    html += '<tr><th class="corner">Month</th>'+
+      monthRuns.map(function(r){ return '<th colspan="'+r.count+'">'+r.label+' '+_year+'</th>'; }).join('')+'</tr>';
+    html += '<tr><th class="corner">Week</th>'+
+      weeks.map(function(w,i){ return '<th class="wk '+(i%2?'alt':'')+'">Wk '+w.weekOfYear+'</th>'; }).join('')+'</tr>';
+    html += '<tr><th class="corner">Date</th>'+
+      weeks.map(function(w,i){ return '<th class="wk '+(i%2?'alt':'')+'">'+weekRangeLabel(w.start,w.end)+'</th>'; }).join('')+'</tr>';
+    html += '</thead><tbody>';
+
+    // ── Markdown row ──────────────────────────────────────────────────────────
+    html += '<tr><th class="rowhead bg-global markdown-rowhead" style="font-size:12px;line-height:1.2">Markdown</th>';
+    weeks.forEach(function(w, i){
+      if(!hasMds){
+        html += '<td class="wk '+(i%2?'alt':'')+'"><div class="cell" style="min-height:'+_trackH+'px"></div></td>';
+      } else {
+        html += '<td class="wk '+(i%2?'alt':'')+' markdown-span-cell" style="height:'+cellH+'px">';
+        allMds.forEach(function(md, idx){
+          if(mdWeekIdx[w.id]&&mdWeekIdx[w.id].has(idx)){
+            var cov    = mdWeeks[idx];
+            var isStart = cov[0]===w.id;
+            var isEnd   = cov[cov.length-1]===w.id;
+            var spanCls = (isStart&&isEnd)?'':(isStart?'md-start':(isEnd?'md-end':'md-mid'));
+            var topPx   = laneOf[idx]*_trackH;
+            html += '<div class="markdown-track" style="position:absolute;top:'+topPx+'px;left:0;right:0">'+
+              '<div class="markdown-bubble-span '+spanCls+'">';
+            if(isStart){
+              html += '<div class="markdown-title">'+esc(md.title||'')+'</div>'+
+                '<div>'+fmtDDMMM(md.startDate)+'&rarr;'+fmtDDMMM(md.endDate)+'</div>';
+            }
+            html += '</div></div>';
+          }
+        });
+        html += '</td>';
+      }
+    });
+    html += '</tr>';
+
+    // ── Section rows ──────────────────────────────────────────────────────────
+    SECTIONS.forEach(function(sec){
+      var secData = bySecWeek[sec.key]||{};
+      html += '<tr><th class="rowhead '+sec.cls+'">'+esc(sec.label)+'</th>';
+      weeks.forEach(function(w,i){
+        var cellRows = secData[w.id]||[];
+        html += '<td class="wk '+(i%2?'alt':'')+'"><div class="cell">';
+        cellRows.forEach(function(row){ html += renderEntry(row); });
+        html += '</div></td>';
+      });
+      html += '</tr>';
+    });
+
+    html += '</tbody>';
+    tbl.innerHTML = html;
+  });
+}
+
+// ── Supabase realtime (auto-refresh) ─────────────────────────────────────────
+
+function _setupRealtime(){
+  if(!_sb) return;
+  // Tear down existing subscription
+  if(_rtChannel){ _sb.removeChannel(_rtChannel); _rtChannel=null; }
+
+  _rtChannel = _sb.channel('btv-pub-cal-rt-v2')
+    .on('postgres_changes',{event:'*',schema:'public',table:'public_calendar_entries'},
+      function(){ _debouncedReload(); })
+    .on('postgres_changes',{event:'*',schema:'public',table:'app_state'},
+      function(){ _debouncedReload(); })
+    .subscribe();
 }
 
 // ── Auth bridge (called by parent index.html) ─────────────────────────────────
 
 function btvSyncStart(session, parentSb){
   if(parentSb){ _sb = parentSb; window._btvSb = parentSb; }
-  if(!_loaded){ _loaded = true; loadCalendar(); }
+  if(!_loaded){
+    _loaded = true;
+    loadCalendar();
+    _setupRealtime();
+  }
 }
 
 window.plannerUnlockWith = function(){};
 window.btvSyncStart  = btvSyncStart;
 window.setYear       = setYear;
 window.loadCalendar  = loadCalendar;
+window.openPopup     = openPopup;
+window.closePopup    = closePopup;
 </script>
 </body>
 </html>
