@@ -7037,7 +7037,13 @@ body.btv-dashboard-mode #quarterGroup{display:none!important}
 
 const STORAGE_KEY = "calendar-2026-working-v5";
   window._btvStorageKey = STORAGE_KEY;
-var _publishedIds = new Set(); // populated async by _btvLoadPublished
+const _PUB_IDS_LS_KEY = 'btv-pub-cal-ids-2026';
+// Pre-populate from localStorage so the initial render shows Live buttons immediately.
+// Supabase confirms/corrects async via _btvLoadPublished().
+var _publishedIds = (function(){
+  try { var c = JSON.parse(localStorage.getItem(_PUB_IDS_LS_KEY)||'[]'); return new Set(Array.isArray(c)?c:[]); }
+  catch(e){ return new Set(); }
+})();
 
 const HISTORY_KEY = "calendar-2026-working-v5-history";
 
@@ -13613,7 +13619,9 @@ function _btvLoadPublished() {
   window._btvSb.from('public_calendar_entries')
     .select('entry_id').eq('year', yr)
     .then(function(res) {
+      if (res.error) { console.warn('[BTV] _btvLoadPublished error:', res.error.message); return; }
       _publishedIds = new Set((res.data || []).map(function(r) { return r.entry_id; }));
+      try { localStorage.setItem(_PUB_IDS_LS_KEY, JSON.stringify(Array.from(_publishedIds))); } catch(e){}
       render();
     });
 }
@@ -13628,6 +13636,7 @@ async function btvTogglePublish(entryId, weekId, section) {
       .delete().eq('entry_id', entryId).eq('year', yr);
     if (delErr) { alert('Error removing from public calendar: ' + delErr.message); return; }
     _publishedIds.delete(entryId);
+    try { localStorage.setItem(_PUB_IDS_LS_KEY, JSON.stringify(Array.from(_publishedIds))); } catch(e){}
   } else {
     // PUBLISH \u2014 needs entry data to write entry_data
     var _st = window._btvState || {};
@@ -13642,6 +13651,7 @@ async function btvTogglePublish(entryId, weekId, section) {
       }, { onConflict: 'entry_id,year' });
     if (pubErr) { alert('Error publishing to public calendar: ' + pubErr.message); return; }
     _publishedIds.add(entryId);
+    try { localStorage.setItem(_PUB_IDS_LS_KEY, JSON.stringify(Array.from(_publishedIds))); } catch(e){}
   }
   // Update all buttons for this entry without full re-render
   document.querySelectorAll('[data-entry-id="' + entryId + '"] .pub-btn').forEach(function(btn) {
