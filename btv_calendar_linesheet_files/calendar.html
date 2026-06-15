@@ -2626,7 +2626,7 @@
 
   }
 
-  .markdown-bubble-span .small,.markdown-bubble-span button{display:none!important}
+  .markdown-bubble-span .small{display:none!important}
 
   .markdown-title{font-weight:700}
   .markdown-bubble-span.md-start{border-radius:999px 0 0 999px;margin-right:0;padding-right:2px;border-right:none}
@@ -8846,6 +8846,8 @@ function renderRegional(entry){
 
   const dotCls = ((KEY_DOTS[entry.keyLevel] || KEY_DOTS.brand) || {}).cls || "brand";
 
+  const regionalCatCls = entry.category ? ' cat-'+entry.category.toLowerCase() : '';
+
   const displayDate = entry.launchDate || entry.startDateISO || "";
 
   const dateStr = displayDate ? fmtDDMMM(displayDate) + " (" + dayNameFromISO(displayDate) + ")" : (entry.startDate || "");
@@ -8868,7 +8870,7 @@ function renderRegional(entry){
 
   return `
 
-    <div class="entry ${getEntryStatus(entry)==="published"?"published-entry":"draft-entry"}" draggable="true" data-entry-id="${entry.id}" data-section="${entry.section}" data-week="${entry.weekId}" data-keylevel="${entry.keyLevel||'brand'}">
+    <div class="entry ${getEntryStatus(entry)==="published"?"published-entry":"draft-entry"}${regionalCatCls}" draggable="true" data-entry-id="${entry.id}" data-section="${entry.section}" data-week="${entry.weekId}" data-keylevel="${entry.keyLevel||'brand'}">
 
       <div class="entry-preview">
 
@@ -8897,7 +8899,7 @@ function renderRegional(entry){
 
         <div class="group">
 
-          <div class="cat">${esc(entry.optionType || "")}</div>
+          <div class="cat">${esc(entry.category || entry.optionType || "")}</div>
 
           <div>
 
@@ -8918,6 +8920,8 @@ function renderRegional(entry){
           </div>
 
         </div>
+
+        <div class="entry-info"><span class="label">Type:</span> ${esc(entry.optionType || "—")}</div>
 
         <div class="entry-info"><span class="label">Markets:</span> ${marketStr}</div>
 
@@ -9568,20 +9572,6 @@ function buildRegionalForm(section, existing, weekId){
         </select>
       </div>
 
-      <div class="field span4"><label>Type</label>
-
-        <select id="optionType">
-
-          <option value="Country Exclusive" ${existing?.optionType==="Country Exclusive"?"selected":""}>Country Exclusive</option>
-
-          <option value="Store Exclusive" ${existing?.optionType==="Store Exclusive"?"selected":""}>Store Exclusive</option>
-
-          <option value="GWP" ${existing?.optionType==="GWP"?"selected":""}>GWP</option>
-
-        </select>
-
-      </div>
-
       <div class="field span4"><label>Start Date<span class="team-badge merch">Merch</span></label><input id="startDate" type="date" value="${esc(existing?.startDateISO || "")}"></div>
 
       <div class="field span4">
@@ -9603,6 +9593,37 @@ function buildRegionalForm(section, existing, weekId){
         <label>Product Details</label>
 
         <div class="product-details">
+
+          <div class="inline-two">
+
+            <div>
+
+              <label>Category<span class="team-badge design">Design</span></label>
+
+              <select id="regionalCategory">
+                <option value="">— Select —</option>
+                ${(loadAdminConfig().categories||GLOBAL_CATEGORIES).map(c => `<option value="${c}" ${existing?.category===c?"selected":""}>${c}</option>`).join("")}
+              </select>
+
+            </div>
+
+            <div>
+
+              <label>Type<span class="team-badge merch">Merch</span></label>
+
+              <select id="optionType">
+
+                <option value="Country Exclusive" ${existing?.optionType==="Country Exclusive"?"selected":""}>Country Exclusive</option>
+
+                <option value="Store Exclusive" ${existing?.optionType==="Store Exclusive"?"selected":""}>Store Exclusive</option>
+
+                <option value="GWP" ${existing?.optionType==="GWP"?"selected":""}>GWP</option>
+
+              </select>
+
+            </div>
+
+          </div>
 
           <div class="inline-two">
 
@@ -11028,6 +11049,8 @@ window.openEditor = function(section, weekId, entryId){
 
       payload.productTitle = e("productTitle").value.trim();
 
+      payload.category = (e("regionalCategory") ? e("regionalCategory").value : "");
+
       payload.colour = e("regionalColour").value.trim();
 
       payload.size = e("regionalSize").value.trim();
@@ -11400,6 +11423,9 @@ function getThreeMonthWindow(startMonth){
 
 function renderRestockLine(line, i){
 
+  const lineColour = line.colour || (line.colors && !line.colors.includes(' / ') ? line.colors : (line.colors || '').split(' / ')[0]) || '';
+  const lineSize   = line.size   || (line.colors && line.colors.includes(' / ') ? line.colors.split(' / ').slice(1).join(' / ') : '') || '';
+
   return `
 
     <div class="restock-line">
@@ -11408,7 +11434,7 @@ function renderRestockLine(line, i){
 
         <div>
 
-          <label>Product Title</label>
+          <label>Product Title<span class="team-badge merch">Merch</span></label>
 
           <input class="restock-product" data-i="${i}" type="text" placeholder="Product Title" value="${esc(line.productTitle || "")}">
 
@@ -11416,9 +11442,17 @@ function renderRestockLine(line, i){
 
         <div>
 
-          <label>Colour / Size</label>
+          <label>Colour / Variant<span class="team-badge design">Design</span></label>
 
-          <input class="restock-colors" data-i="${i}" type="text" placeholder="Colour / Size" value="${esc(line.colors || "")}">
+          <input class="restock-colour" data-i="${i}" type="text" placeholder="e.g. Black, Ivory" value="${esc(lineColour)}">
+
+        </div>
+
+        <div>
+
+          <label>Size<span class="team-badge design">Design</span></label>
+
+          <input class="restock-size" data-i="${i}" type="text" placeholder="e.g. XS–XL" value="${esc(lineSize)}">
 
         </div>
 
@@ -12407,6 +12441,7 @@ window.btvReloadAndRender = function() {
   if (e("globalMarketingView")) renderGlobalMarketingView();
   if (e("marketMarketingView")) renderMarketMarketingView();
   if (typeof _btvCalApplyLockBadges === 'function') _btvCalApplyLockBadges();
+  _btvLoadPublished(); // refresh Live button state after every sync-triggered re-render
 };
 window.loadAdminConfig = loadAdminConfig;
 window.saveAdminConfig = saveAdminConfig;

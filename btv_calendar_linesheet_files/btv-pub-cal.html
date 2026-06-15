@@ -689,11 +689,11 @@ function openPopup(entryId){
     var ls2    = _lsMap[key2];
     body += '<div class="popup-section-hd">Product</div>';
     body += '<table class="popup-table"><thead><tr>'+
-      '<th style="width:70px">Photo</th><th>Type</th><th>Product</th><th>Color / Size</th>'+
+      '<th style="width:70px">Photo</th><th>Category</th><th>Product</th><th>Color / Size</th>'+
       '<th>HS Code</th><th style="text-align:right">Price</th><th>Linesheet</th>'+
       '</tr></thead><tbody><tr>'+
       '<td style="text-align:center;padding:4px">'+(ls2&&ls2.productImg?'<img src="'+esc(ls2.productImg)+'" style="max-width:60px;max-height:70px;display:block;object-fit:contain" onerror="this.style.display=\'none\'">':'<span style="color:#bbb;font-size:11px">No photo</span>')+'</td>'+
-      '<td>'+esc(e.optionType||'—')+'</td>'+
+      '<td><div style="font-weight:700;font-size:11px;color:#888;margin-bottom:2px">'+esc(e.optionType||'')+'</div>'+esc(e.category||'—')+'</td>'+
       '<td>'+esc(e.productTitle||'—')+'</td>'+
       '<td>'+esc(colour)+(size?' / '+esc(size):'')+'</td>'+
       '<td style="font-size:11px;color:#666">'+(ls2&&ls2.hscode?esc(ls2.hscode):'—')+'</td>'+
