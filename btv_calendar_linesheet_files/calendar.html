@@ -13621,24 +13621,26 @@ function _btvLoadPublished() {
 async function btvTogglePublish(entryId, weekId, section) {
   if (!window._btvSb) { alert('Sync not ready. Please wait and try again.'); return; }
   var yr = parseInt(((window._btvStorageKey||'').match(/calendar-(\d{4})-/)||[])[1]||'0');
-  var _st = window._btvState || {};
-  var entry = ((_st[section] || {})[weekId] || []).find(function(e) { return e.id === entryId; });
-  if (!entry) return;
 
   if (_publishedIds.has(entryId)) {
-    var { error } = await window._btvSb.from('public_calendar_entries')
+    // UNPUBLISH \u2014 only needs entry_id + year, no state lookup required
+    var { error: delErr } = await window._btvSb.from('public_calendar_entries')
       .delete().eq('entry_id', entryId).eq('year', yr);
-    if (error) { alert('Error removing from public calendar: ' + error.message); return; }
+    if (delErr) { alert('Error removing from public calendar: ' + delErr.message); return; }
     _publishedIds.delete(entryId);
   } else {
-    var { error } = await window._btvSb.from('public_calendar_entries')
+    // PUBLISH \u2014 needs entry data to write entry_data
+    var _st = window._btvState || {};
+    var entry = ((_st[section] || {})[weekId] || []).find(function(e) { return e.id === entryId; });
+    if (!entry) { alert('Entry not found \u2014 please refresh and try again.'); return; }
+    var { error: pubErr } = await window._btvSb.from('public_calendar_entries')
       .upsert({
         entry_id: entryId, year: yr, week_id: weekId, section: section,
         entry_data: entry,
         published_by: window._btvSyncEmail || '',
         published_at: new Date().toISOString()
       }, { onConflict: 'entry_id,year' });
-    if (error) { alert('Error publishing to public calendar: ' + error.message); return; }
+    if (pubErr) { alert('Error publishing to public calendar: ' + pubErr.message); return; }
     _publishedIds.add(entryId);
   }
   // Update all buttons for this entry without full re-render
