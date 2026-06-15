@@ -229,7 +229,18 @@ create policy "btv_pub_cal_delete" on public.public_calendar_entries
   for delete to authenticated using (true);
 
 grant all on public.public_calendar_entries to authenticated;
-grant usage, select on sequence public.public_calendar_entries_id_seq to authenticated;
+-- Grant on sequence only if it exists (bigserial creates it; identity columns do not)
+do $$
+begin
+  if exists (
+    select 1 from pg_sequences
+    where schemaname = 'public'
+      and sequencename = 'public_calendar_entries_id_seq'
+  ) then
+    execute 'grant usage, select on sequence public.public_calendar_entries_id_seq to authenticated';
+  end if;
+end;
+$$;
 
 -- Enable realtime so BTV Calendar auto-refreshes when Live is toggled
 do $$
