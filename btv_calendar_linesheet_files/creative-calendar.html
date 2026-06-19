@@ -243,6 +243,24 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
   /* ── Viewer mode ─────────────────────────────────────────────────── */
   body.view-only .add-btn { display: none !important; }
   /* ────────────────────────────────────────────────────────────────── */
+
+  /* ── BTV Management Calendar reference card (mirrors calendar.html) ── */
+  .btvcard{background:#fffdfa;border:1px solid var(--grid);border-radius:14px;padding:14px;text-align:left}
+  .btvcard-date{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px}
+  .btvcard-entry-title{font-weight:700;font-size:14px;line-height:1.2;margin-bottom:6px}
+  .btvcard-group{display:grid;grid-template-columns:64px 1fr;gap:12px;margin-top:10px}
+  .btvcard-cat{font-weight:700;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  .btvcard-prod{margin-bottom:8px}
+  .btvcard-prod-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .btvcard-prod-name{font-weight:600;font-size:12.5px;flex:1 1 auto}
+  .btvcard-prod-price{font-weight:600;font-size:12.5px;white-space:nowrap}
+  .btvcard-prod-meta{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .btvcard-info{font-size:12px;margin-top:6px;line-height:1.4}
+  .btvcard-lbl{font-weight:700}
+  .btvcard-status{margin-top:10px;padding-top:8px;border-top:1px solid var(--grid);font-size:12px}
+  .btvcard-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:10.5px;font-weight:700}
+  .btvcard-pub{background:#d5f0dc;color:#155724}
+  .btvcard-draft{background:#fff3cd;color:#7a5800}
 </style>
 </head>
 <body>
@@ -581,6 +599,153 @@ const HOLIDAYS={
   CN:{1:'New Year\'s Day',5:'Spring Festival / CNY (29 Jan)',6:'CNY Golden Week',14:'Qingming Festival',18:'Labour Day Golden Week',25:'Dragon Boat Festival',40:'National Day Golden Week',41:'National Day Golden Week'},
 };
 
+// ── BTV Management Calendar bridge (read-only — same Supabase-synced ────────
+// localStorage key as calendar.html, shared across same-origin iframes) ─────
+const BTV_CAL_STORAGE_KEY='calendar-2026-working-v5';
+const BTV_MARKETS_ALL=['CN','ID','JP','PH','SG','TH'];
+const BTV_SEA_MARKETS=['SG','TH','ID','PH'];
+const BTV_NEA_MARKETS=['CN','JP'];
+const BTV_REF_SECTIONS=['global','china','sea','nea','restocks','store_openings'];
+
+function loadBtvCalState(){ try{ return JSON.parse(localStorage.getItem(BTV_CAL_STORAGE_KEY))||{}; }catch(e){ return {}; } }
+function weekIdForWeekNum(wn){ const w=WEEKS[wn-1]; return w?w.startDate.toISOString().slice(0,10):''; }
+function btvGetEntryStatus(entry,section){ if(entry&&entry.workflowStatus) return entry.workflowStatus; return (section==='global'||section==='china')?'published':'draft'; }
+function btvCountItems(str){ return String(str||'').split(/[,;]/).map(s=>s.trim()).filter(Boolean).length; }
+function btvCountEntrySkus(entry){ return (entry.lines||[]).reduce((sum,line)=>sum+btvCountItems(line&&line.colour),0); }
+
+function btvEntryMarkets(section,entry){
+  if(section==='global') return BTV_MARKETS_ALL.filter(m=>!(entry.noLaunchMarkets||[]).includes(m));
+  if(section==='china') return ['CN'];
+  if(section==='nea') return entry.allMarkets?['CN','JP']:(entry.countries||[]);
+  if(section==='sea') return entry.allMarkets?BTV_SEA_MARKETS.slice():(entry.countries||[]);
+  if(section==='restocks') return entry.allMarkets?BTV_MARKETS_ALL.slice():(entry.markets||[]);
+  if(section==='store_openings') return entry.market?[entry.market]:[];
+  return [];
+}
+
+// All real BTV Calendar entries (any section) that launch in `market` during week `wn`.
+function getBtvEntriesForMarketWeek(market,wn){
+  const st=loadBtvCalState(),wkId=weekIdForWeekNum(wn);
+  if(!wkId) return [];
+  const out=[];
+  BTV_REF_SECTIONS.forEach(section=>{
+    ((st[section]||{})[wkId]||[]).forEach(entry=>{
+      if(btvEntryMarkets(section,entry).includes(market)) out.push({section,entry});
+    });
+  });
+  return out;
+}
+
+// All real BTV Calendar entries in the given sections during week `wn`, optionally
+// restricted to entries touching at least one market in `marketFilter`.
+function getBtvEntriesForSectionsWeek(sectionKeys,wn,marketFilter){
+  const st=loadBtvCalState(),wkId=weekIdForWeekNum(wn);
+  if(!wkId) return [];
+  const out=[];
+  sectionKeys.forEach(section=>{
+    ((st[section]||{})[wkId]||[]).forEach(entry=>{
+      const mkts=btvEntryMarkets(section,entry);
+      if(marketFilter&&!marketFilter.some(m=>mkts.includes(m))) return;
+      out.push({section,entry,_mkts:mkts});
+    });
+  });
+  return out;
+}
+
+function btvEntryTitle(entry){ return entry.launchTitle||entry.productTitle||entry.storeName||'(untitled)'; }
+
+// Card renderers — mirror calendar.html's renderGlobal/renderRegional/renderRestock/renderStoreOpening, read-only.
+function btvRenderCard(section,entry){
+  const status=btvGetEntryStatus(entry,section);
+  const badge=`<span class="btvcard-badge ${status==='published'?'btvcard-pub':'btvcard-draft'}">${status==='published'?'Published':'Draft'}</span>`;
+  if(section==='global'||section==='china'||((section==='sea'||section==='nea')&&entry.lines)) return btvRenderGlobalCard(entry,badge);
+  if(section==='sea'||section==='nea') return btvRenderRegionalCard(entry,badge);
+  if(section==='restocks') return btvRenderRestockCard(entry,badge);
+  if(section==='store_openings') return btvRenderStoreOpeningCard(entry,badge);
+  return `<div class="btvcard">${badge}</div>`;
+}
+
+function btvRenderGlobalCard(entry,badgeHtml){
+  const grouped={};
+  (entry.lines||[]).forEach(line=>{
+    if(!(line.category||line.productName||line.colour||line.size||line.price)) return;
+    const cat=line.category||'';
+    (grouped[cat]=grouped[cat]||[]).push(line);
+  });
+  const groups=Object.entries(grouped).map(([cat,lines])=>`
+    <div class="btvcard-group"><div class="btvcard-cat">${esc(cat)}</div><div>
+      ${lines.map(line=>`<div class="btvcard-prod">
+        <div class="btvcard-prod-top"><div class="btvcard-prod-name">${esc(line.productName||'')}</div><div class="btvcard-prod-price">${line.price?'$'+esc(line.price):''}</div></div>
+        <div class="btvcard-prod-meta">${esc(line.colour||'')}</div>
+      </div>`).join('')}
+    </div></div>`).join('');
+  const mktList=BTV_MARKETS_ALL.filter(m=>!(entry.noLaunchMarkets||[]).includes(m)).join(', ')||'—';
+  const channel=(entry.noLaunchChannelsCollapsed||[]).map(item=>`${item.market}: ${(item.stores||[]).length?item.stores.join(', '):'—'}`).join(' | ')||'—';
+  return `<div class="btvcard">
+    <div class="btvcard-date">${entry.launchDate?formatDate(entry.launchDate):''}</div>
+    <div class="btvcard-entry-title">${esc(entry.launchTitle||'')}</div>
+    ${groups}
+    <div class="btvcard-info"><span class="btvcard-lbl">No. of SKUs:</span> ${btvCountEntrySkus(entry)||(entry.skuCount??0)}</div>
+    <div class="btvcard-info"><span class="btvcard-lbl">Launch (Mkt):</span> ${esc(mktList)}</div>
+    <div class="btvcard-info"><span class="btvcard-lbl">Launch (Channel):</span> ${esc(channel)}</div>
+    <div class="btvcard-status"><span class="btvcard-lbl">Launch Status:</span> ${entry.launchStatus==='delay'?'Delay Flagged':'On Time'}</div>
+    <div class="btvcard-info">${badgeHtml}</div>
+  </div>`;
+}
+
+function btvRenderRegionalCard(entry,badgeHtml){
+  const displayTitle=entry.launchTitle||entry.optionType||'';
+  const marketStr=(entry.allMarkets||false)?'All':(esc((entry.countries||[]).join(', '))||'—');
+  const colour=entry.colour||(entry.colorSize&&!entry.colorSize.includes(' / ')?entry.colorSize:(entry.colorSize||'').split(' / ')[0])||'';
+  const dateStr=entry.launchDate?formatDate(entry.launchDate):(entry.startDate||'');
+  const bottomInfo=entry.optionType==='GWP'
+    ?`<div class="btvcard-info"><span class="btvcard-lbl">Mechanics:</span> ${esc(entry.mechanics||'—')}</div>`
+    :`<div class="btvcard-info"><span class="btvcard-lbl">Stores:</span> ${esc((entry.stores||[]).join(', ')||'—')}</div>`;
+  return `<div class="btvcard">
+    <div class="btvcard-date">${esc(dateStr)}</div>
+    <div class="btvcard-entry-title">${esc(displayTitle)}</div>
+    <div class="btvcard-info"><span class="btvcard-lbl">Colour:</span> ${esc(colour)||'—'}</div>
+    <div class="btvcard-info"><span class="btvcard-lbl">Markets:</span> ${marketStr}</div>
+    ${bottomInfo}
+    <div class="btvcard-info">${badgeHtml}</div>
+  </div>`;
+}
+
+function btvRenderRestockCard(entry,badgeHtml){
+  const lines=(entry.lines&&entry.lines.length)?entry.lines:[{productTitle:entry.productTitle||'',colour:''}];
+  const displayTitle=lines.length>1?lines.map(l=>l.productTitle).filter(Boolean).join(', '):(lines[0]&&lines[0].productTitle||entry.productTitle||'');
+  const marketStr=(entry.allMarkets||false)?'All Markets':(esc((entry.markets||[]).join(', '))||'—');
+  const lineHTML=lines.filter(l=>l.productTitle||l.colour).map(line=>`<div class="btvcard-prod"><div class="btvcard-prod-name">${esc(line.productTitle||'—')}</div><div class="btvcard-prod-meta">${esc(line.colour||'')}</div></div>`).join('');
+  return `<div class="btvcard">
+    <div class="btvcard-date">${entry.etaISO?'ETA '+formatDate(entry.etaISO):(entry.eta?'ETA '+esc(entry.eta):'')}</div>
+    <div class="btvcard-entry-title">${esc(displayTitle)}</div>
+    <div class="btvcard-group"><div class="btvcard-cat">Restock</div><div>${lineHTML}</div></div>
+    <div class="btvcard-info"><span class="btvcard-lbl">Markets:</span> ${marketStr}</div>
+    <div class="btvcard-info">${badgeHtml}</div>
+  </div>`;
+}
+
+function btvRenderStoreOpeningCard(entry,badgeHtml){
+  return `<div class="btvcard">
+    <div class="btvcard-entry-title">${esc(entry.storeName||'')}</div>
+    <div class="btvcard-date">${entry.targetOpenDate?'Target '+formatDate(entry.targetOpenDate):''}</div>
+    <div class="btvcard-info"><span class="btvcard-lbl">Market:</span> ${esc(entry.market||'—')}</div>
+    <div class="btvcard-info"><span class="btvcard-lbl">Store Size:</span> ${esc(entry.storeSize||'—')}</div>
+    <div class="btvcard-info"><span class="btvcard-lbl">Address:</span> ${esc(entry.storeAddress||'—')}</div>
+    <div class="btvcard-info">${badgeHtml}</div>
+  </div>`;
+}
+
+let _btvCardCache={};
+function _cacheBtvCard(section,entry){ const id='btvc-'+section+'-'+entry.id; _btvCardCache[id]={section,entry}; return id; }
+function openBtvCardModal(cid){
+  const c=_btvCardCache[cid]; if(!c) return;
+  document.getElementById('vm-title').textContent='BTV Management Calendar';
+  document.getElementById('vm-sub').textContent='Live reference from the BTV Management Calendar — read-only here.';
+  document.getElementById('vm-body').innerHTML=btvRenderCard(c.section,c.entry);
+  document.getElementById('viewModal').classList.add('show');
+}
+
 // ── Seed data from CREATIVE CAL 2026.xlsx ─────────────────────────────────
 // Format: {m:[markets], wk:weekNum, we:weekEndNum?, row:'row_key', t:'title', b:'brief'}
 // status defaults to 'Not Started', _seeded:true marks as pre-loaded from Excel
@@ -843,25 +1008,19 @@ function renderMarket(market){
     if(row.auto){
       WEEKS.forEach(w=>{ html+=`<td class="${gc} readonly no-hover"><div class="chip c-ns" style="font-size:8.5px">${esc(weekTheme(w.n))}</div></td>`; });
     } else if(row.btvRef){
-      // Read-only BTV Calendar reference — spanning supported, view popup only
-      const refEntries=getMarketEntries(market).filter(e=>e.row===row.key).sort((a,b)=>a.week-b.week);
-      const cov=new Set();
-      refEntries.forEach(e=>{ if(e.weekEnd&&e.weekEnd>e.week) for(let w=e.week+1;w<=e.weekEnd&&w<=53;w++) cov.add(w); });
+      // Read-only — live-pulled straight from the BTV Management Calendar (same
+      // Supabase-synced localStorage key, shared cross-iframe), not a duplicate entry.
       WEEKS.forEach(w=>{
-        if(cov.has(w.n)) return;
-        const starts=refEntries.filter(e=>e.week===w.n);
-        const spanE=starts.filter(e=>e.weekEnd&&e.weekEnd>w.n).sort((a,b)=>b.weekEnd-a.weekEnd)[0];
-        const cs=spanE?(spanE.weekEnd-w.n+1):1;
+        const matches=getBtvEntriesForMarketWeek(market,w.n);
         let chips='';
-        if(spanE&&matchesFilter(spanE)){
-          const cid=_cacheEntry(spanE);
-          chips+=`<div class="chip c-auto" onclick="_viewEntry('${esc(cid)}');event.stopPropagation();"><span class="span-tag">→Wk${spanE.weekEnd}</span>${spanE._seeded?'<span class="seeded-tag">●</span>':''}${esc(spanE.title)}</div>`;
-        }
-        starts.filter(e=>(!e.weekEnd||e.weekEnd<=e.week)&&matchesFilter(e)).forEach(e=>{
-          const cid=_cacheEntry(e);
-          chips+=`<div class="chip c-auto" onclick="_viewEntry('${esc(cid)}');event.stopPropagation();" title="${esc(e.title)}">${e._seeded?'<span class="seeded-tag">●</span>':''}${esc(e.title)}</div>`;
+        matches.forEach(({section,entry})=>{
+          const title=btvEntryTitle(entry);
+          if(F.search && !title.toLowerCase().includes(F.search.toLowerCase())) return;
+          const cid=_cacheBtvCard(section,entry);
+          const pubCls=btvGetEntryStatus(entry,section)==='published'?'c-ap':'c-ns';
+          chips+=`<div class="chip ${pubCls}" onclick="openBtvCardModal('${esc(cid)}');event.stopPropagation();" title="${esc(title)}">${esc(title)}</div>`;
         });
-        html+=`<td${cs>1?` colspan="${cs}"`:''}  class="${gc} readonly">${chips}</td>`;
+        html+=`<td class="${gc} readonly">${chips}</td>`;
       });
     } else if(row.holiday){
       WEEKS.forEach(w=>{ const hol=holidays[w.n]; html+=`<td class="${gc} readonly holiday-cell no-hover">${hol?`<div class="holiday-chip">${esc(hol)}</div>`:''}</td>`; });
@@ -937,12 +1096,12 @@ function renderSocialRow(market, rowKey, gc){
 
 // Global view row configuration
 const GLOBAL_BTV_ROWS=[
-  {key:'g_cal',   label:'Calendar',      mkts:null,                  srcRow:'launch'},
-  {key:'g_sea',   label:'SEA',           mkts:['SG','TH','ID','PH'], srcRow:'launch'},
-  {key:'g_nea',   label:'NEA',           mkts:['CN','JP'],           srcRow:'launch'},
-  {key:'g_china', label:'China',         mkts:['CN'],                srcRow:'launch'},
-  {key:'g_rst',   label:'Restock',       mkts:null,                  srcRow:'restock'},
-  {key:'g_store', label:'Store Opening', mkts:null,                  srcRow:'new_stores'},
+  {key:'g_cal',   label:'Calendar',      mkts:null,                  sections:['global','china']},
+  {key:'g_sea',   label:'SEA',           mkts:['SG','TH','ID','PH'], sections:['sea']},
+  {key:'g_nea',   label:'NEA',           mkts:['CN','JP'],           sections:['nea']},
+  {key:'g_china', label:'China',         mkts:['CN'],                sections:['china']},
+  {key:'g_rst',   label:'Restock',       mkts:null,                  sections:['restocks']},
+  {key:'g_store', label:'Store Opening', mkts:null,                  sections:['store_openings']},
 ];
 
 const GLOBAL_CREATIVE_ROWS=[
@@ -1049,10 +1208,19 @@ function renderGlobal(){
   html+=`<tr class="group-row g-btvrow"><td class="row-head" colspan="${W+1}">From BTV Calendar (Reference Only)</td></tr>`;
 
   GLOBAL_BTV_ROWS.forEach(brow=>{
-    const mkts=brow.mkts||MARKETS;
     html+=`<tr class="g-btvrow"><td class="row-head g-btvrow">${esc(brow.label)}</td>`;
     WEEKS.forEach(w=>{
-      html+=`<td class="g-btvrow readonly">${buildGlobalCellHtml(mkts,[brow.srcRow],w.n,{})}</td>`;
+      const matches=getBtvEntriesForSectionsWeek(brow.sections,w.n,brow.mkts);
+      let chips='';
+      matches.forEach(({section,entry,_mkts})=>{
+        const title=btvEntryTitle(entry);
+        if(F.search && !title.toLowerCase().includes(F.search.toLowerCase())) return;
+        const cid=_cacheBtvCard(section,entry);
+        const isGlobalMkt=_mkts.length>1;
+        const cls=isGlobalMkt?'mkt-global':(MKT_CSS[_mkts[0]]||'c-ns');
+        chips+=`<div class="chip ${cls}" onclick="openBtvCardModal('${esc(cid)}');event.stopPropagation();" title="${esc(title)}"><span class="country-tag">${esc(_mkts.join(', ')||'—')}</span>${esc(title)}</div>`;
+      });
+      html+=`<td class="g-btvrow readonly">${chips}</td>`;
     });
     html+=`</tr>`;
   });
