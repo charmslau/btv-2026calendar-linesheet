@@ -195,6 +195,16 @@ html, body {
   transition: border-color .15s; -webkit-appearance: none;
 }
 .btv-modal-inp:focus { border-color: #111; background: #fff; }
+.btv-modal-textarea {
+  width: 100%; padding: 10px 13px; border: 1.5px solid #e0ddd8;
+  border-radius: 10px; font: inherit; font-size: 13px;
+  background: #fafaf9; color: #111; outline: none;
+  transition: border-color .15s; resize: vertical; min-height: 64px;
+}
+.btv-modal-textarea:focus { border-color: #111; background: #fff; }
+.btv-ne-role-block { margin-bottom: 16px; }
+.btv-ne-role-title { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 2px; }
+.btv-ne-role-tasks { font-size: 11px; color: #b0ada9; margin-bottom: 6px; line-height: 1.4; }
 .btv-modal-btn {
   display: block; width: 100%; padding: 10px; border: none;
   border-radius: 10px; background: #111; color: #fff;
@@ -286,6 +296,7 @@ html, body {
         <div id="navOnlineList"></div>
       </div>
     </div>
+    <button class="nav-right-btn" id="navNotifyEmailsBtn" onclick="btvOpenNotifyEmails()" style="display:none">Notify Emails</button>
     <button class="nav-right-btn" id="navChangePwdBtn" onclick="btvOpenChangePwd()" style="display:none">Change Password</button>
     <button class="nav-right-btn" id="navSignOutBtn" onclick="btvSignOut()" style="display:none">Sign Out</button>
   </div>
@@ -379,6 +390,29 @@ html, body {
       </div>
       <div id="btvUMList" style="margin-bottom:14px;max-height:260px;overflow-y:auto"></div>
       <button class="btv-modal-btn-ghost" onclick="btvCloseUserMgmt()" style="margin-top:14px">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notify Emails Modal — per-role recipients for the Monday linesheet reminder -->
+<div id="btvNotifyEmailsModal" class="btv-modal-backdrop">
+  <div class="btv-modal-bg" style="max-width:520px">
+    <button class="btv-modal-close" onclick="btvCloseNotifyEmails()" title="Close">&times;</button>
+    <div class="btv-modal-title">Notify Emails</div>
+    <div class="btv-modal-sub">Set who gets emailed every Monday morning with their team's outstanding linesheet items.</div>
+    <div id="btvNEPassWrap">
+      <label class="btv-modal-lbl" for="btvNEPassInput">Admin passcode</label>
+      <input type="password" id="btvNEPassInput" class="btv-modal-inp" placeholder="Enter admin passcode" onkeydown="if(event.key==='Enter') btvNEVerifyPass()">
+      <div id="btvNEPassErr" class="btv-modal-err" style="color:#a23a2f;background:#fdf0ef"></div>
+      <button class="btv-modal-btn" onclick="btvNEVerifyPass()">Verify</button>
+      <button class="btv-modal-btn-ghost" onclick="btvCloseNotifyEmails()">Cancel</button>
+    </div>
+    <div id="btvNEPanel" style="display:none">
+      <div id="btvNEFields"></div>
+      <div id="btvNEErr" class="btv-modal-err" style="color:#a23a2f;background:#fdf0ef"></div>
+      <button class="btv-modal-btn" id="btvNESaveBtn" onclick="btvNESave()">Save</button>
+      <button class="btv-modal-btn-ghost" id="btvNETestBtn" onclick="btvNESendTest()">Send Test Now</button>
+      <button class="btv-modal-btn-ghost" onclick="btvCloseNotifyEmails()">Close</button>
     </div>
   </div>
 </div>
@@ -603,6 +637,7 @@ html, body {
   }
 
   function _updateNavButtons(loggedIn) {
+    document.getElementById('navNotifyEmailsBtn').style.display = loggedIn ? '' : 'none';
     document.getElementById('navChangePwdBtn').style.display = loggedIn ? '' : 'none';
     document.getElementById('navSignOutBtn').style.display   = loggedIn ? '' : 'none';
     _refreshTabVisibility();
@@ -941,6 +976,119 @@ html, body {
     update[field] = value;
     const { error } = await _sb.from('user_profiles').update(update).eq('id', userId);
     if (error) alert('Error updating access: ' + error.message);
+  }
+
+  // ── Notify Emails (per-role recipients for the Monday linesheet reminder) ──
+  // Stored as a plain app_state row (key below) — the linesheet-monday-reminder
+  // Edge Function reads the same row server-side. No separate table needed.
+
+  var BTV_NE_KEY = 'btv-linesheet-notify-emails-v1';
+  var BTV_NE_ROLES = [
+    { id: 'merch',  label: 'Merch',              tasks: 'Product Name, Category, Colour/Variant, SGD RRP, Launch Date' },
+    { id: 'design', label: 'Design',             tasks: 'Description, Washcare, Fabric, Product Image, Lookbook Image' },
+    { id: 'prod',   label: 'Prod',                tasks: 'HS Code, SKU, Barcode' },
+    { id: 'pd',     label: 'Product Designers',  tasks: 'Fabric Composition, Product Weight, Measurement Chart' }
+  ];
+
+  function btvOpenNotifyEmails() {
+    var passWrap = document.getElementById('btvNEPassWrap');
+    var panel    = document.getElementById('btvNEPanel');
+    var passErr  = document.getElementById('btvNEPassErr');
+    var passInp  = document.getElementById('btvNEPassInput');
+    passWrap.style.display = ''; panel.style.display = 'none';
+    passErr.textContent    = ''; passInp.value = '';
+    document.getElementById('btvNotifyEmailsModal').classList.add('show');
+    setTimeout(function () { passInp.focus(); }, 80);
+  }
+
+  function btvCloseNotifyEmails() {
+    document.getElementById('btvNotifyEmailsModal').classList.remove('show');
+  }
+
+  function btvNEVerifyPass() {
+    var inp = document.getElementById('btvNEPassInput');
+    var err = document.getElementById('btvNEPassErr');
+    if (!inp) return;
+    if (inp.value.trim() !== window.BTV_SUPABASE_CONFIG.adminPasscode) {
+      err.style.color = '#a23a2f'; err.textContent = 'Incorrect passcode.';
+      inp.select(); inp.focus(); return;
+    }
+    document.getElementById('btvNEPassWrap').style.display = 'none';
+    document.getElementById('btvNEPanel').style.display    = '';
+    _btvNELoad();
+  }
+
+  function _btvNERenderFields(values) {
+    var wrap = document.getElementById('btvNEFields');
+    wrap.innerHTML = BTV_NE_ROLES.map(function (r) {
+      var v = (values[r.id] || []).join(', ');
+      return '<div class="btv-ne-role-block">'
+        + '<div class="btv-ne-role-title">' + r.label + '</div>'
+        + '<div class="btv-ne-role-tasks">Handles: ' + r.tasks + '</div>'
+        + '<textarea class="btv-modal-textarea" id="btvNEInp_' + r.id + '" placeholder="name@beyondthevines.com, name2@beyondthevines.com" rows="2">' + v + '</textarea>'
+        + '</div>';
+    }).join('');
+  }
+
+  async function _btvNELoad() {
+    var wrap = document.getElementById('btvNEFields');
+    wrap.innerHTML = '<p style="color:#aaa;font-size:13px;padding:4px">Loading…</p>';
+    const { data, error } = await _sb.from('app_state').select('value').eq('key', BTV_NE_KEY).maybeSingle();
+    if (error) {
+      wrap.innerHTML = '<p style="color:#c00;font-size:13px;padding:4px">Error loading: ' + error.message + '</p>';
+      return;
+    }
+    _btvNERenderFields((data && data.value) || {});
+  }
+
+  async function btvNESave() {
+    var err = document.getElementById('btvNEErr');
+    var btn = document.getElementById('btvNESaveBtn');
+    err.textContent = '';
+    var value = {};
+    BTV_NE_ROLES.forEach(function (r) {
+      var raw = (document.getElementById('btvNEInp_' + r.id).value || '');
+      value[r.id] = raw.split(/[,\n]/).map(function (s) { return s.trim(); }).filter(Boolean);
+    });
+    btn.disabled = true; btn.textContent = 'Saving…';
+    const { error } = await _sb.from('app_state').upsert(
+      { key: BTV_NE_KEY, value: value, updated_at: new Date().toISOString(), updated_by: _session ? _session.user.id : null },
+      { onConflict: 'key' }
+    );
+    btn.disabled = false; btn.textContent = 'Save';
+    if (error) {
+      err.style.color = '#a23a2f'; err.textContent = error.message;
+    } else {
+      err.style.color = '#27ae60'; err.textContent = 'Saved.';
+      setTimeout(function () { err.textContent = ''; }, 2500);
+    }
+  }
+
+  async function btvNESendTest() {
+    var err = document.getElementById('btvNEErr');
+    var btn = document.getElementById('btvNETestBtn');
+    err.textContent = ''; err.style.color = '#a23a2f';
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      const resp = await fetch(window.BTV_SUPABASE_CONFIG.url + '/functions/v1/linesheet-monday-reminder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + window.BTV_SUPABASE_CONFIG.anonKey
+        }
+      });
+      const out = await resp.json();
+      if (!resp.ok || out.ok === false) {
+        err.textContent = 'Function error: ' + (out.error || resp.status);
+      } else {
+        err.style.color = '#27ae60';
+        err.textContent = 'Sent. ' + JSON.stringify(out.results);
+      }
+    } catch (e) {
+      err.textContent = 'Request failed: ' + e.message + ' (has the Edge Function been deployed yet?)';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Send Test Now';
+    }
   }
 
   // ── Download proxy (iframes post messages here to trigger file downloads) ─

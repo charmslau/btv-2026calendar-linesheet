@@ -285,4 +285,43 @@ create policy "creative_marketing_delete"
   using (bucket_id = 'creative-marketing');
 
 
+-- ── 11. Weekly linesheet email reminder (Monday cron) ────────
+-- Notification recipients are stored as a normal app_state row
+-- (key 'btv-linesheet-notify-emails-v1') edited from the "Notify
+-- Emails" button in the top nav — no extra table needed.
+--
+-- This section schedules a database cron job that calls the
+-- `linesheet-monday-reminder` Edge Function every Monday at
+-- 01:00 UTC (09:00 Singapore time). Before this will work you must:
+--   1. Deploy the function: supabase/functions/linesheet-monday-reminder
+--   2. Set its secret:  supabase secrets set RESEND_API_KEY=re_xxx
+--   3. Run this section (safe to re-run — it drops + recreates the job)
+
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+
+do $$
+begin
+  if exists (select 1 from cron.job where jobname = 'linesheet-monday-reminder') then
+    perform cron.unschedule('linesheet-monday-reminder');
+  end if;
+end;
+$$;
+
+select cron.schedule(
+  'linesheet-monday-reminder',
+  '0 1 * * 1',
+  $cron$
+  select net.http_post(
+    url     := 'https://dftavnyoopghzgsxkhbw.supabase.co/functions/v1/linesheet-monday-reminder',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer sb_publishable_fH8nVY0XcedrNhYCU4lTtQ_1K72RRq9'
+    ),
+    body := '{}'::jsonb
+  );
+  $cron$
+);
+
+
 -- ── Done! ─────────────────────────────────────────────────────
