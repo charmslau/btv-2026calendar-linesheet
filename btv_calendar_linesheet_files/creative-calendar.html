@@ -134,7 +134,6 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
 .cal-table tbody td:hover:not(.readonly):not(.no-hover){filter:brightness(.95)}
 .cal-table tbody td.readonly{cursor:default}
 .cal-table tbody td.no-hover:hover{filter:none}
-.cal-table tbody td.holiday-cell{background:#fdf6f5!important}
 
 /* ── Chips — wrapping ── */
 .chip{display:block;margin:2px 0;padding:3px 5px;border-radius:4px;font-size:10px;
@@ -165,9 +164,6 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
 .add-chip{display:block;margin:2px 0;padding:2px 4px;border-radius:3px;
   font-size:9px;color:#ccc;cursor:pointer;text-align:center}
 .add-chip:hover{color:#888;background:rgba(0,0,0,.05)}
-.holiday-chip{display:block;margin:2px 0;padding:3px 5px;border-radius:4px;
-  font-size:9.5px;font-weight:600;background:#fde8e8;color:#c43030;
-  white-space:normal;word-break:break-word}
 
 /* ── Day sub-slots ── */
 .day-cell{padding:0!important;cursor:default!important}
@@ -391,10 +387,10 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
           <optgroup label="— Context">
             <option value="theme">Theme / Season</option>
             <option value="key_moments">Key Moments</option>
+            <option value="public_holidays">Public Holidays</option>
           </optgroup>
           <optgroup label="— Communication">
             <option value="edm">EDM (Email)</option>
-            <option value="edm_tagOn">EDM Tag-on</option>
             <option value="ig_grid">IG Grid</option>
             <option value="ig_stories">IG Stories</option>
             <option value="ig_mkt">IG Marketing Tag-ons</option>
@@ -602,7 +598,7 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
     <div class="f-actions">
       <button class="btn-primary" onclick="saveMarketingEntry()">Save</button>
       <button class="btn-ghost" onclick="closeMarketingModal()">Cancel</button>
-      <button class="btn-ghost" id="mExportBtn" style="display:none" onclick="exportMarketingEntry()">Export</button>
+      <button class="btn-ghost" id="mExportBtn" onclick="exportMarketingEntry()">Export</button>
       <button class="btn-danger" id="mDeleteBtn" style="display:none" onclick="deleteMarketingEntry()">Delete</button>
     </div>
     <div id="mModalErr" style="font-size:11px;color:#c43030;margin-top:7px;min-height:0"></div>
@@ -641,7 +637,7 @@ const SOCIAL_ROWS=new Set(['ig_grid','ig_stories','ig_mkt','tiktok','line','red_
 const ROW_DEFS=[
   {key:'theme',            label:'Theme / Season',        group:'context',    editable:true},
   {key:'key_moments',      label:'Key Moments',           group:'context',    editable:true},
-  {key:'public_holidays',  label:'Public Holidays',       group:'context',    holiday:true},
+  {key:'public_holidays',  label:'Public Holidays',       group:'context',    editable:true},
   {key:'p_launch',  label:'Launch',         group:'product', btvPerMarket:true, btvSections:['global','china']},
   {key:'p_restock', label:'Restock',        group:'product', btvPerMarket:true, btvSections:['restocks']},
   {key:'p_store',   label:'Store Opening',  group:'product', btvPerMarket:true, btvSections:['store_openings']},
@@ -650,7 +646,6 @@ const ROW_DEFS=[
   {key:'Retail Events',        label:'Retail Activation',    group:'marketing', marketingRow:true},
   {key:'Digital Activations',  label:'Digital Activation',   group:'marketing', marketingRow:true},
   {key:'edm',              label:'EDM',                   group:'communication', editable:true},
-  {key:'edm_tagOn',        label:'EDM Tag-on',            group:'communication', editable:true},
   {key:'ig_grid',          label:'IG Grid',               group:'communication', editable:true},
   {key:'ig_stories',       label:'IG Stories',            group:'communication', editable:true},
   {key:'ig_mkt',           label:'IG Marketing Tag-ons',  group:'communication', editable:true},
@@ -1083,7 +1078,7 @@ function openMarketingAddModal(market,rowKey,week){
   _resetMarketingFormFields();
   renderMarketingImagesList();
   document.getElementById('mDeleteBtn').style.display='none';
-  document.getElementById('mExportBtn').style.display='none';
+  document.getElementById('mExportBtn').style.display='';
   document.getElementById('marketingModal').classList.add('show');
   setTimeout(()=>document.getElementById('mTitle').focus(),60);
 }
@@ -1244,13 +1239,40 @@ function _btvDownload(fileName,data,mime){
   setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 
+// Reads the live form fields (not the saved record), so Export works on
+// unsaved drafts too — including brand-new entries that have never been saved.
+function _gatherMarketingFormData(){
+  return {
+    title:document.getElementById('mTitle').value.trim(),
+    market:document.getElementById('mMarket').value,
+    row:document.getElementById('mRowKey').value,
+    startDateISO:document.getElementById('mStartDate').value,
+    endDateISO:document.getElementById('mEndDate').value,
+    time:document.getElementById('mTime').value.trim(),
+    store:document.getElementById('mStore').value.trim(),
+    guests:document.getElementById('mGuests').value.trim(),
+    objective:document.getElementById('mObjective').value.trim(),
+    targetAudience:document.getElementById('mAudience').value.trim(),
+    eventRundown:document.getElementById('mRundown').value.trim(),
+    mechanics:document.getElementById('mMechanics').value.trim(),
+    comms:document.getElementById('mComms').value.trim(),
+    tnc:document.getElementById('mTnc').value.trim(),
+    status:document.getElementById('mStatus').value,
+    owner:document.getElementById('mOwner').value.trim(),
+    links:document.getElementById('mLinks').value.split('\n').map(l=>l.trim()).filter(Boolean),
+    images:_marketingPendingImages.slice(),
+  };
+}
+
 function exportMarketingEntry(){
-  if(!marketingModalEntry) return;
-  const ev=marketingModalEntry;
+  const ev=_gatherMarketingFormData();
+  if(!ev.title){ ccToast('Please enter a title before exporting.'); return; }
   const rowLabel=(ROW_DEFS.find(r=>r.key===ev.row)||{}).label||ev.row;
+  const startDate=ev.startDateISO?formatDate(ev.startDateISO):'';
+  const endDate=ev.endDateISO?formatDate(ev.endDateISO):'';
   const rows=[
     ['Market',ev.market],['Type',rowLabel],
-    ['Date Range',(ev.startDate||'')+(ev.endDate?' – '+ev.endDate:'')],
+    ['Date Range',(startDate||'—')+(endDate?' – '+endDate:'')],
     ['Time',ev.time||'—'],['Store',ev.store||'—'],['No. of Guests',ev.guests||'—'],
     ['Objective',ev.objective||'—'],['Target Audience',ev.targetAudience||'—'],
     ['Event Rundown',ev.eventRundown||'—'],['Mechanics',ev.mechanics||'—'],
@@ -1260,8 +1282,8 @@ function exportMarketingEntry(){
   const imgHtml=(ev.images||[]).map(img=>`<img src="${esc(img.url)}" style="max-width:220px;border-radius:8px;margin:6px 6px 0 0;border:1px solid #ddd">`).join('');
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(ev.title)}</title>
 <style>body{font-family:Helvetica,Arial,sans-serif;padding:32px;color:#111}h1{font-size:20px;margin-bottom:4px}
-table{border-collapse:collapse;margin-top:16px;width:100%}td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top}
-td:first-child{font-weight:700;width:160px;color:#666;text-transform:uppercase;font-size:11px;letter-spacing:.05em}</style>
+table{border-collapse:collapse;margin-top:16px;width:100%}td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top;white-space:pre-wrap}
+td:first-child{font-weight:700;width:160px;color:#666;text-transform:uppercase;font-size:11px;letter-spacing:.05em;white-space:nowrap}</style>
 </head><body><h1>${esc(ev.title)}</h1><div style="color:#888;font-size:12px">Beyond The Vines — Creative Calendar Export</div>
 <table>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</table>
 ${imgHtml?`<div style="margin-top:18px"><div style="font-weight:700;font-size:11px;color:#666;text-transform:uppercase;margin-bottom:6px">Images</div>${imgHtml}</div>`:''}
@@ -1304,7 +1326,7 @@ function seedData(force=false){
           state[mkt]=state[mkt].filter(e=>!(e.row===sd.row&&e.week===sd.wk&&e.title===sd.t&&e._seeded));
         }
         state[mkt].push({
-          id:'seed-'+mkt+'-'+sd.row+'-'+sd.wk+'-'+sd.t.slice(0,15).replace(/\s/g,''),
+          id:'seed-'+mkt+'-'+sd.row+'-'+sd.wk+'-'+sd.t.slice(0,15).replace(/[^a-zA-Z0-9]/g,''),
           market:mkt,week:sd.wk,weekEnd:sd.we||null,row:sd.row,
           title:sd.t,brief:sd.b||'',status:'Not Started',
           owner:'',pillar:'',links:[],_seeded:true,
@@ -1316,6 +1338,51 @@ function seedData(force=false){
   });
   if(seeded){ saveState(); return true; }
   return false;
+}
+
+// Seeds the default Public Holidays row from the static HOLIDAYS reference
+// data so existing holiday info isn't lost when the row became editable —
+// each market can then add/edit/remove their own from there.
+function seedPublicHolidays(force=false){
+  let seeded=false;
+  Object.keys(HOLIDAYS).forEach(mkt=>{
+    state[mkt]=state[mkt]||[];
+    Object.entries(HOLIDAYS[mkt]).forEach(([wkStr,title])=>{
+      const wk=parseInt(wkStr,10);
+      const exists=state[mkt].some(e=>e.row==='public_holidays'&&e.week===wk&&e.title===title&&e._seeded);
+      if(!exists||force){
+        if(force){
+          state[mkt]=state[mkt].filter(e=>!(e.row==='public_holidays'&&e.week===wk&&e.title===title&&e._seeded));
+        }
+        state[mkt].push({
+          id:'seed-'+mkt+'-public_holidays-'+wk+'-'+title.slice(0,15).replace(/[^a-zA-Z0-9]/g,''),
+          market:mkt,week:wk,weekEnd:null,row:'public_holidays',
+          title,brief:'',status:'Not Started',
+          owner:'',pillar:'',links:[],_seeded:true,
+          created:'2026-01-01T00:00:00Z',updated:'2026-01-01T00:00:00Z'
+        });
+        seeded=true;
+      }
+    });
+  });
+  if(seeded) saveState();
+  return seeded;
+}
+
+// One-time fix for entries seeded before titles with apostrophes (e.g. "Valentine's
+// Day") were sanitised out of generated ids — a raw "'" in an id breaks the inline
+// onclick handler's JS string and silently prevents the chip from reopening.
+function _sanitizeSeededIds(){
+  let changed=false;
+  MARKETS.forEach(mkt=>{
+    (state[mkt]||[]).forEach(e=>{
+      if(e._seeded && e.id && /['"]/.test(e.id)){
+        e.id=e.id.replace(/[^a-zA-Z0-9\-]/g,'');
+        changed=true;
+      }
+    });
+  });
+  if(changed) saveState();
 }
 
 function confirmSeed(){
@@ -1431,7 +1498,6 @@ function renderMarket(market){
   if(!thead||!tbody) return;
   thead.innerHTML=buildThead();
   const rows=getRows(market);
-  const holidays=HOLIDAYS[market]||{};
   let lastGroup=null,html='';
   rows.forEach(row=>{
     if(row.group!==lastGroup){
@@ -1439,7 +1505,7 @@ function renderMarket(market){
       html+=`<tr class="group-row g-${row.group}"><td class="row-head" colspan="${WEEKS.length+1}">${GROUP_LABELS[row.group]||row.group}</td></tr>`;
     }
     const gc='g-'+row.group;
-    html+=`<tr class="${gc}${row.holiday?' holiday-row':''}">`;
+    html+=`<tr class="${gc}">`;
     html+=`<td class="row-head ${gc}">${esc(row.label)}</td>`;
     if(row.btvPerMarket){
       // Read-only — live-pulled straight from the BTV Management Calendar (same
@@ -1458,8 +1524,6 @@ function renderMarket(market){
       });
     } else if(row.marketingRow){
       html+=renderMarketingRow(market,row,gc);
-    } else if(row.holiday){
-      WEEKS.forEach(w=>{ const hol=holidays[w.n]; html+=`<td class="${gc} readonly holiday-cell no-hover">${hol?`<div class="holiday-chip">${esc(hol)}</div>`:''}</td>`; });
     } else if(SOCIAL_ROWS.has(row.key)){
       html+=renderSocialRow(market,row.key,gc);
     } else {
@@ -1542,26 +1606,14 @@ const GLOBAL_BTV_ROWS=[
 
 const GLOBAL_CREATIVE_ROWS=[
   {key:'soc', label:'Social / Content',        srcKeys:['ig_grid','ig_stories','ig_mkt','tiktok','line','red_xhs','wechat']},
-  {key:'edm', label:'Channel (EDM / Media)',    srcKeys:['edm','edm_tagOn','media_ooh']},
+  {key:'edm', label:'Channel (EDM / Media)',    srcKeys:['edm','media_ooh']},
 ];
 
 // Core helper: collect entries for a set of markets + row keys at a week,
 // group by normalised title → deduplicate with yellow for multi-market matches.
 function buildGlobalCellHtml(mkts, rowKeys, weekNum, opts){
-  // opts: { includeHolidays, readonly }
-  const tg={}; // normalisedTitle → { title, markets:[], entries:[], _hol? }
+  const tg={}; // normalisedTitle → { title, markets:[], entries:[] }
   const mktScope = mkts || MARKETS;
-
-  // Holidays (for context rows)
-  if(opts&&opts.includeHolidays){
-    mktScope.forEach(mkt=>{
-      const hol=(HOLIDAYS[mkt]||{})[weekNum];
-      if(!hol) return;
-      const k='hol|'+hol.toLowerCase().slice(0,30);
-      if(!tg[k]) tg[k]={title:hol,markets:[],_hol:true};
-      if(!tg[k].markets.includes(mkt)) tg[k].markets.push(mkt);
-    });
-  }
 
   // Entries from state
   rowKeys.forEach(rk=>{
@@ -1584,10 +1636,6 @@ function buildGlobalCellHtml(mkts, rowKeys, weekNum, opts){
     const isGlobal=g.markets.length>1;
     const mktList=g.markets.slice().sort().join(', ');
     const cssClass=isGlobal?'mkt-global':(MKT_CSS[g.markets[0]]||'c-ns');
-    if(g._hol){
-      chips+=`<div class="chip ${cssClass}"><span class="country-tag">${esc(isGlobal?mktList:g.markets[0])}</span>${esc(g.title)}</div>`;
-      return;
-    }
     const rep=g.entries&&g.entries[0];
     const cid=rep?_cacheEntry({...rep,_displayMarkets:isGlobal?mktList:g.markets[0]}):'';
     const spanTag=rep&&rep.weekEnd&&rep.weekEnd>weekNum?`<span class="span-tag">→Wk${rep.weekEnd}</span>`:'';
@@ -1625,10 +1673,10 @@ function renderGlobal(){
   });
   html+=`</tr>`;
 
-  // Public Holidays — auto from HOLIDAYS
+  // Public Holidays — from entries (per-market editable)
   html+=`<tr class="g-context"><td class="row-head g-context">Public Holidays</td>`;
   WEEKS.forEach(w=>{
-    html+=`<td class="g-context readonly">${buildGlobalCellHtml(null,[],w.n,{includeHolidays:true})}</td>`;
+    html+=`<td class="g-context readonly">${buildGlobalCellHtml(null,['public_holidays'],w.n,{})}</td>`;
   });
   html+=`</tr>`;
 
@@ -1752,7 +1800,7 @@ function renderCurrent(){ if(currentTab==='global')renderGlobal();else renderMar
 
 // ── Modal ──────────────────────────────────────────────────────────────────
 
-const EDM_ROWS=new Set(['edm','edm_tagOn']),KOL_ROWS=new Set(['seeding']),PROMO_ROWS=new Set(['commercial']),PERF_ROWS=new Set(['perf_tier1','perf_tier2','perf_tier3']);
+const EDM_ROWS=new Set(['edm']),KOL_ROWS=new Set(['seeding']),PROMO_ROWS=new Set(['commercial']),PERF_ROWS=new Set(['perf_tier1','perf_tier2','perf_tier3']);
 
 function onRowChange(){
   const row=document.getElementById('fRow').value;
@@ -1849,7 +1897,7 @@ function saveEntry(){
     state[market]=state[market]||[];
     state[market].unshift({
       id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
-      market,week:finalWeek,weekEnd:finalWeekEnd,row,date,pillar,
+      title,market,week:finalWeek,weekEnd:finalWeekEnd,row,date,pillar,
       edmMarket:edmM,edmType:edmT,kol,promo,perfObj,brief,links,owner,status,
       _seeded:false,created:new Date().toISOString(),updated:new Date().toISOString()
     });
@@ -1887,6 +1935,8 @@ document.getElementById('fWeekEnd').innerHTML=buildWeekOpts(null,true);
 // Auto-seed on first load if no launch data exists for any market
 const hasData=MARKETS.some(m=>(state[m]||[]).some(e=>e.row==='launch'));
 if(!hasData){ seedData(false); }
+seedPublicHolidays(false);
+_sanitizeSeededIds();
 // Init filter bar visibility (global = all controls visible)
 (function(){
   const mktGrp=document.getElementById('filterGroupMarket');
