@@ -104,9 +104,9 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
   font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
   color:var(--muted);text-align:center;padding:6px 4px 5px;
   border-bottom:2px solid var(--grid);border-right:1px solid var(--grid);
-  width:90px;min-width:90px;vertical-align:bottom}
+  width:210px;min-width:210px;vertical-align:bottom}
 .cal-table thead th.row-head{position:sticky;top:0;left:0;z-index:15;text-align:left;
-  padding:6px 10px;width:178px;min-width:178px;background:#fafaf8}
+  padding:6px 10px;width:190px;min-width:190px;background:#fafaf8}
 .cal-table thead th .wk-range{font-size:8px;font-weight:400;color:#bbb;display:block;
   margin-top:2px;white-space:normal;word-break:break-word}
 .cal-table thead th.m-first{border-left:2px solid #ccc}
@@ -114,7 +114,7 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
 .cal-table tbody td.row-head{position:sticky;left:0;z-index:5;font-size:9.5px;font-weight:700;
   letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:4px 10px;
   border-right:2px solid var(--grid);border-bottom:1px solid var(--grid);
-  white-space:normal;word-break:break-word;width:178px;min-width:178px;vertical-align:top}
+  white-space:normal;word-break:break-word;width:190px;min-width:190px;vertical-align:top}
 
 .cal-table tbody tr.group-row td{background:#ececea;border-top:2px solid #d0ceca;
   border-bottom:none;cursor:default;padding:2px 10px}
@@ -130,7 +130,7 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
 .g-btvrow td.row-head,.g-btvrow td{background:#fafaf6}
 
 .cal-table tbody td{border-right:1px solid var(--grid);border-bottom:1px solid var(--grid);
-  padding:3px 4px;vertical-align:top;width:90px;min-width:90px;cursor:pointer;transition:filter .1s}
+  padding:3px 4px;vertical-align:top;width:210px;min-width:210px;cursor:pointer;transition:filter .1s}
 .cal-table tbody td:hover:not(.readonly):not(.no-hover){filter:brightness(.95)}
 .cal-table tbody td.readonly{cursor:default}
 .cal-table tbody td.no-hover:hover{filter:none}
@@ -164,6 +164,39 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
 .add-chip{display:block;margin:2px 0;padding:2px 4px;border-radius:3px;
   font-size:9px;color:#ccc;cursor:pointer;text-align:center}
 .add-chip:hover{color:#888;background:rgba(0,0,0,.05)}
+
+/* ── Rich cards — Marketing / Communication / Product, matches the BTV Management
+   Calendar's .entry card format (date + title + summary visible without opening
+   the popup) ── */
+.rcard{display:block;background:#fffdfa;border:1px solid var(--grid);border-left:3px solid #ccc;
+  border-radius:10px;padding:7px 9px;margin:4px 0;cursor:pointer;
+  transition:box-shadow .15s,transform .15s}
+.rcard:hover{box-shadow:0 4px 14px rgba(0,0,0,.12);transform:translateY(-1px)}
+.rcard-date{font-size:10px;font-weight:700;color:var(--muted);margin-bottom:2px;line-height:1.1}
+.rcard-title{font-size:12px;font-weight:700;line-height:1.25;margin-bottom:4px;color:var(--text);word-break:break-word}
+.rcard-summary{font-size:10.5px;color:#555;line-height:1.4;margin-bottom:5px;word-break:break-word;
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.rcard-info{font-size:9.5px;color:var(--muted);line-height:1.3;margin-top:2px}
+.rcard-info b{color:#777;font-weight:700}
+.rcard-badge{display:inline-block;margin-top:5px;padding:2px 8px;border-radius:20px;font-size:9px;
+  font-weight:700;letter-spacing:.02em}
+
+.rcard.mkt-accent-global{border-left-color:var(--mkt-global-bd)}
+.rcard.mkt-accent-sg{border-left-color:var(--mkt-sg-bd)}
+.rcard.mkt-accent-th{border-left-color:var(--mkt-th-bd)}
+.rcard.mkt-accent-id{border-left-color:var(--mkt-id-bd)}
+.rcard.mkt-accent-ph{border-left-color:var(--mkt-ph-bd)}
+.rcard.mkt-accent-cn{border-left-color:var(--mkt-cn-bd)}
+.rcard.mkt-accent-jp{border-left-color:var(--mkt-jp-bd)}
+
+.rcard-badge.s-draft,.rcard-badge.s-ns{background:#eeede9;color:#555}
+.rcard-badge.s-published,.rcard-badge.s-ap{background:#d5f0dc;color:#155724}
+.rcard-badge.s-ip{background:#dde8f9;color:#1a4db0}
+.rcard-badge.s-ir{background:#fef3cd;color:#7a5800}
+.rcard-badge.s-del{background:#111;color:#fff}
+
+.day-chip-summary{font-size:8.5px;color:#888;line-height:1.25;margin-top:1px;word-break:break-word;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
 /* ── Day sub-slots ── */
 .day-cell{padding:0!important;cursor:default!important}
@@ -645,7 +678,7 @@ const ROW_DEFS=[
   {key:'Community Activation', label:'Community Activation', group:'marketing', marketingRow:true},
   {key:'Retail Events',        label:'Retail Activation',    group:'marketing', marketingRow:true},
   {key:'Digital Activations',  label:'Digital Activation',   group:'marketing', marketingRow:true},
-  {key:'edm',              label:'EDM',                   group:'communication', editable:true},
+  {key:'edm',              label:'EDM',                   group:'communication', editable:true, richCard:true},
   {key:'ig_grid',          label:'IG Grid',               group:'communication', editable:true},
   {key:'ig_stories',       label:'IG Stories',            group:'communication', editable:true},
   {key:'ig_mkt',           label:'IG Marketing Tag-ons',  group:'communication', editable:true},
@@ -654,12 +687,12 @@ const ROW_DEFS=[
   {key:'red_xhs',          label:'RED / Xiaohongshu',     group:'communication', editable:true,markets:['CN']},
   {key:'wechat',           label:'WeChat Official',       group:'communication', editable:true,markets:['CN']},
   {key:'livestream',       label:'Livestreaming',         group:'communication', editable:true,markets:['CN']},
-  {key:'media_ooh',        label:'Media / OOH',           group:'communication', editable:true},
-  {key:'in_mall',         label:'In-Mall Visibility',              group:'communication', editable:true},
-  {key:'mall_social',     label:'Mall’s Social Media Visibility', group:'communication', editable:true},
-  {key:'perf_tier1',      label:'Performance Marketing Tier 1',    group:'communication', editable:true},
-  {key:'perf_tier2',      label:'Performance Marketing Tier 2',    group:'communication', editable:true},
-  {key:'perf_tier3',      label:'Performance Marketing Tier 3',    group:'communication', editable:true},
+  {key:'media_ooh',        label:'Media / OOH',           group:'communication', editable:true, richCard:true},
+  {key:'in_mall',         label:'In-Mall Visibility',              group:'communication', editable:true, richCard:true},
+  {key:'mall_social',     label:'Mall’s Social Media Visibility', group:'communication', editable:true, richCard:true},
+  {key:'perf_tier1',      label:'Performance Marketing Tier 1',    group:'communication', editable:true, richCard:true},
+  {key:'perf_tier2',      label:'Performance Marketing Tier 2',    group:'communication', editable:true, richCard:true},
+  {key:'perf_tier3',      label:'Performance Marketing Tier 3',    group:'communication', editable:true, richCard:true},
 ];
 
 const GROUP_LABELS={context:'Context',product:'Product',marketing:'Marketing',communication:'Communication'};
@@ -729,6 +762,29 @@ function getBtvEntriesForSectionsWeek(sectionKeys,wn,marketFilter){
 }
 
 function btvEntryTitle(entry){ return entry.launchTitle||entry.productTitle||entry.storeName||'(untitled)'; }
+
+// Date + content summary for BTV-sourced Product rows (Launch/Restock/Store Opening) —
+// lets the card show readable info without opening the BTV reference popup.
+function btvEntryDateLabel(section,entry){
+  if(section==='global'||section==='china') return entry.launchDate?formatDateWithDay(entry.launchDate):'';
+  if(section==='sea'||section==='nea') return entry.launchDate?formatDateWithDay(entry.launchDate):(entry.startDate||'');
+  if(section==='restocks') return entry.etaISO?('ETA '+formatDateWithDay(entry.etaISO)):(entry.eta?('ETA '+entry.eta):'');
+  if(section==='store_openings') return entry.targetOpenDate?('Target '+formatDateWithDay(entry.targetOpenDate)):'';
+  return '';
+}
+function btvEntrySummary(section,entry){
+  if(section==='global'||section==='china'||((section==='sea'||section==='nea')&&entry.lines)){
+    const names=(entry.lines||[]).map(l=>l.productName).filter(Boolean);
+    return names.length?names.join(', '):(entry.brief||'');
+  }
+  if(section==='sea'||section==='nea') return entry.mechanics||(entry.stores||[]).join(', ')||entry.colour||'';
+  if(section==='restocks'){
+    const lines=(entry.lines&&entry.lines.length)?entry.lines:[{productTitle:entry.productTitle||''}];
+    return lines.map(l=>l.productTitle).filter(Boolean).join(', ');
+  }
+  if(section==='store_openings') return entry.storeAddress||entry.storeSize||'';
+  return entry.brief||entry.notes||'';
+}
 
 // Card renderers — mirror calendar.html's renderGlobal/renderRegional/renderRestock/renderStoreOpening, read-only.
 function btvRenderCard(section,entry){
@@ -955,12 +1011,22 @@ function renderMarketingRow(market,row,gc){
     const colspanAttr=colspan>1?` colspan="${colspan}"`:'';
     let chips='';
     if(spanEntry&&matchesMarketingFilter(spanEntry)){
-      chips+=`<div class="chip ${marketingStatusClass(spanEntry.status)}" onclick="openMarketingViewModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();">
-        <span class="span-tag">→Wk${wEnd}</span>${esc(spanEntry.title)}
-      </div>`;
+      chips+=buildRichCard({
+        date:(spanEntry.startDateISO?formatDateWithDay(spanEntry.startDateISO):weekStartDateLabel(w.n))+' → Wk'+wEnd,
+        title:spanEntry.title,summary:spanEntry.notes,
+        badgeLabel:spanEntry.status==='published'?'Published':'Draft',
+        badgeClass:'s-'+(spanEntry.status||'draft'),accentMkt:market,
+        onclick:`openMarketingViewModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();`
+      });
     }
     starts.filter(e=>marketingWeekEnd(e)<=marketingWeek(e)&&matchesMarketingFilter(e)).forEach(e=>{
-      chips+=`<div class="chip ${marketingStatusClass(e.status)}" onclick="openMarketingViewModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();" title="${esc(e.title)}">${esc(e.title)}</div>`;
+      chips+=buildRichCard({
+        date:e.startDateISO?formatDateWithDay(e.startDateISO):weekStartDateLabel(w.n),
+        title:e.title,summary:e.notes,
+        badgeLabel:e.status==='published'?'Published':'Draft',
+        badgeClass:'s-'+(e.status||'draft'),accentMkt:market,
+        onclick:`openMarketingViewModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();`
+      });
     });
     html+=`<td${colspanAttr} class="${gc}" onclick="openMarketingAddModal('${esc(market)}','${esc(row.key)}',${w.n})">${chips}${chips?`<span class="add-chip" onclick="openMarketingAddModal('${esc(market)}','${esc(row.key)}',${w.n});event.stopPropagation();">+</span>`:''}</td>`;
   });
@@ -1409,6 +1475,24 @@ function ccToast(msg){
 function statusClass(s){ return {'Not Started':'c-ns','In Progress':'c-ip','In Review':'c-ir','Approved':'c-ap','Delivered':'c-del'}[s]||'c-ns'; }
 function statusPillClass(s){ return {'Not Started':'s-ns','In Progress':'s-ip','In Review':'s-ir','Approved':'s-ap','Delivered':'s-del'}[s]||'s-ns'; }
 function formatDate(iso){ if(!iso)return''; const d=new Date(iso+'T00:00:00'),Mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return d.getDate()+' '+Mo[d.getMonth()]; }
+// "24 May (Fri)" — matches the BTV Management Calendar's date+day-of-week card format.
+function formatDateWithDay(iso){ if(!iso)return''; const d=new Date(iso+'T00:00:00'); return formatDate(iso)+' ('+d.toLocaleDateString('en-US',{weekday:'short'})+')'; }
+// Falls back to the Monday of a given week number when no specific date is set.
+function weekStartDateLabel(wn){ const w=WEEKS[wn-1]; if(!w)return''; return formatDateWithDay(w.startDate.toISOString().slice(0,10)); }
+function mktAccentClass(mkt){ return 'mkt-accent-'+(mkt?mkt.toLowerCase():'global'); }
+// Shared rich-card renderer — date + title + summary + badge, visible without opening the popup.
+// opts: {date, title, summary, badgeLabel, badgeClass, accentMkt, onclick}
+function buildRichCard(opts){
+  const dateLine=opts.date?`<div class="rcard-date">${esc(opts.date)}</div>`:'';
+  const summaryLine=opts.summary?`<div class="rcard-summary">${esc(opts.summary)}</div>`:'';
+  const badge=opts.badgeLabel?`<span class="rcard-badge ${opts.badgeClass||''}">${esc(opts.badgeLabel)}</span>`:'';
+  return `<div class="rcard ${mktAccentClass(opts.accentMkt)}"${opts.onclick?` onclick="${opts.onclick}"`:''} title="${esc(opts.title||'')}">
+    ${dateLine}
+    <div class="rcard-title">${esc(opts.title||'')}</div>
+    ${summaryLine}
+    ${badge}
+  </div>`;
+}
 function dateToWeekNum(iso){ if(!iso)return 0; const d=new Date(iso+'T00:00:00'),wk1=new Date(2025,11,29),n=Math.floor((d-wk1)/(7*86400000))+1; return(n>=1&&n<=53)?n:0; }
 function dayOfWeek(iso){ if(!iso)return -1; return(new Date(iso+'T00:00:00').getDay()+6)%7; }
 function isoForWeekDay(wn,di){ const w=WEEKS[wn-1];if(!w)return''; const d=new Date(w.startDate);d.setDate(d.getDate()+di);return d.toISOString().slice(0,10); }
@@ -1517,8 +1601,15 @@ function renderMarket(market){
           const title=btvEntryTitle(entry);
           if(F.search && !title.toLowerCase().includes(F.search.toLowerCase())) return;
           const cid=_cacheBtvCard(section,entry);
-          const pubCls=btvGetEntryStatus(entry,section)==='published'?'c-ap':'c-ns';
-          chips+=`<div class="chip ${pubCls}" onclick="openBtvCardModal('${esc(cid)}');event.stopPropagation();" title="${esc(title)}">${esc(title)}</div>`;
+          const pubStatus=btvGetEntryStatus(entry,section);
+          chips+=buildRichCard({
+            date:btvEntryDateLabel(section,entry)||weekStartDateLabel(w.n),
+            title,summary:btvEntrySummary(section,entry),
+            badgeLabel:pubStatus==='published'?'Published':'Draft',
+            badgeClass:pubStatus==='published'?'s-published':'s-draft',
+            accentMkt:market,
+            onclick:`openBtvCardModal('${esc(cid)}');event.stopPropagation();`
+          });
         });
         html+=`<td class="${gc} readonly">${chips}</td>`;
       });
@@ -1548,23 +1639,43 @@ function renderSpannableRow(market, row, gc){
     const colspan=spanEntry?(spanEntry.weekEnd-w.n+1):1;
     const colspanAttr=colspan>1?` colspan="${colspan}"`:'';
     let chips='';
-    if(spanEntry&&matchesFilter(spanEntry)){
-      const cid=_cacheEntry(spanEntry);
-      chips+=`<div class="chip ${statusClass(spanEntry.status)}" onclick="openEditModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();">
-        <span class="span-tag">→Wk${spanEntry.weekEnd}</span>
-        ${spanEntry._seeded?'<span class="seeded-tag">●</span>':''}
-        ${spanEntry.pillar?`<span class="pillar-tag">${esc(spanEntry.pillar)}</span>`:''}
-        ${esc(spanEntry.title)}
-      </div>`;
+    if(row.richCard){
+      if(spanEntry&&matchesFilter(spanEntry)){
+        chips+=buildRichCard({
+          date:(spanEntry.date?formatDateWithDay(spanEntry.date):weekStartDateLabel(w.n))+' → Wk'+spanEntry.weekEnd,
+          title:spanEntry.title,summary:spanEntry.brief,
+          badgeLabel:spanEntry.status,badgeClass:statusClass(spanEntry.status).replace('c-','s-'),
+          accentMkt:market,
+          onclick:`openEditModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();`
+        });
+      }
+      starts.filter(e=>(!e.weekEnd||e.weekEnd<=e.week)&&matchesFilter(e)).forEach(e=>{
+        chips+=buildRichCard({
+          date:e.date?formatDateWithDay(e.date):weekStartDateLabel(w.n),
+          title:e.title,summary:e.brief,
+          badgeLabel:e.status,badgeClass:statusClass(e.status).replace('c-','s-'),
+          accentMkt:market,
+          onclick:`openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();`
+        });
+      });
+    } else {
+      if(spanEntry&&matchesFilter(spanEntry)){
+        chips+=`<div class="chip ${statusClass(spanEntry.status)}" onclick="openEditModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();">
+          <span class="span-tag">→Wk${spanEntry.weekEnd}</span>
+          ${spanEntry._seeded?'<span class="seeded-tag">●</span>':''}
+          ${spanEntry.pillar?`<span class="pillar-tag">${esc(spanEntry.pillar)}</span>`:''}
+          ${esc(spanEntry.title)}
+        </div>`;
+      }
+      starts.filter(e=>(!e.weekEnd||e.weekEnd<=e.week)&&matchesFilter(e)).forEach(e=>{
+        chips+=`<div class="chip ${statusClass(e.status)}" onclick="openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();" title="${esc(e.title)}">
+          ${e._seeded?'<span class="seeded-tag">●</span>':''}
+          ${e.pillar?`<span class="pillar-tag">${esc(e.pillar)}</span>`:''}
+          ${e.date?`<span class="date-tag">${esc(formatDate(e.date))}</span>`:''}
+          ${esc(e.title)}
+        </div>`;
+      });
     }
-    starts.filter(e=>(!e.weekEnd||e.weekEnd<=e.week)&&matchesFilter(e)).forEach(e=>{
-      chips+=`<div class="chip ${statusClass(e.status)}" onclick="openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();" title="${esc(e.title)}">
-        ${e._seeded?'<span class="seeded-tag">●</span>':''}
-        ${e.pillar?`<span class="pillar-tag">${esc(e.pillar)}</span>`:''}
-        ${e.date?`<span class="date-tag">${esc(formatDate(e.date))}</span>`:''}
-        ${esc(e.title)}
-      </div>`;
-    });
     html+=`<td${colspanAttr} class="${gc}" onclick="openAddModal('${esc(market)}','${esc(row.key)}',${w.n})">${chips}${chips?`<span class="add-chip" onclick="openAddModal('${esc(market)}','${esc(row.key)}',${w.n});event.stopPropagation();">+</span>`:''}</td>`;
   });
   return html;
@@ -1579,12 +1690,12 @@ function renderSocialRow(market, rowKey, gc){
     const cellEntries=rowEntries.filter(e=>e.week===w.n);
     const byDay={u:[]};for(let d=0;d<7;d++)byDay[d]=[];
     cellEntries.forEach(e=>{ const di=e.date?dayOfWeek(e.date):-1; if(di>=0)byDay[di].push(e);else byDay.u.push(e); });
-    let content=`<div class="day-unscheduled">${byDay.u.map(e=>`<div class="chip ${statusClass(e.status)}" onclick="openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();">${e.pillar?`<span class="pillar-tag">${esc(e.pillar)}</span>`:''}${esc(e.title)}</div>`).join('')}</div>`;
+    let content=`<div class="day-unscheduled">${byDay.u.map(e=>`<div class="chip ${statusClass(e.status)}" onclick="openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();">${e.pillar?`<span class="pillar-tag">${esc(e.pillar)}</span>`:''}${esc(e.title)}${e.brief?`<div class="day-chip-summary">${esc(e.brief)}</div>`:''}</div>`).join('')}</div>`;
     for(let di=0;di<7;di++){
       const iso=isoForWeekDay(w.n,di),dn=dayLabel(w.n,di);
       content+=`<div class="day-slot" onclick="openAddModal('${esc(market)}','${esc(rowKey)}',${w.n},'${iso}')">
         <span class="day-lbl">${WEEK_DAYS[di]}<br>${dn}</span>
-        <div class="day-chips">${byDay[di].map(e=>`<div class="chip ${statusClass(e.status)}" onclick="openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();">${e.pillar?`<span class="pillar-tag">${esc(e.pillar)}</span>`:''}${esc(e.title)}</div>`).join('')}</div>
+        <div class="day-chips">${byDay[di].map(e=>`<div class="chip ${statusClass(e.status)}" onclick="openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();">${e.pillar?`<span class="pillar-tag">${esc(e.pillar)}</span>`:''}${esc(e.title)}${e.brief?`<div class="day-chip-summary">${esc(e.brief)}</div>`:''}</div>`).join('')}</div>
       </div>`;
     }
     html+=`<td class="${gc} day-cell">${content}</td>`;
