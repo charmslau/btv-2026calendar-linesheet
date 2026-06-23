@@ -7183,7 +7183,7 @@ const STATUS_OPTIONS = [{value:"draft", label:"Draft"},{value:"published", label
 
 const GM_ROWS = ["Calendar","SEA","NEA","China","Restock","Digital Activations","Events","GWP","Ads","Influencer Marketing"];
 
-const MARKET_CAL_ROWS = ["Launch","Key Moments","Brand Events","Retail Events","Digital Activations","Social Activations","Support","Seeding","GWP"];
+const MARKET_CAL_ROWS = ["Launch","Key Moments","Brand Events","Community Activation","Retail Events","Digital Activations","Social Activations","Support","Seeding","GWP"];
 
 const MARKETS_ALL = ["SG","TH","ID","PH","JP","CN"];
 
@@ -7358,9 +7358,9 @@ function getPublishedMainEntries(){
 
 }
 
-function syncMarketingPublishToMain(market, weekId, row, title, relatedLaunch){
+function syncMarketingPublishToMain(market, weekId, row, title, relatedLaunch, detail){
 
-  if(row === "Brand Events" || row === "Retail Events"){
+  if(row === "Brand Events" || row === "Community Activation" || row === "Retail Events" || row === "Digital Activations"){
 
     state.events ||= {};
 
@@ -7376,11 +7376,12 @@ function syncMarketingPublishToMain(market, weekId, row, title, relatedLaunch){
 
         section: "events", weekId,
 
-        title, startDate: "", endDate: "", startDateISO: "", endDateISO: "",
+        title, startDate: (detail && detail.startDate) || "", endDate: (detail && detail.endDate) || "",
+        startDateISO: (detail && detail.startDateISO) || "", endDateISO: (detail && detail.endDateISO) || "",
 
         allMarkets: false, markets: [market], anthemIncluded: market === "PH",
 
-        notes: `${row}${relatedLaunch ? " • " + relatedLaunch : ""}`,
+        notes: (detail && detail.notes) || `${row}${relatedLaunch ? " • " + relatedLaunch : ""}`,
 
         workflowStatus: "published", linkedMarketingKey: key
 
@@ -7552,7 +7553,7 @@ function renderMarketMarketingView(){
 
       <div class="field span3"><label>Week</label><select id="mmWeek">${weeks.map(w => `<option value="${w.id}">Wk ${w.weekOfYear}</option>`).join('')}</select></div>
 
-      <div class="field span3"><label>Row</label><select id="mmRow">${["Brand Events","Retail Events","Digital Activations","Social Activations","Support","Seeding","GWP","Key Moments","Ads"].map(r => `<option value="${r}">${r}</option>`).join('')}</select></div>
+      <div class="field span3"><label>Row</label><select id="mmRow">${["Brand Events","Community Activation","Retail Events","Digital Activations","Social Activations","Support","Seeding","GWP","Key Moments","Ads"].map(r => `<option value="${r}">${r}</option>`).join('')}</select></div>
 
       <div class="field span3"><label>Status</label><select id="mmStatus">${STATUS_OPTIONS.map(s => `<option value="${s.value}">${s.label}</option>`).join('')}</select></div>
 

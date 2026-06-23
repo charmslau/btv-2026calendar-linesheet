@@ -257,4 +257,32 @@ end;
 $$;
 
 
+-- ── 10. Storage bucket for Marketing event images ────────────
+-- Used by the Creative Calendar's Marketing group (Brand Events,
+-- Community Activation, Retail Activation, Digital Activation)
+-- for the "Images Upload" field.
+
+insert into storage.buckets (id, name, public)
+values ('creative-marketing', 'creative-marketing', true)
+on conflict (id) do nothing;
+
+drop policy if exists "creative_marketing_upload" on storage.objects;
+drop policy if exists "creative_marketing_read"   on storage.objects;
+drop policy if exists "creative_marketing_delete" on storage.objects;
+
+create policy "creative_marketing_upload"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'creative-marketing');
+
+create policy "creative_marketing_read"
+  on storage.objects for select
+  using (bucket_id = 'creative-marketing');
+
+create policy "creative_marketing_delete"
+  on storage.objects for delete
+  to authenticated
+  using (bucket_id = 'creative-marketing');
+
+
 -- ── Done! ─────────────────────────────────────────────────────

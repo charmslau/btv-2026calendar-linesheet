@@ -11,7 +11,7 @@
 :root{
   --bg:#f7f6f3;--panel:#fff;--grid:#e0ddd8;--text:#111;--muted:#787470;
   --g-context:#f5f4f1;--g-product:#eef2fb;--g-activation:#f2faf0;
-  --g-social:#fff9f0;--g-channel:#fdf0f8;--g-retail:#f0f7fd;
+  --g-marketing:#fff0f0;--g-communication:#fff9f0;--g-retail:#f0f7fd;
   --mkt-global-bg:#fffde0;--mkt-global-bd:#e6c200;--mkt-global-tx:#6e5a00;
   --mkt-sg-bg:#ffe8d6;--mkt-sg-bd:#e07030;--mkt-sg-tx:#7a2e00;
   --mkt-id-bg:#d6f0db;--mkt-id-bd:#3aaa55;--mkt-id-tx:#165a25;
@@ -125,8 +125,8 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
 .g-context td.row-head,.g-context td{background:var(--g-context)}
 .g-product td.row-head,.g-product td{background:var(--g-product)}
 .g-activation td.row-head,.g-activation td{background:var(--g-activation)}
-.g-social td.row-head,.g-social td{background:var(--g-social)}
-.g-channel td.row-head,.g-channel td{background:var(--g-channel)}
+.g-marketing td.row-head,.g-marketing td{background:var(--g-marketing)}
+.g-communication td.row-head,.g-communication td{background:var(--g-communication)}
 .g-retail td.row-head,.g-retail td{background:var(--g-retail)}
 .g-btvrow td.row-head,.g-btvrow td{background:#fafaf6}
 
@@ -389,13 +389,9 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
       <div>
         <label class="f-lbl" for="fRow">Category / Channel</label>
         <select id="fRow" class="f-sel" onchange="onRowChange()">
-          <optgroup label="— Product">
-            <option value="launch">Launch</option>
-            <option value="region_exclusive">Region Exclusive</option>
-            <option value="restock">Restock / To Push</option>
-          </optgroup>
           <optgroup label="— Context">
             <option value="theme">Theme / Season</option>
+            <option value="key_moments">Key Moments</option>
             <option value="consumer_mindset">Consumer Mindset</option>
             <option value="retail_impact">Retail Impact</option>
           </optgroup>
@@ -404,7 +400,9 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
             <option value="seeding">Product Seeding (KOL)</option>
             <option value="new_stores">New Stores</option>
           </optgroup>
-          <optgroup label="— Social">
+          <optgroup label="— Communication">
+            <option value="edm">EDM (Email)</option>
+            <option value="edm_tagOn">EDM Tag-on</option>
             <option value="ig_grid">IG Grid</option>
             <option value="ig_stories">IG Stories</option>
             <option value="ig_mkt">IG Marketing Tag-ons</option>
@@ -413,10 +411,7 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
             <option value="red_xhs">RED / Xiaohongshu</option>
             <option value="wechat">WeChat Official</option>
             <option value="livestream">Livestreaming</option>
-          </optgroup>
-          <optgroup label="— Channel">
-            <option value="edm">EDM (Email)</option>
-            <option value="edm_tagOn">EDM Tag-on</option>
+            <option value="media_ooh">Media / OOH</option>
           </optgroup>
           <optgroup label="— Retail / Media">
             <option value="in_mall">In-Mall Visibility</option>
@@ -524,6 +519,106 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
   </div>
 </div>
 
+<!-- Marketing event modal (Brand Events / Community / Retail / Digital Activation) —
+     shares calendar-2026-marketing-workflow-v1 with the BTV Management Calendar. -->
+<div class="modal-overlay" id="marketingModal">
+  <div class="modal-card" style="max-width:600px">
+    <button class="modal-close" onclick="closeMarketingModal()">&times;</button>
+    <div class="modal-title" id="mModalTitle">Add Event</div>
+    <div class="modal-sub" id="mModalSub"></div>
+
+    <input type="hidden" id="mRowKey">
+
+    <label class="f-lbl" for="mTitle">Title *</label>
+    <input type="text" id="mTitle" class="f-inp" placeholder="e.g. BTV Friends & Family Night">
+
+    <div class="f-row">
+      <div>
+        <label class="f-lbl" for="mMarket">Market</label>
+        <select id="mMarket" class="f-sel">
+          <option value="SG">SG</option><option value="TH">TH</option>
+          <option value="ID">ID</option><option value="PH">PH</option>
+          <option value="JP">JP</option><option value="CN">CN</option>
+        </select>
+      </div>
+      <div>
+        <label class="f-lbl" for="mTime">Time</label>
+        <input type="text" id="mTime" class="f-inp" placeholder="e.g. 2:00 PM – 5:00 PM">
+      </div>
+    </div>
+
+    <div class="f-row">
+      <div>
+        <label class="f-lbl" for="mStartDate">Date Range — Start *</label>
+        <input type="date" id="mStartDate" class="f-inp">
+      </div>
+      <div>
+        <label class="f-lbl" for="mEndDate">Date Range — End <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(optional)</span></label>
+        <input type="date" id="mEndDate" class="f-inp">
+      </div>
+    </div>
+
+    <div class="f-row">
+      <div>
+        <label class="f-lbl" for="mStore">Store</label>
+        <input type="text" id="mStore" class="f-inp" placeholder="e.g. ION Orchard">
+      </div>
+      <div>
+        <label class="f-lbl" for="mGuests">No. of Guests</label>
+        <input type="number" id="mGuests" class="f-inp" min="0" placeholder="e.g. 50">
+      </div>
+    </div>
+
+    <label class="f-lbl" for="mObjective">Objective</label>
+    <input type="text" id="mObjective" class="f-inp" placeholder="e.g. Drive brand awareness for new collection">
+
+    <label class="f-lbl" for="mAudience">Target Audience</label>
+    <input type="text" id="mAudience" class="f-inp" placeholder="e.g. Existing VIP members">
+
+    <label class="f-lbl" for="mRundown">Event Rundown</label>
+    <textarea id="mRundown" class="f-txt" placeholder="Run-of-show, timing breakdown…"></textarea>
+
+    <label class="f-lbl" for="mMechanics">Mechanics</label>
+    <textarea id="mMechanics" class="f-txt" style="min-height:45px" placeholder="How it works — e.g. GWP with min. spend…"></textarea>
+
+    <label class="f-lbl" for="mComms">Comms</label>
+    <textarea id="mComms" class="f-txt" style="min-height:45px" placeholder="Key messaging / comms plan…"></textarea>
+
+    <label class="f-lbl" for="mTnc">T&amp;Cs</label>
+    <textarea id="mTnc" class="f-txt" style="min-height:45px" placeholder="Terms & conditions…"></textarea>
+
+    <div class="f-row">
+      <div>
+        <label class="f-lbl" for="mStatus">Status</label>
+        <select id="mStatus" class="f-sel">
+          <option value="draft">Draft</option>
+          <option value="published">Published — push to BTV Calendar</option>
+        </select>
+      </div>
+      <div>
+        <label class="f-lbl" for="mOwner">Owner / Creator</label>
+        <input type="text" id="mOwner" class="f-inp" placeholder="e.g. Becky / VC">
+      </div>
+    </div>
+
+    <label class="f-lbl" for="mLinks">Reference Links (one per line)</label>
+    <textarea id="mLinks" class="f-txt" style="min-height:40px" placeholder="https://…"></textarea>
+
+    <label class="f-lbl" for="mImagesInput">Images</label>
+    <input type="file" id="mImagesInput" accept="image/*" multiple onchange="onMarketingImagesSelected(this)">
+    <div id="mImagesStatus" style="font-size:10.5px;color:var(--muted);margin-top:4px"></div>
+    <div id="mImagesList"></div>
+
+    <div class="f-actions">
+      <button class="btn-primary" onclick="saveMarketingEntry()">Save</button>
+      <button class="btn-ghost" onclick="closeMarketingModal()">Cancel</button>
+      <button class="btn-ghost" id="mExportBtn" style="display:none" onclick="exportMarketingEntry()">Export</button>
+      <button class="btn-danger" id="mDeleteBtn" style="display:none" onclick="deleteMarketingEntry()">Delete</button>
+    </div>
+    <div id="mModalErr" style="font-size:11px;color:#c43030;margin-top:7px;min-height:0"></div>
+  </div>
+</div>
+
 <script>
 'use strict';
 
@@ -550,35 +645,39 @@ const WEEKS = (function(){
 
 const MONTH_STARTS={1:1,2:5,3:10,4:14,5:18,6:22,7:27,8:31,9:36,10:40,11:44,12:48};
 
-function weekTheme(n){
-  if(n<=13)return'BEING IN PRACTICE';if(n<=26)return'IN PRAISE OF PLAY';
-  if(n<=39)return'IMAGINE: PRESENT & FUTURE';return'BEYOND UNIVERSE: PEOPLE, PLACES, PLAY';
-}
-
 const MKT_CSS={global:'mkt-global',SG:'mkt-sg',ID:'mkt-id',TH:'mkt-th',PH:'mkt-ph',CN:'mkt-cn',JP:'mkt-jp'};
 const SOCIAL_ROWS=new Set(['ig_grid','ig_stories','ig_mkt','tiktok','line','red_xhs','wechat','livestream']);
 
 const ROW_DEFS=[
-  {key:'theme',           label:'Theme / Season',        group:'context',    auto:true},
-  {key:'key_moments',     label:'Key Moments',           group:'context',    holiday:true},
-  {key:'consumer_mindset',label:'Consumer Mindset',      group:'context',    editable:true},
-  {key:'retail_impact',   label:'Retail Impact',         group:'context',    editable:true},
-  {key:'launch',          label:'Launch (BTV Cal — ref)',group:'product',    btvRef:true},
-  {key:'region_exclusive',label:'Region Exclusive',      group:'product',    editable:true},
-  {key:'restock',         label:'Restock / To Push',     group:'product',    editable:true},
+  {key:'theme',            label:'Theme / Season',        group:'context',    editable:true},
+  {key:'key_moments',      label:'Key Moments',           group:'context',    editable:true},
+  {key:'public_holidays',  label:'Public Holidays',       group:'context',    holiday:true},
+  {key:'consumer_mindset', label:'Consumer Mindset',      group:'context',    editable:true},
+  {key:'retail_impact',    label:'Retail Impact',         group:'context',    editable:true},
+  {key:'p_launch',  label:'Launch',         group:'product', btvPerMarket:true, btvSections:['global','china']},
+  {key:'p_china',   label:'China',          group:'product', btvPerMarket:true, btvSections:['china'],  markets:['CN']},
+  {key:'p_nea',     label:'NEA',            group:'product', btvPerMarket:true, btvSections:['nea'],    markets:['CN','JP']},
+  {key:'p_sea',     label:'SEA',            group:'product', btvPerMarket:true, btvSections:['sea'],    markets:['SG','TH','ID','PH']},
+  {key:'p_restock', label:'Restock',        group:'product', btvPerMarket:true, btvSections:['restocks']},
+  {key:'p_store',   label:'Store Opening',  group:'product', btvPerMarket:true, btvSections:['store_openings']},
   {key:'commercial',      label:'Commercial Mechanics',  group:'activation', editable:true},
-  {key:'seeding',         label:'Product Seeding (KOL)', group:'activation', editable:true},
-  {key:'new_stores',      label:'New Stores',            group:'activation', editable:true},
-  {key:'ig_grid',         label:'IG Grid',               group:'social',     editable:true},
-  {key:'ig_stories',      label:'IG Stories',            group:'social',     editable:true},
-  {key:'ig_mkt',          label:'IG Marketing Tag-ons',  group:'social',     editable:true},
-  {key:'tiktok',          label:'TikTok',                group:'social',     editable:true},
-  {key:'line',            label:'LINE',                  group:'social',     editable:true,markets:['TH','JP']},
-  {key:'red_xhs',         label:'RED / Xiaohongshu',     group:'social',     editable:true,markets:['CN']},
-  {key:'wechat',          label:'WeChat Official',       group:'social',     editable:true,markets:['CN']},
-  {key:'livestream',      label:'Livestreaming',         group:'social',     editable:true,markets:['CN']},
-  {key:'edm',             label:'EDM',                   group:'channel',    editable:true},
-  {key:'edm_tagOn',       label:'EDM Tag-on',            group:'channel',    editable:true},
+  {key:'seeding',          label:'Product Seeding (KOL)', group:'activation', editable:true},
+  {key:'new_stores',       label:'New Stores',            group:'activation', editable:true},
+  {key:'Brand Events',         label:'Brand Events',         group:'marketing', marketingRow:true},
+  {key:'Community Activation', label:'Community Activation', group:'marketing', marketingRow:true},
+  {key:'Retail Events',        label:'Retail Activation',    group:'marketing', marketingRow:true},
+  {key:'Digital Activations',  label:'Digital Activation',   group:'marketing', marketingRow:true},
+  {key:'edm',              label:'EDM',                   group:'communication', editable:true},
+  {key:'edm_tagOn',        label:'EDM Tag-on',            group:'communication', editable:true},
+  {key:'ig_grid',          label:'IG Grid',               group:'communication', editable:true},
+  {key:'ig_stories',       label:'IG Stories',            group:'communication', editable:true},
+  {key:'ig_mkt',           label:'IG Marketing Tag-ons',  group:'communication', editable:true},
+  {key:'tiktok',           label:'TikTok',                group:'communication', editable:true},
+  {key:'line',             label:'LINE',                  group:'communication', editable:true,markets:['TH','JP']},
+  {key:'red_xhs',          label:'RED / Xiaohongshu',     group:'communication', editable:true,markets:['CN']},
+  {key:'wechat',           label:'WeChat Official',       group:'communication', editable:true,markets:['CN']},
+  {key:'livestream',       label:'Livestreaming',         group:'communication', editable:true,markets:['CN']},
+  {key:'media_ooh',        label:'Media / OOH',           group:'communication', editable:true},
   {key:'in_mall',         label:'In-Mall Visibility',    group:'retail',     editable:true},
   {key:'mall_social',     label:'Mall Social Media',     group:'retail',     editable:true},
   {key:'perf_tier1',      label:'Perf. Mktg — Tier 1',  group:'retail',     editable:true},
@@ -586,7 +685,7 @@ const ROW_DEFS=[
   {key:'perf_tier3',      label:'Perf. Mktg — Tier 3',  group:'retail',     editable:true},
 ];
 
-const GROUP_LABELS={context:'Context',product:'Product',activation:'Activation',social:'Social',channel:'Channel',retail:'Retail / Media'};
+const GROUP_LABELS={context:'Context',product:'Product',activation:'Activation',marketing:'Marketing',communication:'Communication',retail:'Retail / Media'};
 
 function getRows(market){ return ROW_DEFS.filter(r=>!r.markets||r.markets.includes(market)); }
 
@@ -751,6 +850,11 @@ function openBtvCardModal(cid){
 // status defaults to 'Not Started', _seeded:true marks as pre-loaded from Excel
 
 const SEED_DATA=[
+  // ── THEME / SEASON (continuous bars, same across all markets) ──
+  {m:MARKETS,wk:1,we:13,row:'theme',t:'BEING IN PRACTICE',b:'Q1 seasonal theme'},
+  {m:MARKETS,wk:14,we:26,row:'theme',t:'IN PRAISE OF PLAY',b:'Q2 seasonal theme'},
+  {m:MARKETS,wk:27,we:39,row:'theme',t:'IMAGINE: PRESENT & FUTURE',b:'Q3 seasonal theme'},
+  {m:MARKETS,wk:40,we:53,row:'theme',t:'BEYOND UNIVERSE: PEOPLE, PLACES, PLAY',b:'Q4 seasonal theme'},
   // ── LAUNCHES (Marketing Calendar + Asset Cal) ──
   {m:['CN'],wk:2,row:'launch',t:'CNY Capsule — Cherry Series (CN Only)',b:'Bags (Cherry Series): Dumpling Micro, XS Dumpling; Crunch CC0.5, CC01; Poofy; BTV-TO-GO\n+ Festive Packet Launch\nMin Spend: RMB 800\nLaunch: 9 Jan (Fri)'},
   {m:['SG','TH','ID','PH','JP'],wk:3,row:'launch',t:'CNY Capsule — Cherry Series',b:'Bags (Cherry Series): Dumpling Micro, XS Dumpling; Crunch CC0.5, CC01; Poofy; BTV-TO-GO\n+ Festive Packet Launch\nMin Spend: SGD 120 / IDR 1,400,000 / THB 2,500 / PHP 4,000 / JPY 10,000\n*TH Ang Bao: 19 Jan (Mon)\nLaunch: 16 Jan (Fri)'},
@@ -798,8 +902,7 @@ const SEED_DATA=[
   {m:['SG','TH','ID','PH','JP','CN'],wk:49,row:'launch',t:'Festive RTW',b:'Newness\nLaunch: 4 Dec (Fri)'},
   {m:['SG','TH','ID','PH','JP','CN'],wk:50,row:'launch',t:'Volumes',b:'Newness\nLaunch: 11 Dec (Fri)'},
   {m:['SG','TH','ID','PH','JP','CN'],wk:50,row:'launch',t:'Community Week',b:'Annual community celebration\nLaunch: 11 Dec (Fri)'},
-  // ── REGION EXCLUSIVE ──
-  {m:['JP'],wk:2,we:3,row:'region_exclusive',t:'Lucky Bags (JP)',b:'Lucky Bag activation at MARUI\n4–12 Jan (in-store only)'},
+  // ── COMMERCIAL MECHANICS ──
   {m:['SG','TH'],wk:4,row:'commercial',t:'Scratch Card Activation',b:'With every purchase at stores\nSG & TH'},
   {m:['TH'],wk:7,row:'commercial',t:'Fortune Cookie Activation (TH)',b:'At all TH stores\n*CW Pop-Up Closure: 10 Feb'},
   {m:['SG','ID'],wk:9,row:'commercial',t:'Raya Packet Launch (GWP)',b:'SG: Raya Packet GWP — min spend $100\nID: Drawstring Pouch (ID Exclusive GWP) — min spend IDR 1,200,000'},
@@ -832,6 +935,357 @@ const SEED_DATA=[
   {m:['CN'],wk:46,row:'key_moments',t:'11.11 Singles Day (11 Nov) — CN',b:'Biggest CN shopping event of the year — Tmall / JD'},
   {m:['JP'],wk:48,we:51,row:'key_moments',t:'Oseibo Gifting Season (JP)',b:'End Nov – 20 Dec: year-end corporate gifting season in Japan'},
 ];
+
+// ── Marketing group (Brand Events / Community / Retail / Digital Activation) ──
+// Shares calendar-2026-marketing-workflow-v1 with the BTV Management Calendar's
+// own Marketing Calendar tab (same localStorage key, same row-name vocabulary),
+// so an entry added here shows up there too. Publishing also pushes a copy into
+// the BTV Management Calendar's own state (calendar-2026-working-v5 → events),
+// mirroring what calendar.html's syncMarketingPublishToMain() does internally.
+
+const MARKETING_STORAGE_KEY = 'calendar-2026-marketing-workflow-v1';
+const MARKETING_ROW_DEFS = ROW_DEFS.filter(r=>r.marketingRow);
+
+function loadMarketingState(){ try{ return JSON.parse(localStorage.getItem(MARKETING_STORAGE_KEY))||{SG:[],TH:[],ID:[],PH:[],JP:[],CN:[]}; }catch(e){ return {SG:[],TH:[],ID:[],PH:[],JP:[],CN:[]}; } }
+function saveMarketingState(v){ localStorage.setItem(MARKETING_STORAGE_KEY,JSON.stringify(v)); }
+let marketingState = loadMarketingState();
+
+function getMarketingEntries(market){ return marketingState[market]||[]; }
+function marketingWeek(item){ return dateToWeekNum(item.startDateISO||item.weekId)||0; }
+function marketingWeekEnd(item){ return item.endDateISO?dateToWeekNum(item.endDateISO):0; }
+function marketingStatusClass(s){ return s==='published'?'c-ap':'c-ns'; }
+
+function matchesMarketingFilter(e){
+  if(F.search){
+    const q=F.search.toLowerCase();
+    if(!(e.title||'').toLowerCase().includes(q) && !(e.notes||'').toLowerCase().includes(q)) return false;
+  }
+  if(F.markets.size && !F.markets.has(e.market)) return false;
+  return true;
+}
+
+function renderMarketingRow(market,row,gc){
+  const rowEntries=getMarketingEntries(market).filter(e=>e.row===row.key).sort((a,b)=>marketingWeek(a)-marketingWeek(b));
+  const coveredCells=new Set();
+  rowEntries.forEach(e=>{ const w0=marketingWeek(e),w1=marketingWeekEnd(e); if(w1&&w1>w0) for(let w=w0+1;w<=w1&&w<=53;w++) coveredCells.add(w); });
+  let html='';
+  WEEKS.forEach(w=>{
+    if(coveredCells.has(w.n)) return;
+    const starts=rowEntries.filter(e=>marketingWeek(e)===w.n);
+    const spanEntry=starts.filter(e=>marketingWeekEnd(e)>w.n).sort((a,b)=>marketingWeekEnd(b)-marketingWeekEnd(a))[0];
+    const wEnd=spanEntry?marketingWeekEnd(spanEntry):0;
+    const colspan=spanEntry?(wEnd-w.n+1):1;
+    const colspanAttr=colspan>1?` colspan="${colspan}"`:'';
+    let chips='';
+    if(spanEntry&&matchesMarketingFilter(spanEntry)){
+      chips+=`<div class="chip ${marketingStatusClass(spanEntry.status)}" onclick="openMarketingViewModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();">
+        <span class="span-tag">→Wk${wEnd}</span>${esc(spanEntry.title)}
+      </div>`;
+    }
+    starts.filter(e=>marketingWeekEnd(e)<=marketingWeek(e)&&matchesMarketingFilter(e)).forEach(e=>{
+      chips+=`<div class="chip ${marketingStatusClass(e.status)}" onclick="openMarketingViewModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();" title="${esc(e.title)}">${esc(e.title)}</div>`;
+    });
+    html+=`<td${colspanAttr} class="${gc}" onclick="openMarketingAddModal('${esc(market)}','${esc(row.key)}',${w.n})">${chips}${chips?`<span class="add-chip" onclick="openMarketingAddModal('${esc(market)}','${esc(row.key)}',${w.n});event.stopPropagation();">+</span>`:''}</td>`;
+  });
+  return html;
+}
+
+function buildGlobalMarketingCellHtml(rowKey,weekNum){
+  const tg={};
+  MARKETS.forEach(mkt=>{
+    getMarketingEntries(mkt).filter(e=>e.row===rowKey).forEach(e=>{
+      const w0=marketingWeek(e), w1=marketingWeekEnd(e);
+      const inRange = w0===weekNum || (w1>w0 && w0<=weekNum && w1>=weekNum);
+      if(!inRange || !matchesMarketingFilter(e)) return;
+      const k=(e.title||'').trim().toLowerCase();
+      if(!tg[k]) tg[k]={title:e.title,markets:[],entries:[]};
+      if(!tg[k].markets.includes(mkt)) tg[k].markets.push(mkt);
+      tg[k].entries.push(e);
+    });
+  });
+  let chips='';
+  Object.values(tg).sort((a,b)=>(b.markets.length-a.markets.length)).forEach(g=>{
+    const isGlobal=g.markets.length>1;
+    const mktList=g.markets.slice().sort().join(', ');
+    const cssClass=isGlobal?'mkt-global':(MKT_CSS[g.markets[0]]||'c-ns');
+    const rep=g.entries[0];
+    chips+=`<div class="chip ${cssClass}" onclick="openMarketingViewModal('${esc(rep.id)}','${esc(rep.market)}');event.stopPropagation();" title="${esc(g.title)}">
+      <span class="country-tag">${esc(isGlobal?mktList:g.markets[0])}</span>${esc(g.title)}
+    </div>`;
+  });
+  return chips;
+}
+
+function buildMarketingNotes(d){
+  const lines=[];
+  if(d.time) lines.push('Time: '+d.time);
+  if(d.store) lines.push('Store: '+d.store);
+  if(d.guests) lines.push('No. of Guests: '+d.guests);
+  if(d.objective) lines.push('Objective: '+d.objective);
+  if(d.targetAudience) lines.push('Target Audience: '+d.targetAudience);
+  if(d.eventRundown) lines.push('Rundown: '+d.eventRundown);
+  if(d.mechanics) lines.push('Mechanics: '+d.mechanics);
+  if(d.comms) lines.push('Comms: '+d.comms);
+  if(d.tnc) lines.push('T&Cs: '+d.tnc);
+  if(d.owner) lines.push('Owner: '+d.owner);
+  if(d.links&&d.links.length) lines.push('Links: '+d.links.join(', '));
+  return lines.join(' • ');
+}
+
+// Best-effort: if the BTV Management Calendar iframe is open in the same tab,
+// force it to re-read state from localStorage immediately rather than waiting
+// for the next Supabase realtime tick or 15s poll.
+function _btvNotifyCalFrames(){
+  try{
+    const p=window.parent;
+    if(!p||p===window) return;
+    ['frame-cal-2026','frame-cal-2027'].forEach(function(fid){
+      try{
+        const f=p.document.getElementById(fid);
+        if(f&&f.contentWindow&&typeof f.contentWindow.btvReloadAndRender==='function') f.contentWindow.btvReloadAndRender();
+      }catch(e){}
+    });
+  }catch(e){}
+}
+
+// Mirrors/removes a published Marketing entry inside the BTV Management Calendar's
+// own state (events section), joined by linkedMarketingId so edits/deletes stay in sync.
+function pushMarketingToBtvCalendar(item,status){
+  try{
+    const raw=localStorage.getItem(BTV_CAL_STORAGE_KEY);
+    const btvState=raw?JSON.parse(raw):{};
+    btvState.events=btvState.events||{};
+    Object.keys(btvState.events).forEach(function(wk){
+      btvState.events[wk]=(btvState.events[wk]||[]).filter(function(x){ return x.linkedMarketingId!==item.id; });
+    });
+    if(status==='published'){
+      btvState.events[item.weekId]=btvState.events[item.weekId]||[];
+      btvState.events[item.weekId].push({
+        id:'mkt-'+item.id, section:'events', weekId:item.weekId,
+        title:item.title, startDate:item.startDate||'', endDate:item.endDate||'',
+        startDateISO:item.startDateISO||'', endDateISO:item.endDateISO||'',
+        allMarkets:false, markets:[item.market], anthemIncluded:item.market==='PH',
+        notes:`${item.row}${item.notes?(' — '+item.notes):''}`,
+        workflowStatus:'published',
+        linkedMarketingKey:`${item.market}|${item.row}|${item.title}`,
+        linkedMarketingId:item.id
+      });
+    }
+    localStorage.setItem(BTV_CAL_STORAGE_KEY,JSON.stringify(btvState));
+    _btvNotifyCalFrames();
+  }catch(e){ console.error('[Creative Cal] Failed to sync marketing entry to BTV Calendar:',e); }
+}
+
+let marketingModalEntry=null;
+let _marketingPendingImages=[];
+
+function _resetMarketingFormFields(){
+  ['mTime','mStore','mGuests','mObjective','mAudience','mRundown','mMechanics','mComms','mTnc','mLinks','mOwner'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('mEndDate').value='';
+  document.getElementById('mStatus').value='draft';
+  document.getElementById('mImagesStatus').textContent='';
+  document.getElementById('mModalErr').textContent='';
+}
+
+function openMarketingAddModal(market,rowKey,week){
+  if (window._btvCanEdit === false) { ccToast('You have view-only access to the Creative Calendar'); return; }
+  marketingModalEntry=null;
+  _marketingPendingImages=[];
+  const rowLabel=(ROW_DEFS.find(r=>r.key===rowKey)||{}).label||rowKey;
+  document.getElementById('mModalTitle').textContent='Add '+rowLabel;
+  document.getElementById('mModalSub').textContent=`${market||''} · Wk ${week||1}`;
+  document.getElementById('mTitle').value='';
+  document.getElementById('mMarket').value=market||'SG';
+  document.getElementById('mRowKey').value=rowKey;
+  document.getElementById('mStartDate').value=isoForWeekDay(week||1,0);
+  _resetMarketingFormFields();
+  renderMarketingImagesList();
+  document.getElementById('mDeleteBtn').style.display='none';
+  document.getElementById('mExportBtn').style.display='none';
+  document.getElementById('marketingModal').classList.add('show');
+  setTimeout(()=>document.getElementById('mTitle').focus(),60);
+}
+
+function openMarketingViewModal(id,market){
+  const item=getMarketingEntries(market).find(x=>x.id===id);
+  if(item) openMarketingEditModal(item);
+}
+
+function openMarketingEditModal(item){
+  marketingModalEntry=item;
+  _marketingPendingImages=(item.images||[]).slice();
+  const rowLabel=(ROW_DEFS.find(r=>r.key===item.row)||{}).label||item.row;
+  document.getElementById('mModalTitle').textContent='Edit '+rowLabel;
+  document.getElementById('mModalSub').textContent=`${item.market} · Wk ${marketingWeek(item)}`;
+  document.getElementById('mTitle').value=item.title||'';
+  document.getElementById('mMarket').value=item.market;
+  document.getElementById('mRowKey').value=item.row;
+  document.getElementById('mStartDate').value=item.startDateISO||'';
+  document.getElementById('mEndDate').value=item.endDateISO||'';
+  document.getElementById('mTime').value=item.time||'';
+  document.getElementById('mStore').value=item.store||'';
+  document.getElementById('mGuests').value=item.guests||'';
+  document.getElementById('mObjective').value=item.objective||'';
+  document.getElementById('mAudience').value=item.targetAudience||'';
+  document.getElementById('mRundown').value=item.eventRundown||'';
+  document.getElementById('mMechanics').value=item.mechanics||'';
+  document.getElementById('mComms').value=item.comms||'';
+  document.getElementById('mTnc').value=item.tnc||'';
+  document.getElementById('mLinks').value=(item.links||[]).join('\n');
+  document.getElementById('mOwner').value=item.owner||'';
+  document.getElementById('mStatus').value=item.status||'draft';
+  document.getElementById('mImagesStatus').textContent='';
+  document.getElementById('mModalErr').textContent='';
+  renderMarketingImagesList();
+  document.getElementById('mDeleteBtn').style.display='';
+  document.getElementById('mExportBtn').style.display='';
+  document.getElementById('marketingModal').classList.add('show');
+}
+
+function closeMarketingModal(){
+  document.getElementById('marketingModal').classList.remove('show');
+  marketingModalEntry=null;
+  _marketingPendingImages=[];
+}
+
+function saveMarketingEntry(){
+  if (window._btvCanEdit === false) { ccToast('You have view-only access to the Creative Calendar'); return; }
+  const title=document.getElementById('mTitle').value.trim();
+  const market=document.getElementById('mMarket').value;
+  const row=document.getElementById('mRowKey').value;
+  const startDateISO=document.getElementById('mStartDate').value;
+  const endDateISO=document.getElementById('mEndDate').value;
+  const errEl=document.getElementById('mModalErr');
+  if(!title){ errEl.textContent='Please enter a title.'; return; }
+  if(!startDateISO){ errEl.textContent='Please choose a start date.'; return; }
+
+  const d={
+    time:document.getElementById('mTime').value.trim(),
+    store:document.getElementById('mStore').value.trim(),
+    guests:document.getElementById('mGuests').value.trim(),
+    objective:document.getElementById('mObjective').value.trim(),
+    targetAudience:document.getElementById('mAudience').value.trim(),
+    eventRundown:document.getElementById('mRundown').value.trim(),
+    mechanics:document.getElementById('mMechanics').value.trim(),
+    comms:document.getElementById('mComms').value.trim(),
+    tnc:document.getElementById('mTnc').value.trim(),
+    owner:document.getElementById('mOwner').value.trim(),
+    links:document.getElementById('mLinks').value.split('\n').map(l=>l.trim()).filter(Boolean),
+  };
+  const status=document.getElementById('mStatus').value;
+  const startWeek=dateToWeekNum(startDateISO)||1;
+  const weekId=weekIdForWeekNum(startWeek);
+  const startDate=formatDate(startDateISO), endDate=endDateISO?formatDate(endDateISO):'';
+  const notes=buildMarketingNotes(d);
+
+  marketingState[market]=marketingState[market]||[];
+  let item;
+  if(marketingModalEntry){
+    item=marketingModalEntry;
+    const prevMarket=item.market;
+    Object.assign(item,d,{title,market,row,status,weekId,startDate,endDate,startDateISO,endDateISO,
+      images:_marketingPendingImages.slice(),notes,updated:new Date().toISOString()});
+    if(prevMarket!==market){
+      marketingState[prevMarket]=(marketingState[prevMarket]||[]).filter(x=>x.id!==item.id);
+      marketingState[market].unshift(item);
+    }
+  } else {
+    item=Object.assign({
+      id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+      market,weekId,row,status,title,relatedLaunch:'',
+      images:_marketingPendingImages.slice(),notes,
+      created:new Date().toISOString(),updated:new Date().toISOString()
+    },d);
+    item.linkedMarketingId=item.id;
+    marketingState[market].unshift(item);
+  }
+  saveMarketingState(marketingState);
+  pushMarketingToBtvCalendar(item,status);
+  closeMarketingModal();
+  renderCurrent();
+}
+
+function deleteMarketingEntry(){
+  if (window._btvCanEdit === false) { ccToast('You have view-only access to the Creative Calendar'); return; }
+  if(!marketingModalEntry||!confirm('Delete this entry?')) return;
+  const m=marketingModalEntry.market;
+  marketingState[m]=(marketingState[m]||[]).filter(e=>e.id!==marketingModalEntry.id);
+  saveMarketingState(marketingState);
+  pushMarketingToBtvCalendar(marketingModalEntry,'draft'); // removes any previously-pushed BTV Calendar copy
+  closeMarketingModal();
+  renderCurrent();
+}
+
+// ── Image upload (Supabase Storage — bucket: creative-marketing) ───────────
+
+async function onMarketingImagesSelected(inputEl){
+  const files=Array.from(inputEl.files||[]);
+  if(!files.length) return;
+  if(!window._btvSb){ ccToast('Still connecting — please wait a moment and try again.'); inputEl.value=''; return; }
+  const statusEl=document.getElementById('mImagesStatus');
+  for(const file of files){
+    statusEl.textContent='Uploading '+file.name+'…';
+    const path='marketing/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'-'+file.name.replace(/[^a-zA-Z0-9.\-_]/g,'_');
+    const {error}=await window._btvSb.storage.from('creative-marketing').upload(path,file,{upsert:false});
+    if(error){ ccToast('Upload failed: '+error.message); continue; }
+    const {data:pub}=window._btvSb.storage.from('creative-marketing').getPublicUrl(path);
+    _marketingPendingImages.push({url:pub.publicUrl,name:file.name});
+  }
+  statusEl.textContent='';
+  inputEl.value='';
+  renderMarketingImagesList();
+}
+
+function renderMarketingImagesList(){
+  const list=document.getElementById('mImagesList');
+  if(!list) return;
+  list.innerHTML=_marketingPendingImages.map((img,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+      <img src="${esc(img.url)}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--grid)">
+      <a href="${esc(img.url)}" target="_blank" style="font-size:11px;color:#1a4db0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(img.name||'image')}</a>
+      <button type="button" onclick="removeMarketingImage(${i})" style="background:none;border:none;color:#c43030;cursor:pointer;font-size:14px">&times;</button>
+    </div>`).join('');
+}
+function removeMarketingImage(i){ _marketingPendingImages.splice(i,1); renderMarketingImagesList(); }
+
+// ── Export (nicely formatted standalone HTML download) ──────────────────────
+
+function _btvDownload(fileName,data,mime){
+  if(window.parent && window.parent!==window){
+    window.parent.postMessage({type:'btv-download',filename:fileName,data:data,mime:mime},'*');
+    return;
+  }
+  const blob=new Blob([data],{type:mime});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=fileName;document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+
+function exportMarketingEntry(){
+  if(!marketingModalEntry) return;
+  const ev=marketingModalEntry;
+  const rowLabel=(ROW_DEFS.find(r=>r.key===ev.row)||{}).label||ev.row;
+  const rows=[
+    ['Market',ev.market],['Type',rowLabel],
+    ['Date Range',(ev.startDate||'')+(ev.endDate?' – '+ev.endDate:'')],
+    ['Time',ev.time||'—'],['Store',ev.store||'—'],['No. of Guests',ev.guests||'—'],
+    ['Objective',ev.objective||'—'],['Target Audience',ev.targetAudience||'—'],
+    ['Event Rundown',ev.eventRundown||'—'],['Mechanics',ev.mechanics||'—'],
+    ['Comms',ev.comms||'—'],['T&Cs',ev.tnc||'—'],['Status',ev.status||'draft'],
+    ['Owner / Creator',ev.owner||'—'],['Reference Links',(ev.links||[]).join(', ')||'—'],
+  ];
+  const imgHtml=(ev.images||[]).map(img=>`<img src="${esc(img.url)}" style="max-width:220px;border-radius:8px;margin:6px 6px 0 0;border:1px solid #ddd">`).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(ev.title)}</title>
+<style>body{font-family:Helvetica,Arial,sans-serif;padding:32px;color:#111}h1{font-size:20px;margin-bottom:4px}
+table{border-collapse:collapse;margin-top:16px;width:100%}td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top}
+td:first-child{font-weight:700;width:160px;color:#666;text-transform:uppercase;font-size:11px;letter-spacing:.05em}</style>
+</head><body><h1>${esc(ev.title)}</h1><div style="color:#888;font-size:12px">Beyond The Vines — Creative Calendar Export</div>
+<table>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</table>
+${imgHtml?`<div style="margin-top:18px"><div style="font-weight:700;font-size:11px;color:#666;text-transform:uppercase;margin-bottom:6px">Images</div>${imgHtml}</div>`:''}
+</body></html>`;
+  _btvDownload((ev.title||'event').replace(/[^a-z0-9\-_]+/gi,'_')+'.html',html,'text/html;charset=utf-8');
+}
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -1005,13 +1459,11 @@ function renderMarket(market){
     const gc='g-'+row.group;
     html+=`<tr class="${gc}${row.holiday?' holiday-row':''}">`;
     html+=`<td class="row-head ${gc}">${esc(row.label)}</td>`;
-    if(row.auto){
-      WEEKS.forEach(w=>{ html+=`<td class="${gc} readonly no-hover"><div class="chip c-ns" style="font-size:8.5px">${esc(weekTheme(w.n))}</div></td>`; });
-    } else if(row.btvRef){
+    if(row.btvPerMarket){
       // Read-only — live-pulled straight from the BTV Management Calendar (same
-      // Supabase-synced localStorage key, shared cross-iframe), not a duplicate entry.
+      // Supabase-synced localStorage key, shared cross-iframe), scoped to this market only.
       WEEKS.forEach(w=>{
-        const matches=getBtvEntriesForMarketWeek(market,w.n);
+        const matches=getBtvEntriesForSectionsWeek(row.btvSections,w.n,[market]);
         let chips='';
         matches.forEach(({section,entry})=>{
           const title=btvEntryTitle(entry);
@@ -1022,6 +1474,8 @@ function renderMarket(market){
         });
         html+=`<td class="${gc} readonly">${chips}</td>`;
       });
+    } else if(row.marketingRow){
+      html+=renderMarketingRow(market,row,gc);
     } else if(row.holiday){
       WEEKS.forEach(w=>{ const hol=holidays[w.n]; html+=`<td class="${gc} readonly holiday-cell no-hover">${hol?`<div class="holiday-chip">${esc(hol)}</div>`:''}</td>`; });
     } else if(SOCIAL_ROWS.has(row.key)){
@@ -1107,7 +1561,7 @@ const GLOBAL_BTV_ROWS=[
 const GLOBAL_CREATIVE_ROWS=[
   {key:'act', label:'Activations & Mechanics', srcKeys:['commercial','seeding']},
   {key:'soc', label:'Social / Content',        srcKeys:['ig_grid','ig_stories','ig_mkt','tiktok','line','red_xhs','wechat']},
-  {key:'edm', label:'Channel (EDM)',            srcKeys:['edm','edm_tagOn']},
+  {key:'edm', label:'Channel (EDM / Media)',    srcKeys:['edm','edm_tagOn','media_ooh']},
 ];
 
 // Core helper: collect entries for a set of markets + row keys at a week,
@@ -1176,15 +1630,22 @@ function renderGlobal(){
   // ── CONTEXT section ────────────────────────────────────────────────────
   html+=`<tr class="group-row g-context"><td class="row-head" colspan="${W+1}">Context</td></tr>`;
 
-  // Theme/Season — auto, one row (no per-market split needed)
+  // Theme/Season — from entries (continuous bar, same across markets)
   html+=`<tr class="g-context"><td class="row-head g-context">Theme / Season</td>`;
   WEEKS.forEach(w=>{
-    html+=`<td class="g-context readonly no-hover"><div class="chip c-ns" style="font-size:8.5px">${esc(weekTheme(w.n))}</div></td>`;
+    html+=`<td class="g-context readonly">${buildGlobalCellHtml(null,['theme'],w.n,{})}</td>`;
   });
   html+=`</tr>`;
 
-  // Key Moments & Holidays — auto from HOLIDAYS, yellow for shared
-  html+=`<tr class="g-context"><td class="row-head g-context">Key Moments &amp; Holidays</td>`;
+  // Key Moments — from entries
+  html+=`<tr class="g-context"><td class="row-head g-context">Key Moments</td>`;
+  WEEKS.forEach(w=>{
+    html+=`<td class="g-context readonly">${buildGlobalCellHtml(null,['key_moments'],w.n,{})}</td>`;
+  });
+  html+=`</tr>`;
+
+  // Public Holidays — auto from HOLIDAYS
+  html+=`<tr class="g-context"><td class="row-head g-context">Public Holidays</td>`;
   WEEKS.forEach(w=>{
     html+=`<td class="g-context readonly">${buildGlobalCellHtml(null,[],w.n,{includeHolidays:true})}</td>`;
   });
@@ -1232,6 +1693,17 @@ function renderGlobal(){
     html+=`<tr class="g-activation"><td class="row-head g-activation">${esc(gRow.label)}</td>`;
     WEEKS.forEach(w=>{
       html+=`<td class="g-activation readonly">${buildGlobalCellHtml(null,gRow.srcKeys,w.n,{})}</td>`;
+    });
+    html+=`</tr>`;
+  });
+
+  // ── MARKETING section ───────────────────────────────────────────────────
+  html+=`<tr class="group-row g-activation"><td class="row-head" colspan="${W+1}">Marketing</td></tr>`;
+
+  MARKETING_ROW_DEFS.forEach(mRow=>{
+    html+=`<tr class="g-activation"><td class="row-head g-activation">${esc(mRow.label)}</td>`;
+    WEEKS.forEach(w=>{
+      html+=`<td class="g-activation readonly">${buildGlobalMarketingCellHtml(mRow.key,w.n)}</td>`;
     });
     html+=`</tr>`;
   });
@@ -1419,11 +1891,11 @@ document.getElementById('fDate').addEventListener('change',function(){
 
 // ── Keyboard ──────────────────────────────────────────────────────────────
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeModal();closeViewModal();}
+  if(e.key==='Escape'){closeModal();closeViewModal();closeMarketingModal();}
 });
 
 // ── Supabase sync ─────────────────────────────────────────────────────────
-window.btvRender=function(){state=loadState();renderCurrent();};
+window.btvRender=function(){state=loadState();marketingState=loadMarketingState();renderCurrent();};
 window.btvReloadAndRender=window.btvRender;
 window._btvCalRender=window.btvRender;
 window.btvSyncStorageKey=STORAGE_KEY;
