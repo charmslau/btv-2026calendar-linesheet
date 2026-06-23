@@ -11,7 +11,7 @@
 :root{
   --bg:#f7f6f3;--panel:#fff;--grid:#e0ddd8;--text:#111;--muted:#787470;
   --g-context:#f5f4f1;--g-product:#eef2fb;--g-activation:#f2faf0;
-  --g-marketing:#fff0f0;--g-communication:#fff9f0;--g-retail:#f0f7fd;
+  --g-marketing:#fff0f0;--g-communication:#fff9f0;
   --mkt-global-bg:#fffde0;--mkt-global-bd:#e6c200;--mkt-global-tx:#6e5a00;
   --mkt-sg-bg:#ffe8d6;--mkt-sg-bd:#e07030;--mkt-sg-tx:#7a2e00;
   --mkt-id-bg:#d6f0db;--mkt-id-bd:#3aaa55;--mkt-id-tx:#165a25;
@@ -127,7 +127,6 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
 .g-activation td.row-head,.g-activation td{background:var(--g-activation)}
 .g-marketing td.row-head,.g-marketing td{background:var(--g-marketing)}
 .g-communication td.row-head,.g-communication td{background:var(--g-communication)}
-.g-retail td.row-head,.g-retail td{background:var(--g-retail)}
 .g-btvrow td.row-head,.g-btvrow td{background:#fafaf6}
 
 .cal-table tbody td{border-right:1px solid var(--grid);border-bottom:1px solid var(--grid);
@@ -392,13 +391,6 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
           <optgroup label="— Context">
             <option value="theme">Theme / Season</option>
             <option value="key_moments">Key Moments</option>
-            <option value="consumer_mindset">Consumer Mindset</option>
-            <option value="retail_impact">Retail Impact</option>
-          </optgroup>
-          <optgroup label="— Activation">
-            <option value="commercial">Commercial Mechanics / GWP</option>
-            <option value="seeding">Product Seeding (KOL)</option>
-            <option value="new_stores">New Stores</option>
           </optgroup>
           <optgroup label="— Communication">
             <option value="edm">EDM (Email)</option>
@@ -412,13 +404,11 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
             <option value="wechat">WeChat Official</option>
             <option value="livestream">Livestreaming</option>
             <option value="media_ooh">Media / OOH</option>
-          </optgroup>
-          <optgroup label="— Retail / Media">
             <option value="in_mall">In-Mall Visibility</option>
-            <option value="mall_social">Mall Social Media</option>
-            <option value="perf_tier1">Perf. Mktg — Tier 1</option>
-            <option value="perf_tier2">Perf. Mktg — Tier 2</option>
-            <option value="perf_tier3">Perf. Mktg — Tier 3 (Evergreen)</option>
+            <option value="mall_social">Mall's Social Media Visibility</option>
+            <option value="perf_tier1">Performance Marketing Tier 1</option>
+            <option value="perf_tier2">Performance Marketing Tier 2</option>
+            <option value="perf_tier3">Performance Marketing Tier 3</option>
           </optgroup>
         </select>
       </div>
@@ -652,17 +642,9 @@ const ROW_DEFS=[
   {key:'theme',            label:'Theme / Season',        group:'context',    editable:true},
   {key:'key_moments',      label:'Key Moments',           group:'context',    editable:true},
   {key:'public_holidays',  label:'Public Holidays',       group:'context',    holiday:true},
-  {key:'consumer_mindset', label:'Consumer Mindset',      group:'context',    editable:true},
-  {key:'retail_impact',    label:'Retail Impact',         group:'context',    editable:true},
   {key:'p_launch',  label:'Launch',         group:'product', btvPerMarket:true, btvSections:['global','china']},
-  {key:'p_china',   label:'China',          group:'product', btvPerMarket:true, btvSections:['china'],  markets:['CN']},
-  {key:'p_nea',     label:'NEA',            group:'product', btvPerMarket:true, btvSections:['nea'],    markets:['CN','JP']},
-  {key:'p_sea',     label:'SEA',            group:'product', btvPerMarket:true, btvSections:['sea'],    markets:['SG','TH','ID','PH']},
   {key:'p_restock', label:'Restock',        group:'product', btvPerMarket:true, btvSections:['restocks']},
   {key:'p_store',   label:'Store Opening',  group:'product', btvPerMarket:true, btvSections:['store_openings']},
-  {key:'commercial',      label:'Commercial Mechanics',  group:'activation', editable:true},
-  {key:'seeding',          label:'Product Seeding (KOL)', group:'activation', editable:true},
-  {key:'new_stores',       label:'New Stores',            group:'activation', editable:true},
   {key:'Brand Events',         label:'Brand Events',         group:'marketing', marketingRow:true},
   {key:'Community Activation', label:'Community Activation', group:'marketing', marketingRow:true},
   {key:'Retail Events',        label:'Retail Activation',    group:'marketing', marketingRow:true},
@@ -678,14 +660,14 @@ const ROW_DEFS=[
   {key:'wechat',           label:'WeChat Official',       group:'communication', editable:true,markets:['CN']},
   {key:'livestream',       label:'Livestreaming',         group:'communication', editable:true,markets:['CN']},
   {key:'media_ooh',        label:'Media / OOH',           group:'communication', editable:true},
-  {key:'in_mall',         label:'In-Mall Visibility',    group:'retail',     editable:true},
-  {key:'mall_social',     label:'Mall Social Media',     group:'retail',     editable:true},
-  {key:'perf_tier1',      label:'Perf. Mktg — Tier 1',  group:'retail',     editable:true},
-  {key:'perf_tier2',      label:'Perf. Mktg — Tier 2',  group:'retail',     editable:true},
-  {key:'perf_tier3',      label:'Perf. Mktg — Tier 3',  group:'retail',     editable:true},
+  {key:'in_mall',         label:'In-Mall Visibility',              group:'communication', editable:true},
+  {key:'mall_social',     label:'Mall’s Social Media Visibility', group:'communication', editable:true},
+  {key:'perf_tier1',      label:'Performance Marketing Tier 1',    group:'communication', editable:true},
+  {key:'perf_tier2',      label:'Performance Marketing Tier 2',    group:'communication', editable:true},
+  {key:'perf_tier3',      label:'Performance Marketing Tier 3',    group:'communication', editable:true},
 ];
 
-const GROUP_LABELS={context:'Context',product:'Product',activation:'Activation',marketing:'Marketing',communication:'Communication',retail:'Retail / Media'};
+const GROUP_LABELS={context:'Context',product:'Product',marketing:'Marketing',communication:'Communication'};
 
 function getRows(market){ return ROW_DEFS.filter(r=>!r.markets||r.markets.includes(market)); }
 
@@ -1559,7 +1541,6 @@ const GLOBAL_BTV_ROWS=[
 ];
 
 const GLOBAL_CREATIVE_ROWS=[
-  {key:'act', label:'Activations & Mechanics', srcKeys:['commercial','seeding']},
   {key:'soc', label:'Social / Content',        srcKeys:['ig_grid','ig_stories','ig_mkt','tiktok','line','red_xhs','wechat']},
   {key:'edm', label:'Channel (EDM / Media)',    srcKeys:['edm','edm_tagOn','media_ooh']},
 ];
