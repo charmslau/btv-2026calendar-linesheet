@@ -13,6 +13,7 @@
 //                          delivers to the Resend account owner's own email.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "npm:resend";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const FROM_EMAIL = Deno.env.get("LINESHEET_FROM_EMAIL") || "BTV Planner <onboarding@resend.dev>";
@@ -30,9 +31,24 @@ const TDEF = [
   { id: "pd", label: "Product Designers", fields: ["fabric", "weightGrams", "measurementSummary"], flabels: ["Fabric Composition", "Product Weight", "Measurement Chart"] },
 ];
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
   if (!RESEND_API_KEY) {
     return json({ ok: false, error: "RESEND_API_KEY secret is not set." }, 500);
+  }
+
+  // Quick connectivity check: call with ?ping=<email> to send a one-off
+  // "Hello World" test email and confirm the Resend API key works, without
+  // running the full outstanding-items logic below.
+  const pingTo = new URL(req.url).searchParams.get("ping");
+  if (pingTo) {
+    const resend = new Resend(RESEND_API_KEY);
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: pingTo,
+      subject: "Hello World",
+      html: "<p>Congrats on sending your <strong>first email</strong>!</p>",
+    });
+    return json({ ok: !error, data, error });
   }
 
   const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);

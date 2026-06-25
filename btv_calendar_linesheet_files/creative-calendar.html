@@ -9,7 +9,7 @@
 <script src="../js/supabase-sync.js"></script>
 <style>
 :root{
-  --bg:#f7f6f3;--panel:#fff;--grid:#e0ddd8;--text:#111;--muted:#787470;
+  --bg:#f7f6f4;--panel:#fff;--grid:#d6d2cc;--text:#111;--muted:#787470;--btn:#f0efed;
   --g-context:#f5f4f1;--g-product:#eef2fb;--g-activation:#f2faf0;
   --g-marketing:#fff0f0;--g-communication:#fff9f0;
   --mkt-global-bg:#fffde0;--mkt-global-bd:#e6c200;--mkt-global-tx:#6e5a00;
@@ -21,24 +21,32 @@
   --mkt-jp-bg:#d6e8f7;--mkt-jp-bd:#4a90d9;--mkt-jp-tx:#1a4472;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,sans-serif;
   background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;overflow:hidden}
-.app{display:flex;flex-direction:column;height:100vh}
+.app{display:flex;flex-direction:column;height:100vh;padding:10px}
+
+/* ── Toolbar chrome (topbar + tab-bar + filter-bar + legend read as one panel,
+   matching the BTV Management Calendar's rounded/blurred sticky toolbar) ── */
+.topbar,.tab-bar,.filter-bar,.legend{
+  background:rgba(246,241,232,.97);backdrop-filter:blur(8px);
+  border-left:1px solid var(--grid);border-right:1px solid var(--grid)}
+.topbar{border-top:1px solid var(--grid);border-radius:14px 14px 0 0}
+.legend{border-bottom:1px solid var(--grid);border-radius:0 0 14px 14px;margin-bottom:10px}
 
 /* ── Topbar ── */
 .topbar{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:9px 14px;
-  background:var(--panel);border-bottom:1px solid var(--grid);z-index:20}
+  border-bottom:1px solid var(--grid);z-index:20}
 .page-title{font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase}
 .page-sub{font-size:10.5px;color:var(--muted)}
 .topbar-right{margin-left:auto;display:flex;gap:6px;align-items:center}
-.seed-btn{font-size:10px;padding:4px 10px;border:1px solid var(--grid);border-radius:7px;
-  background:var(--panel);color:var(--muted);cursor:pointer;transition:all .15s}
+.seed-btn{font-size:10px;padding:4px 10px;border:1px solid var(--grid);border-radius:10px;
+  background:var(--btn);color:var(--muted);cursor:pointer;transition:all .15s}
 .seed-btn:hover{border-color:#777;color:var(--text)}
 .seed-btn.active{background:#111;color:#fff;border-color:#111}
 
 /* ── Tab bar ── */
 .tab-bar{flex-shrink:0;display:flex;align-items:center;gap:2px;
-  padding:7px 14px 0;background:var(--panel);border-bottom:1px solid var(--grid);overflow-x:auto}
+  padding:7px 14px 0;border-bottom:1px solid var(--grid);overflow-x:auto}
 .tab-btn{padding:7px 14px;border:none;background:transparent;font:inherit;font-size:10.5px;
   font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:pointer;
   border-radius:7px 7px 0 0;border-bottom:2.5px solid transparent;
@@ -49,7 +57,7 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
 
 /* ── Filter bar ── */
 .filter-bar{flex-shrink:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-  padding:6px 14px;background:#fafaf8;border-bottom:1px solid var(--grid)}
+  padding:6px 14px;border-bottom:1px solid var(--grid)}
 .filter-search{padding:5px 10px;border:1.5px solid var(--grid);border-radius:8px;
   font:inherit;font-size:11.5px;background:#fff;color:var(--text);outline:none;
   width:180px;transition:border-color .15s}
@@ -77,7 +85,7 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
 
 /* ── Legend ── */
 .legend{flex-shrink:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
-  padding:5px 14px;background:var(--panel);border-bottom:1px solid var(--grid);font-size:9.5px;color:var(--muted)}
+  padding:5px 14px;font-size:9.5px;color:var(--muted)}
 .legend-item{display:flex;gap:3px;align-items:center}
 .legend-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;border:1px solid rgba(0,0,0,.1)}
 
@@ -88,10 +96,11 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
 
 /* ── Market toolbar ── */
 .mkt-toolbar{flex-shrink:0;display:flex;align-items:center;gap:10px;
-  padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--grid)}
+  padding:8px 14px;margin:10px 0;background:rgba(246,241,232,.97);backdrop-filter:blur(8px);
+  border:1px solid var(--grid);border-radius:14px}
 .mkt-toolbar h2{font-size:13px;font-weight:700}
 .mkt-toolbar .sub{font-size:10.5px;color:var(--muted);margin-left:4px}
-.add-btn{margin-left:auto;padding:6px 13px;border:none;border-radius:8px;
+.add-btn{margin-left:auto;padding:6px 13px;border:none;border-radius:10px;
   background:var(--text);color:#fff;font:inherit;font-size:10.5px;font-weight:700;
   letter-spacing:.05em;cursor:pointer;transition:background .15s}
 .add-btn:hover{background:#333}
@@ -100,13 +109,13 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
 .table-scroll{flex:1;overflow:auto}
 .cal-table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;table-layout:fixed}
 
-.cal-table thead th{position:sticky;top:0;z-index:10;background:#fafaf8;
+.cal-table thead th{position:sticky;top:0;z-index:10;background:#e8e2d8;
   font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
   color:var(--muted);text-align:center;padding:6px 4px 5px;
   border-bottom:2px solid var(--grid);border-right:1px solid var(--grid);
   width:210px;min-width:210px;vertical-align:bottom}
 .cal-table thead th.row-head{position:sticky;top:0;left:0;z-index:15;text-align:left;
-  padding:6px 10px;width:190px;min-width:190px;background:#fafaf8}
+  padding:6px 10px;width:190px;min-width:190px;background:#e8e2d8}
 .cal-table thead th .wk-range{font-size:8px;font-weight:400;color:#bbb;display:block;
   margin-top:2px;white-space:normal;word-break:break-word}
 .cal-table thead th.m-first{border-left:2px solid #ccc}
@@ -169,9 +178,9 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
    Calendar's .entry card format (date + title + summary visible without opening
    the popup) ── */
 .rcard{display:block;background:#fffdfa;border:1px solid var(--grid);border-left:3px solid #ccc;
-  border-radius:10px;padding:7px 9px;margin:4px 0;cursor:pointer;
-  transition:box-shadow .15s,transform .15s}
-.rcard:hover{box-shadow:0 4px 14px rgba(0,0,0,.12);transform:translateY(-1px)}
+  border-radius:12px;padding:8px 10px;margin:4px 0;cursor:pointer;position:relative;
+  transition:box-shadow .15s ease,transform .15s ease}
+.rcard:hover{z-index:15;box-shadow:0 10px 28px rgba(0,0,0,.16);transform:translateY(-1px)}
 .rcard-date{font-size:10px;font-weight:700;color:var(--muted);margin-bottom:2px;line-height:1.1}
 .rcard-title{font-size:12px;font-weight:700;line-height:1.25;margin-bottom:4px;color:var(--text);word-break:break-word}
 .rcard-summary{font-size:10.5px;color:#555;line-height:1.4;margin-bottom:5px;word-break:break-word;
@@ -220,9 +229,9 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
 
 /* ── Modals ── */
 .modal-overlay{display:none;position:fixed;inset:0;z-index:500;
-  background:rgba(0,0,0,.4);align-items:flex-start;justify-content:center;padding-top:36px}
+  background:rgba(0,0,0,.28);align-items:flex-start;justify-content:center;padding-top:36px}
 .modal-overlay.show{display:flex}
-.modal-card{background:#fff;border:1px solid var(--grid);border-radius:16px;
+.modal-card{background:#fbf8f1;border:1px solid var(--grid);border-radius:18px;
   padding:22px 20px 18px;width:100%;max-width:520px;
   box-shadow:0 10px 60px rgba(0,0,0,.2);position:relative;max-height:88vh;overflow-y:auto}
 .modal-title{font-size:15px;font-weight:700;margin-bottom:3px}
@@ -243,25 +252,25 @@ html,body{height:100%;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
 .f-lbl{display:block;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
   color:var(--muted);margin-bottom:4px;margin-top:12px}
 .f-lbl:first-of-type{margin-top:0}
-.f-inp,.f-sel,.f-txt{width:100%;padding:8px 10px;border:1.5px solid var(--grid);border-radius:9px;
-  font:inherit;font-size:12.5px;background:#fafaf9;color:var(--text);outline:none;
+.f-inp,.f-sel,.f-txt{width:100%;padding:8px 10px;border:1px solid var(--grid);border-radius:10px;
+  font:inherit;font-size:12.5px;background:#fffdfa;color:var(--text);outline:none;
   transition:border-color .15s;-webkit-appearance:none}
 .f-inp:focus,.f-sel:focus,.f-txt:focus{border-color:var(--text);background:#fff}
 .f-txt{resize:vertical;min-height:55px}
 .f-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .f-conditional{display:none}.f-conditional.show{display:block}
 .f-actions{display:flex;gap:7px;margin-top:14px}
-.btn-primary{flex:1;padding:9px;border:none;border-radius:9px;background:var(--text);color:#fff;
+.btn-primary{flex:1;padding:9px;border:none;border-radius:10px;background:var(--text);color:#fff;
   font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:background .15s}
 .btn-primary:hover{background:#333}
-.btn-ghost{padding:9px 13px;border:1.5px solid var(--grid);border-radius:9px;background:transparent;
+.btn-ghost{padding:9px 13px;border:1px solid var(--grid);border-radius:10px;background:var(--btn);
   color:var(--muted);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s}
 .btn-ghost:hover{border-color:#999;color:var(--text)}
-.btn-danger{padding:9px 13px;border:1.5px solid #f5c6c6;border-radius:9px;background:transparent;
+.btn-danger{padding:9px 13px;border:1px solid #f5c6c6;border-radius:10px;background:transparent;
   color:#c43030;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:background .15s}
 .btn-danger:hover{background:#fde8e8}
-.btn-close-only{display:block;width:100%;padding:9px;border:1.5px solid var(--grid);border-radius:9px;
-  background:transparent;color:var(--muted);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+.btn-close-only{display:block;width:100%;padding:9px;border:1px solid var(--grid);border-radius:10px;
+  background:var(--btn);color:var(--muted);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
   margin-top:14px;transition:all .15s}
 .btn-close-only:hover{border-color:#999;color:var(--text)}
 .mkt-group-header td{background:#111!important;color:#fff!important;font-size:10px!important;
