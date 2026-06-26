@@ -153,7 +153,7 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
   margin-bottom:1px;text-transform:uppercase}
 .chip .span-tag{font-size:8px;opacity:.65;float:right;margin-left:3px}
 .chip .pillar-tag{font-size:7.5px;font-weight:800;opacity:.65;margin-right:2px}
-.chip .date-tag{font-size:8px;opacity:.65;float:right;margin-left:3px}
+.chip .date-tag{display:block;font-size:8px;font-weight:800;letter-spacing:.05em;opacity:.65;margin-bottom:1px}
 .chip .seeded-tag{font-size:7.5px;opacity:.5;margin-right:2px}
 
 .c-ns{background:#eeede9;color:#555}
@@ -597,11 +597,13 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
       </div>
     </div>
 
-    <label class="f-lbl" for="mObjective">Objective</label>
-    <input type="text" id="mObjective" class="f-inp" placeholder="e.g. Drive brand awareness for new collection">
+    <label class="f-lbl" for="mObjective">Objective <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(one bullet per line)</span></label>
+    <textarea id="mObjective" class="f-txt" style="min-height:55px" placeholder="To position Beyond The Vines at the centre of the conversation…
+To drive in-store traffic and brand discovery…"></textarea>
 
-    <label class="f-lbl" for="mAudience">Target Audience</label>
-    <input type="text" id="mAudience" class="f-inp" placeholder="e.g. Existing VIP members">
+    <label class="f-lbl" for="mAudience">Target Audience <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(one bullet per line)</span></label>
+    <textarea id="mAudience" class="f-txt" style="min-height:55px" placeholder="Existing VIP members…
+Senior retail operators and decision-makers…"></textarea>
 
     <label class="f-lbl" for="mRundown">Event Rundown</label>
     <textarea id="mRundown" class="f-txt" placeholder="Run-of-show, timing breakdown…"></textarea>
@@ -632,7 +634,7 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
     <label class="f-lbl" for="mLinks">Reference Links (one per line)</label>
     <textarea id="mLinks" class="f-txt" style="min-height:40px" placeholder="https://…"></textarea>
 
-    <label class="f-lbl" for="mImagesInput">Images</label>
+    <label class="f-lbl" for="mImagesInput">Reference Images <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(each gets its own title + notes on Export)</span></label>
     <input type="file" id="mImagesInput" accept="image/*" multiple onchange="onMarketingImagesSelected(this)">
     <div id="mImagesStatus" style="font-size:10.5px;color:var(--muted);margin-top:4px"></div>
     <div id="mImagesList"></div>
@@ -1281,21 +1283,31 @@ async function onMarketingImagesSelected(inputEl){
     const {error}=await window._btvSb.storage.from('creative-marketing').upload(path,file,{upsert:false});
     if(error){ ccToast('Upload failed: '+error.message); continue; }
     const {data:pub}=window._btvSb.storage.from('creative-marketing').getPublicUrl(path);
-    _marketingPendingImages.push({url:pub.publicUrl,name:file.name});
+    _marketingPendingImages.push({url:pub.publicUrl,name:file.name,title:'',notes:''});
   }
   statusEl.textContent='';
   inputEl.value='';
   renderMarketingImagesList();
 }
 
+// Title/notes inputs mutate _marketingPendingImages directly (no re-render on
+// every keystroke) so typing doesn't lose focus/cursor position.
 function renderMarketingImagesList(){
   const list=document.getElementById('mImagesList');
   if(!list) return;
   list.innerHTML=_marketingPendingImages.map((img,i)=>`
-    <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
-      <img src="${esc(img.url)}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--grid)">
-      <a href="${esc(img.url)}" target="_blank" style="font-size:11px;color:#1a4db0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(img.name||'image')}</a>
-      <button type="button" onclick="removeMarketingImage(${i})" style="background:none;border:none;color:#c43030;cursor:pointer;font-size:14px">&times;</button>
+    <div style="display:flex;gap:8px;margin-top:8px;padding:8px;border:1px solid var(--grid);border-radius:9px;background:#fafaf9">
+      <img src="${esc(img.url)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--grid);flex-shrink:0">
+      <div style="flex:1;min-width:0">
+        <input type="text" value="${esc(img.title||'')}" placeholder="Reference title — e.g. Coach Play"
+          style="width:100%;font:inherit;font-size:11.5px;font-weight:700;border:none;border-bottom:1px solid var(--grid);padding:2px 0 4px;margin-bottom:4px;background:transparent;outline:none"
+          oninput="_marketingPendingImages[${i}].title=this.value">
+        <textarea placeholder="Notes — one bullet per line" rows="2"
+          style="width:100%;font:inherit;font-size:10.5px;border:none;background:transparent;outline:none;resize:vertical"
+          oninput="_marketingPendingImages[${i}].notes=this.value">${esc(img.notes||'')}</textarea>
+        <a href="${esc(img.url)}" target="_blank" style="font-size:9.5px;color:#1a4db0;display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(img.name||'image')}</a>
+      </div>
+      <button type="button" onclick="removeMarketingImage(${i})" style="background:none;border:none;color:#c43030;cursor:pointer;font-size:14px;flex-shrink:0">&times;</button>
     </div>`).join('');
 }
 function removeMarketingImage(i){ _marketingPendingImages.splice(i,1); renderMarketingImagesList(); }
@@ -1342,26 +1354,63 @@ function _gatherMarketingFormData(){
 function exportMarketingEntry(){
   const ev=_gatherMarketingFormData();
   if(!ev.title){ ccToast('Please enter a title before exporting.'); return; }
-  const rowLabel=(ROW_DEFS.find(r=>r.key===ev.row)||{}).label||ev.row;
-  const startDate=ev.startDateISO?formatDate(ev.startDateISO):'';
-  const endDate=ev.endDateISO?formatDate(ev.endDateISO):'';
-  const rows=[
-    ['Market',ev.market],['Type',rowLabel],
-    ['Date Range',(startDate||'—')+(endDate?' – '+endDate:'')],
-    ['Time',ev.time||'—'],['Store',ev.store||'—'],['No. of Guests',ev.guests||'—'],
-    ['Objective',ev.objective||'—'],['Target Audience',ev.targetAudience||'—'],
-    ['Event Rundown',ev.eventRundown||'—'],['Mechanics',ev.mechanics||'—'],
-    ['Comms',ev.comms||'—'],['T&Cs',ev.tnc||'—'],['Status',ev.status||'draft'],
-    ['Owner / Creator',ev.owner||'—'],['Reference Links',(ev.links||[]).join(', ')||'—'],
-  ];
-  const imgHtml=(ev.images||[]).map(img=>`<img src="${esc(img.url)}" style="max-width:220px;border-radius:8px;margin:6px 6px 0 0;border:1px solid #ddd">`).join('');
+  const crumb=exportBreadcrumb(ev.startDateISO,ev.market);
+  const dateLine=ev.startDateISO?formatDateFull(ev.startDateISO)+(ev.endDateISO?' – '+formatDateFull(ev.endDateISO):''):'';
+  const metaRows=[
+    ['Date',dateLine],['Time',ev.time],['Market',ev.market],
+    ['Store',ev.store],['No. of Guests',ev.guests],
+  ].filter(r=>r[1]);
+  const section=(label,text)=>{ const html=bulletListHtml(text); return html?('<h2>'+esc(label)+'</h2>'+html):''; };
+  const sideCards=(ev.images||[]).map(img=>{
+    const head=img.title?('<div class="ref-card-head">'+esc(img.title)+'</div>'):'';
+    const notes=bulletListHtml(img.notes)||'<ul></ul>';
+    return '<div class="ref-card">'+head+'<div class="ref-card-body">'+notes+
+      '<div class="ref-card-img"><img src="'+esc(img.url)+'"></div></div></div>';
+  }).join('');
+  const footerBits=[
+    ev.owner?('Owner / Creator: '+esc(ev.owner)):'',
+    ev.status?('Status: '+esc(ev.status)):'',
+    (ev.links&&ev.links.length)?('Links: '+ev.links.map(esc).join(', ')):'',
+  ].filter(Boolean);
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(ev.title)}</title>
-<style>body{font-family:Helvetica,Arial,sans-serif;padding:32px;color:#111}h1{font-size:20px;margin-bottom:4px}
-table{border-collapse:collapse;margin-top:16px;width:100%}td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top;white-space:pre-wrap}
-td:first-child{font-weight:700;width:160px;color:#666;text-transform:uppercase;font-size:11px;letter-spacing:.05em;white-space:nowrap}</style>
-</head><body><h1>${esc(ev.title)}</h1><div style="color:#888;font-size:12px">Beyond The Vines — Creative Calendar Export</div>
-<table>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</table>
-${imgHtml?`<div style="margin-top:18px"><div style="font-weight:700;font-size:11px;color:#666;text-transform:uppercase;margin-bottom:6px">Images</div>${imgHtml}</div>`:''}
+<style>
+*{box-sizing:border-box}
+body{font-family:'Everett','Helvetica Neue',Helvetica,Arial,sans-serif;margin:0;padding:36px 40px;color:#111;background:#fff}
+.export-crumb{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#888;margin-bottom:6px}
+h1{font-size:26px;font-weight:700;margin:0 0 22px;line-height:1.2}
+.export-grid{display:flex;gap:32px;align-items:flex-start}
+.export-main{flex:1.3;min-width:0}
+.export-side{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
+.meta-line{font-size:13px;margin-bottom:4px}
+.meta-line b{font-weight:700}
+h2{font-size:13px;font-weight:700;margin:16px 0 6px}
+.export-main ul{margin:0;padding-left:18px;font-size:12.5px;line-height:1.55}
+.export-main li{margin-bottom:3px}
+.export-footer{margin-top:20px;padding-top:10px;border-top:1px solid #eee;font-size:10.5px;color:#888}
+.ref-card{background:linear-gradient(160deg,#1c2b4a 0%,#0c1326 100%);border-radius:14px;overflow:hidden;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.ref-card-head{background:linear-gradient(120deg,#7a1f1f,#3d0e0e);padding:10px 14px;font-weight:700;font-size:13px}
+.ref-card-body{display:flex;gap:10px;padding:12px 14px;align-items:stretch}
+.ref-card-body ul{flex:1;margin:0;padding-left:14px;font-size:10px;line-height:1.45;color:#fff}
+.ref-card-img{flex:1;border-radius:8px;overflow:hidden;min-height:90px}
+.ref-card-img img{width:100%;height:100%;object-fit:cover;display:block}
+@media print{ body{padding:18px} }
+</style>
+</head><body>
+<div class="export-crumb">${esc(crumb)}</div>
+<h1>${esc(ev.title)}</h1>
+<div class="export-grid">
+  <div class="export-main">
+    ${metaRows.map(r=>'<div class="meta-line"><b>'+esc(r[0])+':</b> '+esc(r[1])+'</div>').join('')}
+    ${section('Objective',ev.objective)}
+    ${section('Target Audience',ev.targetAudience)}
+    ${section('Event Rundown',ev.eventRundown)}
+    ${section('Mechanics',ev.mechanics)}
+    ${section('Comms',ev.comms)}
+    ${section('Terms & Conditions',ev.tnc)}
+    ${footerBits.length?('<div class="export-footer">'+footerBits.join(' &nbsp;·&nbsp; ')+'</div>'):''}
+  </div>
+  ${sideCards?('<div class="export-side">'+sideCards+'</div>'):''}
+</div>
 </body></html>`;
   _btvDownload((ev.title||'event').replace(/[^a-z0-9\-_]+/gi,'_')+'.html',html,'text/html;charset=utf-8');
 }
@@ -1501,6 +1550,27 @@ function buildRichCard(opts){
     ${summaryLine}
     ${badge}
   </div>`;
+}
+// "Tuesday, 2 June 2026" — full date for the Marketing entry export header.
+function formatDateFull(iso){
+  if(!iso) return '';
+  const d=new Date(iso+'T00:00:00');
+  const Mo=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return d.toLocaleDateString('en-US',{weekday:'long'})+', '+d.getDate()+' '+Mo[d.getMonth()]+' '+d.getFullYear();
+}
+// "SG / Q2 / Jun 2026" — breadcrumb for the Marketing entry export header.
+function exportBreadcrumb(iso,market){
+  if(!iso) return market||'';
+  const d=new Date(iso+'T00:00:00'),Mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return (market||'')+' / Q'+(Math.floor(d.getMonth()/3)+1)+' / '+Mo[d.getMonth()]+' '+d.getFullYear();
+}
+// Inline **bold** markdown support for export bullet text.
+function mdInline(s){ return esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>'); }
+// One bullet per non-empty line; returns '' when text is empty so callers can skip the section.
+function bulletListHtml(text){
+  const lines=String(text||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  if(!lines.length) return '';
+  return '<ul>'+lines.map(l=>'<li>'+mdInline(l.replace(/^[-•]\s*/,''))+'</li>').join('')+'</ul>';
 }
 function dateToWeekNum(iso){ if(!iso)return 0; const d=new Date(iso+'T00:00:00'),wk1=new Date(2025,11,29),n=Math.floor((d-wk1)/(7*86400000))+1; return(n>=1&&n<=53)?n:0; }
 function dayOfWeek(iso){ if(!iso)return -1; return(new Date(iso+'T00:00:00').getDay()+6)%7; }
@@ -1670,6 +1740,7 @@ function renderSpannableRow(market, row, gc){
     } else {
       if(spanEntry&&matchesFilter(spanEntry)){
         chips+=`<div class="chip ${statusClass(spanEntry.status)}" onclick="openEditModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();">
+          <span class="date-tag">${esc(spanEntry.date?formatDateWithDay(spanEntry.date):weekStartDateLabel(w.n))}</span>
           <span class="span-tag">→Wk${spanEntry.weekEnd}</span>
           ${spanEntry._seeded?'<span class="seeded-tag">●</span>':''}
           ${spanEntry.pillar?`<span class="pillar-tag">${esc(spanEntry.pillar)}</span>`:''}
@@ -1678,9 +1749,9 @@ function renderSpannableRow(market, row, gc){
       }
       starts.filter(e=>(!e.weekEnd||e.weekEnd<=e.week)&&matchesFilter(e)).forEach(e=>{
         chips+=`<div class="chip ${statusClass(e.status)}" onclick="openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();" title="${esc(e.title)}">
+          <span class="date-tag">${esc(e.date?formatDateWithDay(e.date):weekStartDateLabel(w.n))}</span>
           ${e._seeded?'<span class="seeded-tag">●</span>':''}
           ${e.pillar?`<span class="pillar-tag">${esc(e.pillar)}</span>`:''}
-          ${e.date?`<span class="date-tag">${esc(formatDate(e.date))}</span>`:''}
           ${esc(e.title)}
         </div>`;
       });
@@ -1759,7 +1830,9 @@ function buildGlobalCellHtml(mkts, rowKeys, weekNum, opts){
     const rep=g.entries&&g.entries[0];
     const cid=rep?_cacheEntry({...rep,_displayMarkets:isGlobal?mktList:g.markets[0]}):'';
     const spanTag=rep&&rep.weekEnd&&rep.weekEnd>weekNum?`<span class="span-tag">→Wk${rep.weekEnd}</span>`:'';
+    const dateLabel=rep&&rep.date?formatDateWithDay(rep.date):weekStartDateLabel(weekNum);
     chips+=`<div class="chip ${cssClass}"${cid?` onclick="_viewEntry('${esc(cid)}');event.stopPropagation();"`:''} title="${esc(g.title)}">
+      <span class="date-tag">${esc(dateLabel)}</span>
       <span class="country-tag">${esc(isGlobal?mktList:g.markets[0])}</span>
       ${spanTag}${esc(g.title)}
     </div>`;
@@ -1828,7 +1901,8 @@ function renderGlobal(){
         const cid=_cacheBtvCard(section,entry);
         const isGlobalMkt=_mkts.length>1;
         const cls=isGlobalMkt?'mkt-global':(MKT_CSS[_mkts[0]]||'c-ns');
-        chips+=`<div class="chip ${cls}" onclick="openBtvCardModal('${esc(cid)}');event.stopPropagation();" title="${esc(title)}"><span class="country-tag">${esc(_mkts.join(', ')||'—')}</span>${esc(title)}</div>`;
+        const dateLabel=btvEntryDateLabel(section,entry)||weekStartDateLabel(w.n);
+        chips+=`<div class="chip ${cls}" onclick="openBtvCardModal('${esc(cid)}');event.stopPropagation();" title="${esc(title)}"><span class="date-tag">${esc(dateLabel)}</span><span class="country-tag">${esc(_mkts.join(', ')||'—')}</span>${esc(title)}</div>`;
       });
       html+=`<td class="g-btvrow readonly">${chips}</td>`;
     });
