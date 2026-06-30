@@ -12457,9 +12457,6 @@ if(e("globalMarketingView")) renderGlobalMarketingView();
 
 if(e("marketMarketingView")) renderMarketMarketingView();
 
-// Bust stale linesheetCalendarData on every page load so linesheet always gets correct field mappings
-(function(){ var _p = _btvHasUnsavedChanges; saveState(state); _btvHasUnsavedChanges = _p; })();
-
 window.btvConfigCalWebhook = btvConfigCalWebhook;
 window.btvConfigWebhook = btvConfigWebhook;
 window._btvCalRender = render;
