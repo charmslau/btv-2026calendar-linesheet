@@ -8854,7 +8854,7 @@ function renderGlobal(entry){
 
               <div class="entry-date">${fmtDDMMM(entry.launchDate)}${entry.launchDate ? " (" + dayNameFromISO(entry.launchDate) + ")" : ""}</div>
 
-              <div class="entry-title">${esc(entry.launchTitle || "")}</div>
+              <div class="entry-title" onclick="btvShowLaunchDetail('${entry.id}')" style="cursor:pointer;text-decoration:underline dotted #aaa 1px;text-underline-offset:2px" title="View product details">${esc(entry.launchTitle || "")}</div>
 
             </div>
 
@@ -8862,7 +8862,6 @@ function renderGlobal(entry){
 
           <div style="display:flex;flex-direction:column;align-items:stretch;min-width:58px">
             <button class="small-btn" onclick="openEditor('${entry.section}','${entry.weekId}','${entry.id}')">Edit</button>
-            <button class="small-btn" onclick="window.btvOpenInLinesheet('${entry.launchDate||''}')" title="View in Linesheet" style="background:#f0f4ff;border-color:#b0bfdd;color:#2a4a8a;margin-top:2px">&#8599; LS</button>
             <button class="pub-btn${_publishedIds.has(entry.id)?' pub-on':''}" data-pub-id="${entry.id}" data-pub-week="${entry.weekId}" data-pub-section="${entry.section}" title="${_publishedIds.has(entry.id)?'Remove from public calendar':'Publish to public calendar'}">${_publishedIds.has(entry.id)?'\u2714 Live':'\u2191 Publish'}</button>
           </div>
 
@@ -12485,10 +12484,6 @@ window.loadAdminConfig = loadAdminConfig;
 window.saveAdminConfig = saveAdminConfig;
 window.getActiveStores = getActiveStores;
 window.btvEsc = esc;
-window.btvOpenInLinesheet = function(launchDate, launchTitle) {
-  localStorage.setItem('btv-ls-focus', JSON.stringify({launchDate: launchDate || '', launchTitle: launchTitle || ''}));
-  try { window.parent.showFrame('ls'); } catch(e) {}
-};
 window._btvCalImportEntries = function(entries) {
   var added = 0, skipped = 0;
   entries.forEach(function(entry) {
@@ -13676,8 +13671,119 @@ window.btvTogglePublish = btvTogglePublish;
 <div id="btvWebhookModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center"><div style="background:#fffdfa;border:1px solid #c7b493;border-radius:16px;padding:24px;max-width:520px;width:90%;box-shadow:0 12px 40px rgba(0,0,0,.2)"><h3 style="margin:0 0 8px 0;font-size:16px" id="btvWhkTitle">Configure Webhook</h3><p style="margin:0 0 14px;font-size:13px;color:#75695c">Paste your Microsoft Teams incoming webhook URL below. Leave blank to disable.</p><input type="url" id="btvWhkInput" placeholder="https://prod.webhooks.office.com/..." style="width:100%;padding:10px 12px;border:1px solid #c7b493;border-radius:10px;font:inherit;font-size:13px;margin-bottom:14px"><div style="display:flex;gap:10px;justify-content:flex-end"><button type="button" onclick="document.getElementById('btvWebhookModal').style.display='none'" style="padding:9px 18px;border:1px solid #c7b493;border-radius:10px;background:#faf6ef;cursor:pointer;font:inherit">Cancel</button><button type="button" onclick="__btvSaveWebhook()" style="padding:9px 18px;border:1px solid #8B6F4E;border-radius:10px;background:#8B6F4E;color:#fff;cursor:pointer;font:inherit;font-weight:700">Save</button></div></div></div>
 
 
-</body></html>
+<!-- BTV Launch Detail Popup -->
+<div id="btvLDOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9900;align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto" onclick="if(event.target===this)btvCloseLaunchDetail()">
+  <div style="background:#fbf8f1;border-radius:18px;width:100%;max-width:1100px;box-shadow:0 12px 48px rgba(0,0,0,.22);overflow:hidden;margin:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px 14px;border-bottom:1px solid #e6e0d4;background:#fbf8f1">
+      <div>
+        <div id="btvLDTitle" style="font-size:17px;font-weight:700;color:#1a1a1a"></div>
+        <div id="btvLDSub" style="font-size:12px;color:#888;margin-top:2px"></div>
+      </div>
+      <button onclick="btvCloseLaunchDetail()" style="background:none;border:none;cursor:pointer;font-size:22px;color:#666;line-height:1;padding:4px 8px" title="Close">&times;</button>
+    </div>
+    <div style="overflow:auto;max-height:72vh">
+      <div id="btvLDBody"></div>
+    </div>
+  </div>
+</div>
+<script>
+function btvShowLaunchDetail(entryId) {
+  var overlay = document.getElementById('btvLDOverlay');
+  var bodyEl = document.getElementById('btvLDBody');
+  var titleEl = document.getElementById('btvLDTitle');
+  var subEl = document.getElementById('btvLDSub');
 
+  var calEntry = null;
+  try {
+    var st = JSON.parse(localStorage.getItem('calendar-2026-working-v5') || '{}');
+    ['global','china','nea','sea'].forEach(function(sec) {
+      var weeks = st[sec] || {};
+      Object.values(weeks).forEach(function(wEntries) {
+        (Array.isArray(wEntries) ? wEntries : []).forEach(function(e) {
+          if (e.id === entryId) calEntry = e;
+        });
+      });
+    });
+  } catch(ex) {}
+
+  var allProducts = [];
+  try { allProducts = JSON.parse(localStorage.getItem('btv_linesheet_products') || '[]'); } catch(ex) {}
+  var products = allProducts.filter(function(p) { return p.calEntryId === entryId; });
+
+  titleEl.textContent = calEntry ? (calEntry.launchTitle || entryId) : entryId;
+  subEl.textContent = (calEntry && calEntry.launchDate) ? 'Launch Date: ' + calEntry.launchDate : '';
+
+  if (!products.length) {
+    bodyEl.innerHTML = '<div style="padding:32px;text-align:center;color:#999;font-size:14px">No linesheet products found for this launch.<br><small style="color:#bbb">Open and save any calendar entry to sync data through to the linesheet.</small></div>';
+    overlay.style.display = 'flex';
+    return;
+  }
+
+  var x = function(v) { return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  var cell = function(v, wrap) {
+    var ws = wrap ? 'pre-wrap' : 'nowrap';
+    return '<td style="padding:8px 10px;vertical-align:top;font-size:12px;color:#333;border-bottom:1px solid #ede9e2;white-space:'+ws+';max-width:'+(wrap?'180px':'none')+'">'+(v||'<span style="color:#ccc">—</span>')+'</td>';
+  };
+  var imgCell = function(url) {
+    if (!url) return '<td style="padding:8px 10px;border-bottom:1px solid #ede9e2;text-align:center"><span style="color:#ccc;font-size:11px">—</span></td>';
+    return '<td style="padding:6px 10px;border-bottom:1px solid #ede9e2;text-align:center"><a href="'+x(url)+'" target="_blank" rel="noopener"><img src="'+x(url)+'" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #e0dbd2" onerror="this.style.display=\'none\'"></a></td>';
+  };
+  var approvalCell = function(p) {
+    var d = p.approvedDesigner ? '<span style="color:#1a7f3a;font-weight:700">D</span>' : '<span style="color:#ccc">D</span>';
+    var s = p.approvedSC      ? '<span style="color:#1a7f3a;font-weight:700">SC</span>' : '<span style="color:#ccc">SC</span>';
+    var m = p.approvedMerch   ? '<span style="color:#1a7f3a;font-weight:700">M</span>' : '<span style="color:#ccc">M</span>';
+    var all = p.approvedDesigner && p.approvedSC && p.approvedMerch;
+    var badge = all
+      ? '<div style="display:inline-block;background:#e6f6ec;color:#1a7f3a;border:1px solid #b5dfc5;border-radius:8px;font-size:10px;padding:2px 8px;font-weight:600;margin-top:4px">Approved</div>'
+      : '<div style="display:inline-block;background:#fdf3e7;color:#b07030;border:1px solid #dfd0b5;border-radius:8px;font-size:10px;padding:2px 8px;font-weight:600;margin-top:4px">Pending</div>';
+    return '<td style="padding:8px 10px;vertical-align:top;border-bottom:1px solid #ede9e2"><div style="font-size:12px;font-family:monospace;letter-spacing:1px">'+d+' / '+s+' / '+m+'</div>'+badge+'</td>';
+  };
+
+  var cols = ['Product Image','Lookbook Image','SKU','Barcode','HS Code (8)','HS Code (10)','Launch Date','Product Name','Colour / Variant','Product Category','Description','Fabric Composition','Sizing','Weight (g)','Measurement','Washcare','SGD RRP','SGD (w/o GST)','JP RRP','ID RRP','TH RRP','PH RRP','CN RRP','Markets','Launch Channels','Approval (D/SC/M)'];
+  var thStyle = 'padding:9px 10px;font-size:11px;font-weight:600;color:#555;background:#ede9e2;white-space:nowrap;border-bottom:2px solid #d6d0c4;position:sticky;top:0;text-align:left;z-index:1';
+
+  var html = '<table style="width:100%;border-collapse:collapse">';
+  html += '<thead><tr>'+cols.map(function(c){ return '<th style="'+thStyle+'">'+x(c)+'</th>'; }).join('')+'</tr></thead><tbody>';
+  products.forEach(function(p) {
+    html += '<tr style="background:#fff">';
+    html += imgCell(p.productImg);
+    html += imgCell(p.lookbookImg);
+    html += cell(x(p.sku));
+    html += cell(x(p.barcode));
+    html += cell(x(p.hscode));
+    html += cell(x(p.hscode10));
+    html += cell(x(p.launchDate));
+    html += cell('<strong>'+x(p.name)+'</strong>');
+    html += cell(x(p.variant));
+    html += cell(x(p.category));
+    html += cell(x(p.description), true);
+    html += cell(x(p.fabric), true);
+    html += cell(x(p.sizing));
+    html += cell(x(p.weightGrams));
+    html += cell(x(p.measurementSummary), true);
+    html += cell(x(p.washcare), true);
+    html += cell(x(p.sgd));
+    html += cell(x(p.sgdNoGST));
+    html += cell(x(p.jp));
+    html += cell(x(p.idRrp));
+    html += cell(x(p.th));
+    html += cell(x(p.ph));
+    html += cell(x(p.cn));
+    html += cell(x((p.calMarkets||[]).join(', ')));
+    html += cell(x((p.calStores||[]).join('\n')), true);
+    html += approvalCell(p);
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  bodyEl.innerHTML = html;
+  overlay.style.display = 'flex';
+}
+function btvCloseLaunchDetail() {
+  document.getElementById('btvLDOverlay').style.display = 'none';
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') btvCloseLaunchDetail(); });
+</script>
+</body></html>
 
 
 
