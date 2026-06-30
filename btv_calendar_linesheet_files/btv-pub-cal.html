@@ -773,6 +773,12 @@ function openPopup(entryId){
     if(e.notes) body += '<div class="popup-section-hd">Notes</div><div>'+esc(e.notes)+'</div>';
   }
 
+  // Add linesheet button for launch sections
+  if(sec==='global'||sec==='china'||sec==='sea'||sec==='nea'){
+    body += '<div style="margin-top:18px;padding-top:14px;border-top:1px solid #e8e2d8">'
+      +'<button onclick="btvShowLaunchDetail(\''+entryId+'\')" style="padding:9px 20px;background:#1a1a1a;color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;letter-spacing:.02em">View Linesheet Products &rarr;</button>'
+      +'</div>';
+  }
   document.getElementById('popupBody').innerHTML = body;
   document.getElementById('popupSkuCount').textContent = totalSkus ? 'Total SKUs: '+totalSkus : '';
   document.getElementById('entryPopup').classList.add('show');
@@ -994,6 +1000,173 @@ window.setYear       = setYear;
 window.loadCalendar  = loadCalendar;
 window.openPopup     = openPopup;
 window.closePopup    = closePopup;
+window.btvShowLaunchDetail = btvShowLaunchDetail;
+
+function btvShowLaunchDetail(entryId) {
+  if (!document.getElementById('btvLDStyles')) {
+    var s = document.createElement('style');
+    s.id = 'btvLDStyles';
+    s.textContent = [
+      '.btv-ld-card{background:#fff;border-radius:14px;border:1px solid #e8e2d8;padding:24px 20px;margin-bottom:18px}',
+      '.btv-ld-grid{display:grid;grid-template-columns:120px 1fr 260px;gap:20px;align-items:start}',
+      '.btv-ld-imgs{display:flex;flex-direction:column;gap:10px}',
+      '.btv-ld-imgwrap{width:110px;height:110px;border-radius:10px;overflow:hidden;border:1px solid #e0dbd2;background:#f5f3ef;display:flex;align-items:center;justify-content:center}',
+      '.btv-ld-imgwrap img{width:100%;height:100%;object-fit:cover;display:block}',
+      '.btv-ld-imgblank{color:#ccc;font-size:10px;text-align:center;padding:4px}',
+      '.btv-ld-info{min-width:0}',
+      '.btv-ld-pname{font-size:17px;font-weight:700;color:#1a1a1a;margin-bottom:6px;line-height:1.3}',
+      '.btv-ld-hs{font-size:12px;color:#c07830;font-weight:500;margin-bottom:2px}',
+      '.btv-ld-fields{margin-top:10px;display:flex;flex-direction:column;gap:3px}',
+      '.btv-ld-field{font-size:12px;color:#333;line-height:1.5}',
+      '.btv-ld-label{font-weight:700;color:#555;letter-spacing:.04em}',
+      '.btv-ld-channels{white-space:pre-line;font-size:12px;color:#333;padding-left:8px;margin-top:2px}',
+      '.btv-ld-desc{font-size:12px;color:#555;line-height:1.6;margin-top:12px;padding-top:12px;border-top:1px solid #f0ebe4}',
+      '.btv-ld-ph{font-size:10px;font-weight:700;letter-spacing:.08em;color:#888;margin-top:14px;margin-bottom:6px;text-transform:uppercase}',
+      '.btv-ld-pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#e8e2d8;border:1px solid #e8e2d8;border-radius:8px;overflow:hidden}',
+      '.btv-ld-pcell{background:#fbf8f1;padding:8px 10px;text-align:center}',
+      '.btv-ld-plabel{font-size:9px;font-weight:700;color:#888;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}',
+      '.btv-ld-pval{font-size:13px;font-weight:600;color:#1a1a1a}',
+      '.btv-ld-approval{margin-top:12px;font-size:12px;font-family:monospace;letter-spacing:.08em;color:#555;display:flex;align-items:center;gap:8px}',
+      '.btv-ld-appr{color:#1a7f3a;font-weight:700}',
+      '.btv-ld-appgrey{color:#ccc}',
+      '.btv-ld-badgeok{background:#e6f6ec;color:#1a7f3a;border:1px solid #b5dfc5;border-radius:8px;font-size:10px;padding:2px 10px;font-weight:600;font-family:sans-serif}',
+      '.btv-ld-badgepend{background:#fdf3e7;color:#b07030;border:1px solid #dfd0b5;border-radius:8px;font-size:10px;padding:2px 10px;font-weight:600;font-family:sans-serif}',
+      '.btv-ld-sku{min-width:0}',
+      '.btv-ld-skuhead{font-size:10px;font-weight:700;letter-spacing:.08em;color:#888;text-transform:uppercase;margin-bottom:8px}',
+      '.btv-ld-sktable{width:100%;border-collapse:collapse;font-size:11px}',
+      '.btv-ld-skth{padding:6px 8px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.06em;color:#666;border-bottom:2px solid #e0dbd2;white-space:nowrap}',
+      '.btv-ld-skcell{padding:5px 8px;border-bottom:1px solid #f0ebe4;color:#333;vertical-align:top;word-break:break-all}',
+      '.btv-ld-sknum{font-family:monospace;font-size:10px;color:#555}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+  var overlay = document.getElementById('btvLDOverlay');
+  var bodyEl  = document.getElementById('btvLDBody');
+  var titleEl = document.getElementById('btvLDTitle');
+  var subEl   = document.getElementById('btvLDSub');
+
+  var calEntry = null;
+  var _btvCalSt = {};
+  try {
+    _btvCalSt = JSON.parse(localStorage.getItem('calendar-2026-working-v5') || '{}');
+    ['global','china','nea','sea'].forEach(function(sec2) {
+      Object.values(_btvCalSt[sec2] || {}).forEach(function(wE) {
+        (Array.isArray(wE)?wE:[]).forEach(function(e){ if(e.id===entryId) calEntry=e; });
+      });
+    });
+  } catch(ex) {}
+
+  var _mktSfx = /\s*[-–—]\s*(SG|TH|ID|PH|JP|CN|MY|HK|TW|VN|KR|AU|UK|US|EU)(\s.*)?$/i;
+  var _base = calEntry ? (calEntry.launchTitle||'').replace(_mktSfx,'').trim() : '';
+  var _sibIds = new Set([entryId]);
+  if (_base) {
+    try {
+      ['global','china','nea','sea'].forEach(function(sec2) {
+        Object.values(_btvCalSt[sec2]||{}).forEach(function(wE){
+          (Array.isArray(wE)?wE:[]).forEach(function(e){
+            if(e.launchTitle&&e.launchTitle.replace(_mktSfx,'').trim()===_base) _sibIds.add(e.id);
+          });
+        });
+      });
+    } catch(ex2){}
+  }
+
+  var allProducts = [];
+  try { allProducts = JSON.parse(localStorage.getItem('btv_linesheet_products')||'[]'); } catch(ex) {}
+  var _calDate = calEntry ? (calEntry.launchDate||'') : '';
+  var _seen = new Set();
+  var products = allProducts.filter(function(p){
+    if(_seen.has(p.id)) return false;
+    if(p.calEntryId && _sibIds.has(p.calEntryId)){ _seen.add(p.id); return true; }
+    if(_calDate && p.launchDate && p.launchDate===_calDate){ _seen.add(p.id); return true; }
+    return false;
+  });
+
+  titleEl.textContent = calEntry ? (calEntry.launchTitle||entryId) : entryId;
+  subEl.textContent   = _calDate ? 'Launch Date: '+_calDate : '';
+
+  if (!products.length) {
+    bodyEl.innerHTML = '<div style="padding:40px;text-align:center;color:#999;font-size:14px">No linesheet products linked to this launch yet.<br><small style="color:#bbb;margin-top:6px;display:block">Products appear here once uploaded to the linesheet.</small></div>';
+    overlay.style.display = 'flex';
+    return;
+  }
+
+  var x = function(v){ return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  function fld(label,value,pre){
+    if(!value&&value!==0) return '<div class="btv-ld-field"><span class="btv-ld-label">'+label+':</span> <span style="color:#ccc">—</span></div>';
+    var v=pre?'<span style="white-space:pre-line">'+x(String(value))+'</span>':x(String(value));
+    return '<div class="btv-ld-field"><span class="btv-ld-label">'+label+':</span> '+v+'</div>';
+  }
+  function skuTable(p){
+    var sizes=[];
+    var ord=['XXS','XS','S','M','L','XL','XXL'];
+    if(p.sizeSKUs&&Object.keys(p.sizeSKUs).length){
+      Object.keys(p.sizeSKUs).sort(function(a,b){var ai=ord.indexOf(a),bi=ord.indexOf(b);return(ai>=0&&bi>=0)?ai-bi:a.localeCompare(b);}).forEach(function(sz){sizes.push({sz:sz,sk:p.sizeSKUs[sz]||'',bc:(p.sizeBarcodes||{})[sz]||''});});
+    } else { sizes.push({sz:'ONE SIZE',sk:p.sku||'',bc:p.barcode||''}); }
+    return '<table class="btv-ld-sktable"><thead><tr><th class="btv-ld-skth">SIZE</th><th class="btv-ld-skth">SKU</th><th class="btv-ld-skth">BARCODE</th></tr></thead><tbody>'
+      +sizes.map(function(r){return '<tr><td class="btv-ld-skcell">'+x(r.sz)+'</td><td class="btv-ld-skcell btv-ld-sknum">'+x(r.sk)+'</td><td class="btv-ld-skcell btv-ld-sknum">'+x(r.bc)+'</td></tr>';}).join('')+'</tbody></table>';
+  }
+  function approvalRow(p){
+    var d=p.approvedDesigner?'<span class="btv-ld-appr">D</span>':'<span class="btv-ld-appgrey">D</span>';
+    var s=p.approvedSC?'<span class="btv-ld-appr">SC</span>':'<span class="btv-ld-appgrey">SC</span>';
+    var m=p.approvedMerch?'<span class="btv-ld-appr">M</span>':'<span class="btv-ld-appgrey">M</span>';
+    var all=p.approvedDesigner&&p.approvedSC&&p.approvedMerch;
+    return '<div class="btv-ld-approval">'+d+' / '+s+' / '+m+' '+(all?'<span class="btv-ld-badgeok">&#10003; Approved</span>':'<span class="btv-ld-badgepend">Pending</span>')+'</div>';
+  }
+  var html = products.map(function(p){
+    var title=x(p.name||'')+(p.variant?' — '+x(p.variant):'');
+    function img(url,alt){
+      if(url) return '<div class="btv-ld-imgwrap"><a href="'+x(url)+'" target="_blank"><img src="'+x(url)+'" alt="'+alt+'" onerror="this.parentNode.className+=\' btv-ld-imgblank\'"></a></div>';
+      return '<div class="btv-ld-imgwrap btv-ld-imgblank"><span>'+alt+'</span></div>';
+    }
+    return '<div class="btv-ld-card"><div class="btv-ld-grid">'
+      +'<div class="btv-ld-imgs">'+img(p.productImg,'Product')+img(p.lookbookImg,'Lookbook')+'</div>'
+      +'<div class="btv-ld-info">'
+        +'<div class="btv-ld-pname">'+title+'</div>'
+        +(p.hscode?'<div class="btv-ld-hs">HS Code: '+x(p.hscode)+'</div>':'')
+        +'<div class="btv-ld-fields">'
+          +fld('CATEGORY',p.category)+fld('LAUNCH DATE',p.launchDate)+fld('FABRIC',p.fabric)
+          +(p.washcare?'<div class="btv-ld-field"><span class="btv-ld-label">WASHCARE:</span> <span style="white-space:pre-line">'+x(p.washcare)+'</span></div>':fld('WASHCARE',''))
+        +'</div>'
+        +(p.description?'<div class="btv-ld-desc">'+x(p.description)+'</div>':'')
+        +'<div class="btv-ld-ph">Pricing</div>'
+        +'<div class="btv-ld-pgrid">'
+          +'<div class="btv-ld-pcell"><div class="btv-ld-plabel">SGD</div><div class="btv-ld-pval">'+(p.sgd?'S$'+x(p.sgd):'—')+'</div></div>'
+          +'<div class="btv-ld-pcell"><div class="btv-ld-plabel">SGD EX GST</div><div class="btv-ld-pval">'+(p.sgdNoGST?'S$'+x(p.sgdNoGST):'—')+'</div></div>'
+          +'<div class="btv-ld-pcell"><div class="btv-ld-plabel">JPY</div><div class="btv-ld-pval">'+(p.jp?'¥'+x(p.jp):'—')+'</div></div>'
+          +'<div class="btv-ld-pcell"><div class="btv-ld-plabel">IDR</div><div class="btv-ld-pval">'+(p.idRrp?'Rp '+x(p.idRrp):'—')+'</div></div>'
+          +'<div class="btv-ld-pcell"><div class="btv-ld-plabel">THB</div><div class="btv-ld-pval">'+(p.th?'฿'+x(p.th):'—')+'</div></div>'
+          +'<div class="btv-ld-pcell"><div class="btv-ld-plabel">PHP</div><div class="btv-ld-pval">'+(p.ph?'₱'+x(p.ph):'—')+'</div></div>'
+          +'<div class="btv-ld-pcell"><div class="btv-ld-plabel">CNY</div><div class="btv-ld-pval">'+(p.cn?'¥'+x(p.cn):'—')+'</div></div>'
+        +'</div>'+approvalRow(p)
+      +'</div>'
+      +'<div class="btv-ld-sku"><div class="btv-ld-skuhead">SKU / Barcode by Size</div>'+skuTable(p)+'</div>'
+    +'</div></div>';
+  }).join('');
+
+  bodyEl.innerHTML = html;
+  overlay.style.display = 'flex';
+}
+function btvCloseLaunchDetail(){
+  document.getElementById('btvLDOverlay').style.display='none';
+}
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') btvCloseLaunchDetail(); });
 </script>
+
+<!-- BTV Launch Detail Popup Overlay -->
+<div id="btvLDOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9900;align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto" onclick="if(event.target===this)btvCloseLaunchDetail()">
+  <div style="background:#fbf8f1;border-radius:18px;width:100%;max-width:1100px;box-shadow:0 12px 48px rgba(0,0,0,.22);overflow:hidden;margin:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px 14px;border-bottom:1px solid #e6e0d4;background:#fbf8f1">
+      <div>
+        <div id="btvLDTitle" style="font-size:17px;font-weight:700;color:#1a1a1a"></div>
+        <div id="btvLDSub" style="font-size:12px;color:#888;margin-top:2px"></div>
+      </div>
+      <button onclick="btvCloseLaunchDetail()" style="background:none;border:none;cursor:pointer;font-size:22px;color:#666;line-height:1;padding:4px 8px">&times;</button>
+    </div>
+    <div style="overflow:auto;max-height:72vh">
+      <div id="btvLDBody" style="padding:20px"></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>

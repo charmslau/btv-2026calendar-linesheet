@@ -13730,10 +13730,11 @@ function btvShowLaunchDetail(entryId) {
   var subEl   = document.getElementById('btvLDSub');
 
   var calEntry = null;
+  var _btvCalSt = {};
   try {
-    var st = JSON.parse(localStorage.getItem('calendar-2026-working-v5') || '{}');
+    _btvCalSt = JSON.parse(localStorage.getItem('calendar-2026-working-v5') || '{}');
     ['global','china','nea','sea'].forEach(function(sec) {
-      var weeks = st[sec] || {};
+      var weeks = _btvCalSt[sec] || {};
       Object.values(weeks).forEach(function(wEntries) {
         (Array.isArray(wEntries) ? wEntries : []).forEach(function(e) {
           if (e.id === entryId) calEntry = e;
@@ -13742,9 +13743,35 @@ function btvShowLaunchDetail(entryId) {
     });
   } catch(ex) {}
 
+  // Build set of sibling entry IDs: same launch title across markets (strips "- SG", "- TH" etc.)
+  var _btvMktSuffix = /\s*[-–—]\s*(SG|TH|ID|PH|JP|CN|MY|HK|TW|VN|KR|AU|UK|US|EU)(\s.*)?$/i;
+  var _btvBaseTitle = calEntry ? (calEntry.launchTitle || '').replace(_btvMktSuffix, '').trim() : '';
+  var _btvSibIds = new Set([entryId]);
+  if (_btvBaseTitle) {
+    try {
+      ['global','china','nea','sea'].forEach(function(sec) {
+        Object.values(_btvCalSt[sec] || {}).forEach(function(wEntries) {
+          (Array.isArray(wEntries) ? wEntries : []).forEach(function(e) {
+            if (!e.launchTitle) return;
+            if (e.launchTitle.replace(_btvMktSuffix, '').trim() === _btvBaseTitle) _btvSibIds.add(e.id);
+          });
+        });
+      });
+    } catch(ex2) {}
+  }
+
   var allProducts = [];
   try { allProducts = JSON.parse(localStorage.getItem('btv_linesheet_products') || '[]'); } catch(ex) {}
-  var products = allProducts.filter(function(p) { return p.calEntryId === entryId; });
+
+  // Match products: by calEntryId (any sibling market entry), then fallback by launch date
+  var _btvCalDate = calEntry ? (calEntry.launchDate || '') : '';
+  var _btvSeen = new Set();
+  var products = allProducts.filter(function(p) {
+    if (_btvSeen.has(p.id)) return false;
+    if (p.calEntryId && _btvSibIds.has(p.calEntryId)) { _btvSeen.add(p.id); return true; }
+    if (_btvCalDate && p.launchDate && p.launchDate === _btvCalDate) { _btvSeen.add(p.id); return true; }
+    return false;
+  });
 
   titleEl.textContent = calEntry ? (calEntry.launchTitle || entryId) : entryId;
   subEl.textContent   = (calEntry && calEntry.launchDate) ? 'Launch Date: ' + calEntry.launchDate : '';
