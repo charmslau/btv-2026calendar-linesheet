@@ -7831,98 +7831,140 @@ function saveState(state){
 
     });
 
-    // NEA entries
-    Object.values(state.nea || {}).flat().forEach(entry => {
-
-      if(!entry.productTitle) return;
-
-      const colours = entry.colour ? entry.colour.split(/[,;]/).map(s => s.trim()).filter(Boolean) : [""];
-
-      const rawSize = entry.size || (entry.colorSize && entry.colorSize.includes(' / ') ? entry.colorSize.split(' / ').slice(1).join(' / ') : '') || "";
-
-      const sizes = rawSize ? rawSize.split(/[,;]/).map(s => s.trim()).filter(Boolean) : [""];
-
-      colours.forEach(col => {
-
-        sizes.forEach(siz => {
-
-          linesheetRows.push({
-
-            calEntryId: entry.id,
-            calSection: "nea",
-
-            launchDate: entry.launchDate || entry.startDateISO || "",
-
-            launchTitle: entry.launchTitle || entry.optionType || "",
-
-            category: entry.optionType || "NEA",
-
-            productName: entry.productTitle || "",
-
-            colour: col,
-
-            size: siz,
-
-            sgdRrp: entry.price || "",
-
-            workflowStatus: entry.workflowStatus || "draft",
-
-            calMarkets: entry.allMarkets ? NEA_MARKETS.slice() : (entry.countries || []),
-            calStores: entry.stores || []
-
+    // NEA entries — new global format (lines[]) or old regional format (backward compat)
+    Object.values(state.nea || {}).flat().forEach(function(entry) {
+      if(entry.lines && entry.lines.length) {
+        entry.lines.forEach(function(line) {
+          if(!(line.category || line.productName || line.productTitle || line.colour || line.size || line.price)) return;
+          var colours = line.colour ? line.colour.split(/[,;]/).map(function(s){ return s.trim(); }).filter(Boolean) : [""];
+          var sizes = line.size ? line.size.split(/[,;]/).map(function(s){ return s.trim(); }).filter(Boolean) : [""];
+          colours.forEach(function(col) {
+            sizes.forEach(function(siz) {
+              linesheetRows.push({
+                calEntryId: entry.id,
+                calSection: "nea",
+                calWeekId: entry.weekId || findWeekIdForDate(entry.launchDate || "") || "",
+                launchDate: entry.launchDate || entry.startDateISO || "",
+                launchTitle: entry.launchTitle || "",
+                category: line.category || "",
+                productName: line.productName || line.productTitle || "",
+                colour: col,
+                size: siz,
+                sgdRrp: line.price || "",
+                workflowStatus: entry.workflowStatus || "draft",
+                calMarkets: entry.noLaunchMarkets !== undefined
+                  ? MARKETS_ALL.filter(function(m){ return !(entry.noLaunchMarkets||[]).includes(m); })
+                  : (entry.allMarkets ? NEA_MARKETS.slice() : (entry.countries || [])),
+                calStores: entry.noLaunchChannelsCollapsed !== undefined
+                  ? (function(){
+                      var noMap = {};
+                      (entry.noLaunchChannelsCollapsed || []).forEach(function(item){ noMap[item.market] = new Set(item.stores || []); });
+                      var mks = MARKETS_ALL.filter(function(m){ return !(entry.noLaunchMarkets||[]).includes(m); });
+                      var out = [];
+                      mks.forEach(function(mkt){
+                        var allS = getActiveStores(mkt, entry.launchDate || "");
+                        var noS  = noMap[mkt] || new Set();
+                        var launching = allS.filter(function(s){ return !noS.has(s); });
+                        if(launching.length) out.push(mkt + ': ' + launching.join(', '));
+                      });
+                      return out;
+                    })()
+                  : (entry.stores || [])
+              });
+            });
           });
-
         });
-
-      });
-
+      } else if(entry.productTitle) {
+        var colours = entry.colour ? entry.colour.split(/[,;]/).map(function(s){ return s.trim(); }).filter(Boolean) : [""];
+        var rawSize = entry.size || (entry.colorSize && entry.colorSize.includes(' / ') ? entry.colorSize.split(' / ').slice(1).join(' / ') : '') || "";
+        var sizes = rawSize ? rawSize.split(/[,;]/).map(function(s){ return s.trim(); }).filter(Boolean) : [""];
+        colours.forEach(function(col) {
+          sizes.forEach(function(siz) {
+            linesheetRows.push({
+              calEntryId: entry.id,
+              calSection: "nea",
+              launchDate: entry.launchDate || entry.startDateISO || "",
+              launchTitle: entry.launchTitle || entry.optionType || "",
+              category: entry.category || entry.optionType || "NEA",
+              productName: entry.productTitle || "",
+              colour: col,
+              size: siz,
+              sgdRrp: entry.price || "",
+              workflowStatus: entry.workflowStatus || "draft",
+              calMarkets: entry.allMarkets ? NEA_MARKETS.slice() : (entry.countries || []),
+              calStores: entry.stores || []
+            });
+          });
+        });
+      }
     });
 
-    // SEA entries
-    Object.values(state.sea || {}).flat().forEach(entry => {
-
-      if(!entry.productTitle) return;
-
-      const colours = entry.colour ? entry.colour.split(/[,;]/).map(s => s.trim()).filter(Boolean) : [""];
-
-      const rawSize = entry.size || (entry.colorSize && entry.colorSize.includes(' / ') ? entry.colorSize.split(' / ').slice(1).join(' / ') : '') || "";
-
-      const sizes = rawSize ? rawSize.split(/[,;]/).map(s => s.trim()).filter(Boolean) : [""];
-
-      colours.forEach(col => {
-
-        sizes.forEach(siz => {
-
-          linesheetRows.push({
-
-            calEntryId: entry.id,
-            calSection: "sea",
-
-            launchDate: entry.launchDate || entry.startDateISO || "",
-
-            launchTitle: entry.launchTitle || entry.optionType || "",
-
-            category: entry.optionType || "SEA",
-
-            productName: entry.productTitle || "",
-
-            colour: col,
-
-            size: siz,
-
-            sgdRrp: entry.price || "",
-
-            workflowStatus: entry.workflowStatus || "draft",
-
-            calMarkets: entry.allMarkets ? SEA_MARKETS.slice() : (entry.countries || []),
-            calStores: entry.stores || []
-
+    // SEA entries — new global format (lines[]) or old regional format (backward compat)
+    Object.values(state.sea || {}).flat().forEach(function(entry) {
+      if(entry.lines && entry.lines.length) {
+        entry.lines.forEach(function(line) {
+          if(!(line.category || line.productName || line.productTitle || line.colour || line.size || line.price)) return;
+          var colours = line.colour ? line.colour.split(/[,;]/).map(function(s){ return s.trim(); }).filter(Boolean) : [""];
+          var sizes = line.size ? line.size.split(/[,;]/).map(function(s){ return s.trim(); }).filter(Boolean) : [""];
+          colours.forEach(function(col) {
+            sizes.forEach(function(siz) {
+              linesheetRows.push({
+                calEntryId: entry.id,
+                calSection: "sea",
+                calWeekId: entry.weekId || findWeekIdForDate(entry.launchDate || "") || "",
+                launchDate: entry.launchDate || entry.startDateISO || "",
+                launchTitle: entry.launchTitle || "",
+                category: line.category || "",
+                productName: line.productName || line.productTitle || "",
+                colour: col,
+                size: siz,
+                sgdRrp: line.price || "",
+                workflowStatus: entry.workflowStatus || "draft",
+                calMarkets: entry.noLaunchMarkets !== undefined
+                  ? MARKETS_ALL.filter(function(m){ return !(entry.noLaunchMarkets||[]).includes(m); })
+                  : (entry.allMarkets ? SEA_MARKETS.slice() : (entry.countries || [])),
+                calStores: entry.noLaunchChannelsCollapsed !== undefined
+                  ? (function(){
+                      var noMap = {};
+                      (entry.noLaunchChannelsCollapsed || []).forEach(function(item){ noMap[item.market] = new Set(item.stores || []); });
+                      var mks = MARKETS_ALL.filter(function(m){ return !(entry.noLaunchMarkets||[]).includes(m); });
+                      var out = [];
+                      mks.forEach(function(mkt){
+                        var allS = getActiveStores(mkt, entry.launchDate || "");
+                        var noS  = noMap[mkt] || new Set();
+                        var launching = allS.filter(function(s){ return !noS.has(s); });
+                        if(launching.length) out.push(mkt + ': ' + launching.join(', '));
+                      });
+                      return out;
+                    })()
+                  : (entry.stores || [])
+              });
+            });
           });
-
         });
-
-      });
-
+      } else if(entry.productTitle) {
+        var colours = entry.colour ? entry.colour.split(/[,;]/).map(function(s){ return s.trim(); }).filter(Boolean) : [""];
+        var rawSize = entry.size || (entry.colorSize && entry.colorSize.includes(' / ') ? entry.colorSize.split(' / ').slice(1).join(' / ') : '') || "";
+        var sizes = rawSize ? rawSize.split(/[,;]/).map(function(s){ return s.trim(); }).filter(Boolean) : [""];
+        colours.forEach(function(col) {
+          sizes.forEach(function(siz) {
+            linesheetRows.push({
+              calEntryId: entry.id,
+              calSection: "sea",
+              launchDate: entry.launchDate || entry.startDateISO || "",
+              launchTitle: entry.launchTitle || entry.optionType || "",
+              category: entry.category || entry.optionType || "SEA",
+              productName: entry.productTitle || "",
+              colour: col,
+              size: siz,
+              sgdRrp: entry.price || "",
+              workflowStatus: entry.workflowStatus || "draft",
+              calMarkets: entry.allMarkets ? SEA_MARKETS.slice() : (entry.countries || []),
+              calStores: entry.stores || []
+            });
+          });
+        });
+      }
     });
 
     // China entries (global-format: uses lines[] like Global row)
@@ -9257,7 +9299,13 @@ function render(){
 
   html += "</tbody>";
 
+  const _tw = document.querySelector('#calendarView .table-wrap');
+  const _sl = _tw ? _tw.scrollLeft : 0;
+  const _st = _tw ? _tw.scrollTop : 0;
+
   e("calendar").innerHTML = html;
+
+  if(_tw){ _tw.scrollLeft = _sl; _tw.scrollTop = _st; }
 
   bindDragDrop();
   _bindPubButtons();
@@ -10560,7 +10608,7 @@ function btvValidateCalendarModal(section){
   var missing = [];
   function val(id){ var el=e(id); return el ? String(el.value || '').trim() : ''; }
   function anyChecked(name){ return Array.from(document.querySelectorAll('input[name="'+name+'"]')).some(function(x){ return x.checked; }); }
-  if(section === "global" || section === "china"){
+  if(section === "global" || section === "china" || section === "nea" || section === "sea"){
     if(!val("launchDate")) missing.push("Launch Date");
     if(!anyChecked("noLaunchMarkets")) missing.push("Markets");
     var rows = Array.from(document.querySelectorAll(".line-category"));
@@ -10615,9 +10663,7 @@ window.openEditor = function(section, weekId, entryId){
 
   let inner = "";
 
-  if(section === "global" || section === "china") inner = buildGlobalForm(existing, weekId) + actions(existing, section);
-
-  else if(section === "nea" || section === "sea") inner = buildRegionalForm(section, existing, weekId) + actions(existing, section);
+  if(section === "global" || section === "china" || section === "nea" || section === "sea") inner = buildGlobalForm(existing, weekId) + actions(existing, section);
 
   else if(section === "restocks") inner = buildRestockForm(existing) + actions(existing, section);
 
@@ -10800,7 +10846,7 @@ window.openEditor = function(section, weekId, entryId){
 
 
 
-  if(section === "global" || section === "china"){
+  if(section === "global" || section === "china" || section === "nea" || section === "sea"){
 
     bindAllToggle("noLaunchAll", "noLaunchMarkets");
 
@@ -10851,68 +10897,6 @@ window.openEditor = function(section, weekId, entryId){
       bindDelayRemove();
 
     };
-
-  }
-
-  if(section === "nea" || section === "sea"){
-
-    bindRegionalDynamicRows();
-
-    bindAllToggle(section + "AllMarkets", "countries");
-
-    document.querySelectorAll('[data-region-all]').forEach(allBox => {
-
-      const mkt = allBox.getAttribute('data-region-all');
-
-      const items = Array.from(document.querySelectorAll(`input[data-region-market="${mkt}"]`));
-
-      const syncAll = () => { allBox.checked = items.length && items.every(x => x.checked); };
-
-      allBox.onchange = () => { items.forEach(x => x.checked = allBox.checked); };
-
-      items.forEach(item => item.addEventListener('change', syncAll));
-
-      syncAll();
-
-    });
-
-    const sync = () => {
-
-      const isGWP = e("optionType").value === "GWP";
-
-      e("gwpWrap").classList.toggle("hidden", !isGWP);
-
-    };
-
-    const syncDates = () => {
-
-      const tso = e("tillSoldOut");
-
-      const end = e("endDate");
-
-      const days = e("daysCount");
-
-      if(!tso || !end || !days) return;
-
-      end.disabled = tso.checked;
-
-      end.classList.toggle("disabled-date", tso.checked);
-
-      days.textContent = tso.checked ? "Till Sold Out" : ((e("startDate").value && end.value) ? calcDays(e("startDate").value, end.value) + " days" : "");
-
-    };
-
-    e("optionType").onchange = sync;
-
-    e("startDate").addEventListener("input", syncDates);
-
-    e("endDate").addEventListener("input", syncDates);
-
-    e("tillSoldOut").addEventListener("change", syncDates);
-
-    sync();
-
-    syncDates();
 
   }
 
@@ -11082,49 +11066,33 @@ window.openEditor = function(section, weekId, entryId){
 
       payload.launchTitle = e("launchTitle").value.trim();
 
+      payload.launchDate = e("launchDate").value;
+
       payload.keyLevel = e("keyLevel").value;
 
-      payload.optionType = e("optionType").value;
+      targetWeekId = findWeekIdForDate(payload.launchDate) || targetWeekId;
 
-      payload.startDateISO = e("startDate").value;
+      payload.lines = getCurrentProductLines().filter(x => x.category || x.productName || x.colour || x.size || x.price);
 
-      payload.endDateISO = e("endDate").value;
+      payload.noLaunchMarkets = checkedByName("noLaunchMarkets");
 
-      payload.startDate = payload.startDateISO ? fmtDDMMM(payload.startDateISO) : "";
+      payload.skuCount = Number(e("skuCount").value || 0);
 
-      payload.endDate = payload.endDateISO ? fmtDDMMM(payload.endDateISO) : "";
+      payload.noLaunchChannelsCollapsed = collectCollapsedChannels();
 
-      targetWeekId = findWeekIdForDate(payload.startDateISO || payload.endDateISO) || targetWeekId;
+      payload.launchStatus = e("launchStatus").value;
 
-      payload.tillSoldOut = e("tillSoldOut").checked;
+      payload.delayMarkets = payload.launchStatus === "delay"
 
-      const selectedMarkets = checkedByName("countries");
+        ? Array.from(document.querySelectorAll(".delay-row")).map(row => ({
 
-      payload.allMarkets = selectedMarkets.length === (section === "nea" ? NEA_MARKETS.length : SEA_MARKETS.length);
+            market: row.querySelector(".delay-market").value,
 
-      payload.countries = payload.allMarkets ? [] : selectedMarkets;
+            eta: row.querySelector(".delay-eta").value
 
-      payload.lines = getCurrentRegionalProductLines().filter(function(x){ return x.category || x.productTitle || x.colour || x.size || x.price; });
+          })).filter(x => x.market && x.eta)
 
-      // Backward-compat single-product fields (first line)
-      payload.productTitle = (payload.lines[0] || {}).productTitle || "";
-      payload.category     = (payload.lines[0] || {}).category || "";
-      payload.colour       = (payload.lines[0] || {}).colour || "";
-      payload.size         = (payload.lines[0] || {}).size || "";
-      payload.colorSize    = payload.colour + (payload.size ? ' / ' + payload.size : '');
-      payload.price        = (payload.lines[0] || {}).price || "";
-
-      if(payload.optionType === "GWP"){
-
-        payload.mechanics = e("mechanics").value.trim();
-
-        payload.stores = [];
-
-      } else {
-
-        payload.stores = Array.from(document.querySelectorAll('input[data-group="regionStores"]:checked')).map(el => el.value);
-
-      }
+        : [];
 
     } else if(section === "restocks"){
 
