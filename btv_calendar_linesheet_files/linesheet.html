@@ -1758,9 +1758,10 @@ table.master td img { border-radius: 0 !important; }
 #view-dashboard.active > div:first-child{margin-top:0!important;padding-top:0!important}
 @media(max-width:900px){.ls-product-header{grid-template-columns:1fr!important}.ls-size-panel{width:100%!important}}
 @media print{
+  html,body,.app{height:auto!important;overflow:visible!important;display:block!important}
   .ls-toolbar,.topbar,.view:not(#view-linesheet){display:none!important}
   #view-linesheet > :not(.linesheet-wrap){display:none!important}
-  #view-linesheet{display:block!important;padding:0!important;overflow:visible!important}
+  #view-linesheet{display:block!important;padding:0!important;overflow:visible!important;height:auto!important}
   .linesheet-wrap{border:none!important;box-shadow:none!important;padding:16px 0 0 0!important}
   .ls-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:20px!important}
   .ls-product{page-break-inside:avoid!important;break-inside:avoid!important}
