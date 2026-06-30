@@ -13685,10 +13685,49 @@ window.btvTogglePublish = btvTogglePublish;
 </div>
 <script>
 function btvShowLaunchDetail(entryId) {
+  // Inject card styles once
+  if (!document.getElementById('btvLDStyles')) {
+    var s = document.createElement('style');
+    s.id = 'btvLDStyles';
+    s.textContent = [
+      '.btv-ld-card{background:#fff;border-radius:14px;border:1px solid #e8e2d8;padding:24px 20px;margin-bottom:18px}',
+      '.btv-ld-grid{display:grid;grid-template-columns:120px 1fr 260px;gap:20px;align-items:start}',
+      '.btv-ld-imgs{display:flex;flex-direction:column;gap:10px}',
+      '.btv-ld-imgwrap{width:110px;height:110px;border-radius:10px;overflow:hidden;border:1px solid #e0dbd2;background:#f5f3ef;display:flex;align-items:center;justify-content:center}',
+      '.btv-ld-imgwrap img{width:100%;height:100%;object-fit:cover;display:block}',
+      '.btv-ld-imgblank{color:#ccc;font-size:10px;text-align:center;padding:4px}',
+      '.btv-ld-info{min-width:0}',
+      '.btv-ld-pname{font-size:17px;font-weight:700;color:#1a1a1a;margin-bottom:6px;line-height:1.3}',
+      '.btv-ld-hs{font-size:12px;color:#c07830;font-weight:500;margin-bottom:2px}',
+      '.btv-ld-fields{margin-top:10px;display:flex;flex-direction:column;gap:3px}',
+      '.btv-ld-field{font-size:12px;color:#333;line-height:1.5}',
+      '.btv-ld-label{font-weight:700;color:#555;letter-spacing:.04em}',
+      '.btv-ld-channels{white-space:pre-line;font-size:12px;color:#333;padding-left:8px;margin-top:2px}',
+      '.btv-ld-desc{font-size:12px;color:#555;line-height:1.6;margin-top:12px;padding-top:12px;border-top:1px solid #f0ebe4}',
+      '.btv-ld-ph{font-size:10px;font-weight:700;letter-spacing:.08em;color:#888;margin-top:14px;margin-bottom:6px;text-transform:uppercase}',
+      '.btv-ld-pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#e8e2d8;border:1px solid #e8e2d8;border-radius:8px;overflow:hidden}',
+      '.btv-ld-pcell{background:#fbf8f1;padding:8px 10px;text-align:center}',
+      '.btv-ld-plabel{font-size:9px;font-weight:700;color:#888;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}',
+      '.btv-ld-pval{font-size:13px;font-weight:600;color:#1a1a1a}',
+      '.btv-ld-approval{margin-top:12px;font-size:12px;font-family:monospace;letter-spacing:.08em;color:#555;display:flex;align-items:center;gap:8px}',
+      '.btv-ld-appr{color:#1a7f3a;font-weight:700}',
+      '.btv-ld-appgrey{color:#ccc}',
+      '.btv-ld-badgeok{background:#e6f6ec;color:#1a7f3a;border:1px solid #b5dfc5;border-radius:8px;font-size:10px;padding:2px 10px;font-weight:600;font-family:sans-serif;letter-spacing:.02em}',
+      '.btv-ld-badgepend{background:#fdf3e7;color:#b07030;border:1px solid #dfd0b5;border-radius:8px;font-size:10px;padding:2px 10px;font-weight:600;font-family:sans-serif;letter-spacing:.02em}',
+      '.btv-ld-sku{min-width:0}',
+      '.btv-ld-skuhead{font-size:10px;font-weight:700;letter-spacing:.08em;color:#888;text-transform:uppercase;margin-bottom:8px}',
+      '.btv-ld-sktable{width:100%;border-collapse:collapse;font-size:11px}',
+      '.btv-ld-skth{padding:6px 8px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.06em;color:#666;border-bottom:2px solid #e0dbd2;white-space:nowrap}',
+      '.btv-ld-skcell{padding:5px 8px;border-bottom:1px solid #f0ebe4;color:#333;vertical-align:top;word-break:break-all}',
+      '.btv-ld-sknum{font-family:monospace;font-size:10px;color:#555}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+
   var overlay = document.getElementById('btvLDOverlay');
-  var bodyEl = document.getElementById('btvLDBody');
+  var bodyEl  = document.getElementById('btvLDBody');
   var titleEl = document.getElementById('btvLDTitle');
-  var subEl = document.getElementById('btvLDSub');
+  var subEl   = document.getElementById('btvLDSub');
 
   var calEntry = null;
   try {
@@ -13708,70 +13747,104 @@ function btvShowLaunchDetail(entryId) {
   var products = allProducts.filter(function(p) { return p.calEntryId === entryId; });
 
   titleEl.textContent = calEntry ? (calEntry.launchTitle || entryId) : entryId;
-  subEl.textContent = (calEntry && calEntry.launchDate) ? 'Launch Date: ' + calEntry.launchDate : '';
+  subEl.textContent   = (calEntry && calEntry.launchDate) ? 'Launch Date: ' + calEntry.launchDate : '';
 
   if (!products.length) {
-    bodyEl.innerHTML = '<div style="padding:32px;text-align:center;color:#999;font-size:14px">No linesheet products found for this launch.<br><small style="color:#bbb">Open and save any calendar entry to sync data through to the linesheet.</small></div>';
+    bodyEl.innerHTML = '<div style="padding:40px;text-align:center;color:#999;font-size:14px">No linesheet products linked to this launch yet.<br><small style="color:#bbb;margin-top:6px;display:block">Products appear here once the linesheet is synced from the calendar.</small></div>';
     overlay.style.display = 'flex';
     return;
   }
 
   var x = function(v) { return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
-  var cell = function(v, wrap) {
-    var ws = wrap ? 'pre-wrap' : 'nowrap';
-    return '<td style="padding:8px 10px;vertical-align:top;font-size:12px;color:#333;border-bottom:1px solid #ede9e2;white-space:'+ws+';max-width:'+(wrap?'180px':'none')+'">'+(v||'<span style="color:#ccc">—</span>')+'</td>';
-  };
-  var imgCell = function(url) {
-    if (!url) return '<td style="padding:8px 10px;border-bottom:1px solid #ede9e2;text-align:center"><span style="color:#ccc;font-size:11px">—</span></td>';
-    return '<td style="padding:6px 10px;border-bottom:1px solid #ede9e2;text-align:center"><a href="'+x(url)+'" target="_blank" rel="noopener"><img src="'+x(url)+'" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #e0dbd2" onerror="this.style.display=\'none\'"></a></td>';
-  };
-  var approvalCell = function(p) {
-    var d = p.approvedDesigner ? '<span style="color:#1a7f3a;font-weight:700">D</span>' : '<span style="color:#ccc">D</span>';
-    var s = p.approvedSC      ? '<span style="color:#1a7f3a;font-weight:700">SC</span>' : '<span style="color:#ccc">SC</span>';
-    var m = p.approvedMerch   ? '<span style="color:#1a7f3a;font-weight:700">M</span>' : '<span style="color:#ccc">M</span>';
+
+  function fld(label, value, pre) {
+    if (!value && value !== 0) return '<div class="btv-ld-field"><span class="btv-ld-label">' + label + ':</span> <span style="color:#ccc">—</span></div>';
+    var v = pre ? '<span style="white-space:pre-line">' + x(String(value)) + '</span>' : x(String(value));
+    return '<div class="btv-ld-field"><span class="btv-ld-label">' + label + ':</span> ' + v + '</div>';
+  }
+
+  function skuTable(p) {
+    var sizes = [];
+    if (p.sizeSKUs && Object.keys(p.sizeSKUs).length) {
+      var order = ['XXS','XS','S','M','L','XL','XXL'];
+      Object.keys(p.sizeSKUs).sort(function(a,b){
+        var ai=order.indexOf(a), bi=order.indexOf(b);
+        return (ai>=0&&bi>=0) ? ai-bi : a.localeCompare(b);
+      }).forEach(function(sz) {
+        sizes.push({sz:sz, sk:p.sizeSKUs[sz]||'', bc:(p.sizeBarcodes||{})[sz]||''});
+      });
+    } else {
+      sizes.push({sz:'ONE SIZE', sk:p.sku||'', bc:p.barcode||''});
+    }
+    return '<table class="btv-ld-sktable"><thead><tr>'
+      + '<th class="btv-ld-skth">SIZE</th><th class="btv-ld-skth">SKU</th><th class="btv-ld-skth">BARCODE</th>'
+      + '</tr></thead><tbody>'
+      + sizes.map(function(r){
+          return '<tr><td class="btv-ld-skcell">' + x(r.sz) + '</td>'
+            + '<td class="btv-ld-skcell btv-ld-sknum">' + x(r.sk) + '</td>'
+            + '<td class="btv-ld-skcell btv-ld-sknum">' + x(r.bc) + '</td></tr>';
+        }).join('')
+      + '</tbody></table>';
+  }
+
+  function approvalRow(p) {
+    var d = p.approvedDesigner ? '<span class="btv-ld-appr">D</span>' : '<span class="btv-ld-appgrey">D</span>';
+    var s = p.approvedSC       ? '<span class="btv-ld-appr">SC</span>' : '<span class="btv-ld-appgrey">SC</span>';
+    var m = p.approvedMerch    ? '<span class="btv-ld-appr">M</span>' : '<span class="btv-ld-appgrey">M</span>';
     var all = p.approvedDesigner && p.approvedSC && p.approvedMerch;
-    var badge = all
-      ? '<div style="display:inline-block;background:#e6f6ec;color:#1a7f3a;border:1px solid #b5dfc5;border-radius:8px;font-size:10px;padding:2px 8px;font-weight:600;margin-top:4px">Approved</div>'
-      : '<div style="display:inline-block;background:#fdf3e7;color:#b07030;border:1px solid #dfd0b5;border-radius:8px;font-size:10px;padding:2px 8px;font-weight:600;margin-top:4px">Pending</div>';
-    return '<td style="padding:8px 10px;vertical-align:top;border-bottom:1px solid #ede9e2"><div style="font-size:12px;font-family:monospace;letter-spacing:1px">'+d+' / '+s+' / '+m+'</div>'+badge+'</td>';
-  };
+    var badge = all ? '<span class="btv-ld-badgeok">&#10003; Approved</span>' : '<span class="btv-ld-badgepend">Pending</span>';
+    return '<div class="btv-ld-approval">' + d + ' / ' + s + ' / ' + m + ' ' + badge + '</div>';
+  }
 
-  var cols = ['Product Image','Lookbook Image','SKU','Barcode','HS Code (8)','HS Code (10)','Launch Date','Product Name','Colour / Variant','Product Category','Description','Fabric Composition','Sizing','Weight (g)','Measurement','Washcare','SGD RRP','SGD (w/o GST)','JP RRP','ID RRP','TH RRP','PH RRP','CN RRP','Markets','Launch Channels','Approval (D/SC/M)'];
-  var thStyle = 'padding:9px 10px;font-size:11px;font-weight:600;color:#555;background:#ede9e2;white-space:nowrap;border-bottom:2px solid #d6d0c4;position:sticky;top:0;text-align:left;z-index:1';
+  var html = products.map(function(p) {
+    var title = x(p.name||'') + (p.variant ? ' — ' + x(p.variant) : '');
+    var markets  = (p.calMarkets||[]).join(', ');
+    var channels = (p.calStores||[]).join('\n');
+    var sizing   = p.sizing || (p.sizeSKUs ? Object.keys(p.sizeSKUs).join(', ') : '');
 
-  var html = '<table style="width:100%;border-collapse:collapse">';
-  html += '<thead><tr>'+cols.map(function(c){ return '<th style="'+thStyle+'">'+x(c)+'</th>'; }).join('')+'</tr></thead><tbody>';
-  products.forEach(function(p) {
-    html += '<tr style="background:#fff">';
-    html += imgCell(p.productImg);
-    html += imgCell(p.lookbookImg);
-    html += cell(x(p.sku));
-    html += cell(x(p.barcode));
-    html += cell(x(p.hscode));
-    html += cell(x(p.hscode10));
-    html += cell(x(p.launchDate));
-    html += cell('<strong>'+x(p.name)+'</strong>');
-    html += cell(x(p.variant));
-    html += cell(x(p.category));
-    html += cell(x(p.description), true);
-    html += cell(x(p.fabric), true);
-    html += cell(x(p.sizing));
-    html += cell(x(p.weightGrams));
-    html += cell(x(p.measurementSummary), true);
-    html += cell(x(p.washcare), true);
-    html += cell(x(p.sgd));
-    html += cell(x(p.sgdNoGST));
-    html += cell(x(p.jp));
-    html += cell(x(p.idRrp));
-    html += cell(x(p.th));
-    html += cell(x(p.ph));
-    html += cell(x(p.cn));
-    html += cell(x((p.calMarkets||[]).join(', ')));
-    html += cell(x((p.calStores||[]).join('\n')), true);
-    html += approvalCell(p);
-    html += '</tr>';
-  });
-  html += '</tbody></table>';
+    function img(url, alt) {
+      if (url) return '<div class="btv-ld-imgwrap"><a href="'+x(url)+'" target="_blank" rel="noopener"><img src="'+x(url)+'" alt="'+alt+'" onerror="this.parentNode.className+=\' btv-ld-imgblank\'"></a></div>';
+      return '<div class="btv-ld-imgwrap btv-ld-imgblank"><span>' + alt + '</span></div>';
+    }
+
+    return '<div class="btv-ld-card"><div class="btv-ld-grid">'
+      // ── Images ──
+      + '<div class="btv-ld-imgs">' + img(p.productImg,'Product') + img(p.lookbookImg,'Lookbook') + '</div>'
+      // ── Info ──
+      + '<div class="btv-ld-info">'
+        + '<div class="btv-ld-pname">' + title + '</div>'
+        + (p.hscode   ? '<div class="btv-ld-hs">HS Code (8): ' + x(p.hscode)   + '</div>' : '')
+        + (p.hscode10 ? '<div class="btv-ld-hs">HS Code (10): ' + x(p.hscode10) + '</div>' : '')
+        + '<div class="btv-ld-fields">'
+          + fld('BRAND', 'Beyond The Vines')
+          + fld('LAUNCH TITLE', p.launchTitle)
+          + fld('CATEGORY', p.category)
+          + fld('LAUNCH DATE', p.launchDate)
+          + fld('MARKETS', markets)
+          + (channels ? '<div class="btv-ld-field"><span class="btv-ld-label">LAUNCH CHANNELS:</span><div class="btv-ld-channels">' + x(channels) + '</div></div>' : '')
+          + fld('SIZES', sizing)
+          + fld('WEIGHT', p.weightGrams ? p.weightGrams + 'g' : '')
+          + fld('FABRIC', p.fabric)
+          + (p.washcare ? '<div class="btv-ld-field"><span class="btv-ld-label">WASHCARE:</span> <span style="white-space:pre-line">' + x(p.washcare) + '</span></div>' : fld('WASHCARE',''))
+        + '</div>'
+        + (p.description ? '<div class="btv-ld-desc">' + x(p.description) + '</div>' : '')
+        + '<div class="btv-ld-ph">Pricing / Details</div>'
+        + '<div class="btv-ld-pgrid">'
+          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">SGD</div><div class="btv-ld-pval">' + (p.sgd      ? 'S$'+x(p.sgd)      : '—') + '</div></div>'
+          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">SGD EX GST</div><div class="btv-ld-pval">' + (p.sgdNoGST ? 'S$'+x(p.sgdNoGST) : '—') + '</div></div>'
+          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">JPY</div><div class="btv-ld-pval">' + (p.jp       ? '¥'+x(p.jp)  : '—') + '</div></div>'
+          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">IDR</div><div class="btv-ld-pval">' + (p.idRrp    ? 'Rp '+x(p.idRrp) : '—') + '</div></div>'
+          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">THB</div><div class="btv-ld-pval">' + (p.th       ? '฿'+x(p.th)  : '—') + '</div></div>'
+          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">PHP</div><div class="btv-ld-pval">' + (p.ph       ? '₱'+x(p.ph)  : '—') + '</div></div>'
+          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">CNY</div><div class="btv-ld-pval">' + (p.cn       ? '¥'+x(p.cn)  : '—') + '</div></div>'
+        + '</div>'
+        + approvalRow(p)
+      + '</div>'
+      // ── SKU / Barcode table ──
+      + '<div class="btv-ld-sku"><div class="btv-ld-skuhead">SKU / Barcode by Size</div>' + skuTable(p) + '</div>'
+    + '</div></div>';
+  }).join('');
+
   bodyEl.innerHTML = html;
   overlay.style.display = 'flex';
 }
