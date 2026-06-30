@@ -602,6 +602,12 @@ function openPopup(entryId){
   var e   = row.entry_data||{};
   var sec = row.section||'global';
 
+  // Product launches go directly to the linesheet card view (no intermediate popup)
+  if(sec==='global'||sec==='china'||sec==='sea'||sec==='nea'){
+    btvShowLaunchDetail(entryId);
+    return;
+  }
+
   // Title + meta
   var title = e.launchTitle||e.title||e.storeName||e.productTitle||'(Untitled)';
   var dateStr = '';
@@ -773,12 +779,6 @@ function openPopup(entryId){
     if(e.notes) body += '<div class="popup-section-hd">Notes</div><div>'+esc(e.notes)+'</div>';
   }
 
-  // Add linesheet button for launch sections
-  if(sec==='global'||sec==='china'||sec==='sea'||sec==='nea'){
-    body += '<div style="margin-top:18px;padding-top:14px;border-top:1px solid #e8e2d8">'
-      +'<button onclick="btvShowLaunchDetail(\''+entryId+'\')" style="padding:9px 20px;background:#1a1a1a;color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;letter-spacing:.02em">View Linesheet Products &rarr;</button>'
-      +'</div>';
-  }
   document.getElementById('popupBody').innerHTML = body;
   document.getElementById('popupSkuCount').textContent = totalSkus ? 'Total SKUs: '+totalSkus : '';
   document.getElementById('entryPopup').classList.add('show');
@@ -1073,11 +1073,34 @@ function btvShowLaunchDetail(entryId) {
 
   var allProducts = [];
   try { allProducts = JSON.parse(localStorage.getItem('btv_linesheet_products')||'[]'); } catch(ex) {}
+
+  // Collect product names from sibling entries' lines for precise name-based matching
+  var _lineNames = new Set();
+  try {
+    ['global','china','nea','sea'].forEach(function(sec2) {
+      Object.values(_btvCalSt[sec2]||{}).forEach(function(wE){
+        (Array.isArray(wE)?wE:[]).forEach(function(e){
+          if(!_sibIds.has(e.id)) return;
+          (e.lines||[]).forEach(function(l){
+            var nm=(l.productName||l.productTitle||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+            if(nm) _lineNames.add(nm);
+          });
+        });
+      });
+    });
+  } catch(ex3){}
+
+  var _norm = function(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]/g,''); };
   var _calDate = calEntry ? (calEntry.launchDate||'') : '';
   var _seen = new Set();
   var products = allProducts.filter(function(p){
     if(_seen.has(p.id)) return false;
     if(p.calEntryId && _sibIds.has(p.calEntryId)){ _seen.add(p.id); return true; }
+    if(_lineNames.size>0){
+      var pn=_norm(p.name);
+      if(pn && _lineNames.has(pn)){ _seen.add(p.id); return true; }
+      return false;
+    }
     if(_calDate && p.launchDate && p.launchDate===_calDate){ _seen.add(p.id); return true; }
     return false;
   });

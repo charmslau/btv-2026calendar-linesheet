@@ -13763,12 +13763,36 @@ function btvShowLaunchDetail(entryId) {
   var allProducts = [];
   try { allProducts = JSON.parse(localStorage.getItem('btv_linesheet_products') || '[]'); } catch(ex) {}
 
-  // Match products: by calEntryId (any sibling market entry), then fallback by launch date
+  // Collect product names from ALL sibling entries' lines array for name-based matching
+  var _btvLineNames = new Set(); // normalised product names that belong to this launch
+  try {
+    ['global','china','nea','sea'].forEach(function(sec) {
+      Object.values(_btvCalSt[sec] || {}).forEach(function(wEntries) {
+        (Array.isArray(wEntries) ? wEntries : []).forEach(function(e) {
+          if (!_btvSibIds.has(e.id)) return;
+          (e.lines || []).forEach(function(l) {
+            var nm = (l.productName || l.productTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (nm) _btvLineNames.add(nm);
+          });
+        });
+      });
+    });
+  } catch(ex3) {}
+
+  var _btvNorm = function(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
   var _btvCalDate = calEntry ? (calEntry.launchDate || '') : '';
   var _btvSeen = new Set();
   var products = allProducts.filter(function(p) {
     if (_btvSeen.has(p.id)) return false;
+    // 1. Explicit calEntryId link (any sibling market entry for this launch)
     if (p.calEntryId && _btvSibIds.has(p.calEntryId)) { _btvSeen.add(p.id); return true; }
+    // 2. Product name matches a line item in the calendar entry — most specific, correct match
+    if (_btvLineNames.size > 0) {
+      var pn = _btvNorm(p.name);
+      if (pn && _btvLineNames.has(pn)) { _btvSeen.add(p.id); return true; }
+      return false; // entry has product lines defined — don't fall through to date match
+    }
+    // 3. Date fallback only when calendar entry has NO product lines at all
     if (_btvCalDate && p.launchDate && p.launchDate === _btvCalDate) { _btvSeen.add(p.id); return true; }
     return false;
   });
