@@ -7951,6 +7951,10 @@ function loadFromCalendar(notifyNew){
 
 
 
+
+  // SAFETY: snapshot current products before any calendar sync modifies them
+  var __btvPreSyncProducts = JSON.parse(JSON.stringify(products));
+  var __btvPreSyncCount = __btvPreSyncProducts.filter(function(p){ return p.sku || p.barcode || p.hscode || p.description || p.fabric; }).length;
   try {
 
 
@@ -8728,6 +8732,35 @@ return __btvEnrichRowWithPrices(__btvRow);
 
 
 
+
+      // SAFETY — two gaps that caused historical data loss:
+      //
+      // GAP A: products not in linesheetCalendarData silently vanish.
+      //   Fix: re-add any pre-sync product that was not matched (by calEntryId or name+variant)
+      //   by any incoming calendar row.
+      //
+      // GAP B: empty linesheetCalendarData (e.g. another session with blank calendar)
+      //   wipes everything.
+      //   Fix: if the rebuilt list is empty but we had products before, restore the snapshot.
+      (function(){
+        // Orphan rescue (Gap A)
+        var _calFuzzyKeys = new Set(products.map(function(p){ return _btvNorm(p.name)+'|'+_btvNorm(p.variant); }).filter(Boolean));
+        var _calEntryIds  = new Set(products.map(function(p){ return p.calEntryId; }).filter(Boolean));
+        var _orphans = __btvPreSyncProducts.filter(function(p){
+          if(p.calEntryId && _calEntryIds.has(p.calEntryId)) return false;
+          var fk = _btvNorm(p.name)+'|'+_btvNorm(p.variant);
+          return !(fk && _calFuzzyKeys.has(fk));
+        });
+        if(_orphans.length){
+          console.warn('[BTV LS] Orphan rescue: re-adding', _orphans.length, 'products not found in calendarRows:', _orphans.map(function(p){return p.name+'/'+p.variant;}));
+          products = products.concat(_orphans);
+        }
+        // Total-wipe guard (Gap B)
+        if(products.length === 0 && __btvPreSyncProducts.length > 0){
+          console.warn('[BTV LS] Total-wipe guard: calendarRows produced 0 products but', __btvPreSyncProducts.length, 'existed — restoring snapshot.');
+          products = __btvPreSyncProducts;
+        }
+      })();
       var __btvNewPush=products.filter(function(p){var k=[p.launchDate,p.category,p.name,p.variant].join("|");return !existingMap[k];});
 
 

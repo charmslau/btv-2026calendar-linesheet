@@ -245,6 +245,22 @@
   function applyRow(key, val, fromUserId, updatedAt) {
     if (updatedAt) _lastPullTimes[key] = updatedAt;
     if (localStorage.getItem(key) === val) return; // nothing changed
+
+    // SAFETY: never overwrite btv_linesheet_products with an empty array when local has data.
+    // This prevents a blank-calendar session (or failed sync) from silently wiping all enriched
+    // product data (SKU / barcode / HS codes / pricing) that was entered by another session.
+    if (key === 'btv_linesheet_products') {
+      try {
+        var _incoming = JSON.parse(val);
+        var _current  = JSON.parse(localStorage.getItem(key) || '[]');
+        if (Array.isArray(_incoming) && _incoming.length === 0 &&
+            Array.isArray(_current)  && _current.length  > 0) {
+          console.warn('[BTV Sync] Blocked empty btv_linesheet_products from Supabase overwriting', _current.length, 'local products.');
+          return;
+        }
+      } catch (e) {}
+    }
+
     _origSetItem(key, val);
     if (!RENDER_KEYS.includes(key)) return;
     // Only re-render and toast for changes from someone else.
