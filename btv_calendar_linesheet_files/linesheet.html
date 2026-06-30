@@ -1768,7 +1768,7 @@ table.master td img { border-radius: 0 !important; }
   .ls-img,.ls-img-placeholder{width:86px!important;height:104px!important}
   .ls-size-sku-table th,.ls-size-sku-table td{font-size:8px!important;padding:3px 4px!important;white-space:normal!important;overflow:visible!important;word-break:break-word!important;overflow-wrap:anywhere!important}
 }
-@page{margin:16mm}
+@page{size:landscape;margin:10mm}
 
 
 /* BTV PATCH v3: force KPI dashboard to open at very top */
@@ -16139,7 +16139,7 @@ function renderLinesheet(){
 
 
 
-        <div class="ls-desc">${escapeHtml(p.description || '—')}</div>
+        <div class="ls-desc"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#888;margin-bottom:4px">Description</div>${escapeHtml(p.description || '—')}</div>
 
 
 

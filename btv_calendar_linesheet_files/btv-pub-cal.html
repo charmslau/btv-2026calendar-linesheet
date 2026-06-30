@@ -1033,9 +1033,9 @@ function btvShowLaunchDetail(entryId) {
       '.btv-ld-badgepend{background:#fdf3e7;color:#b07030;border:1px solid #dfd0b5;border-radius:8px;font-size:10px;padding:2px 10px;font-weight:600;font-family:sans-serif}',
       '.btv-ld-sku{min-width:0}',
       '.btv-ld-skuhead{font-size:10px;font-weight:700;letter-spacing:.08em;color:#888;text-transform:uppercase;margin-bottom:8px}',
-      '.btv-ld-sktable{width:100%;border-collapse:collapse;font-size:11px}',
-      '.btv-ld-skth{padding:6px 8px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.06em;color:#666;border-bottom:2px solid #e0dbd2;white-space:nowrap}',
-      '.btv-ld-skcell{padding:5px 8px;border-bottom:1px solid #f0ebe4;color:#333;vertical-align:top;word-break:break-all}',
+      '.btv-ld-sktable{width:100%;border-collapse:collapse;font-size:11px;border:1px solid #e0dbd2}',
+      '.btv-ld-skth{padding:6px 8px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.06em;color:#666;border:1px solid #e0dbd2;border-bottom:2px solid #e0dbd2;white-space:nowrap}',
+      '.btv-ld-skcell{padding:5px 8px;border:1px solid #e0dbd2;color:#333;vertical-align:top;word-break:break-all}',
       '.btv-ld-sknum{font-family:monospace;font-size:10px;color:#555}'
     ].join('');
     document.head.appendChild(s);
@@ -1138,6 +1138,9 @@ function btvShowLaunchDetail(entryId) {
   }
   var html = products.map(function(p){
     var title=x(p.name||'')+(p.variant?' — '+x(p.variant):'');
+    var markets=(p.calMarkets||[]).join(', ');
+    var channels=(p.calStores||[]).join('\n');
+    var sizing=p.sizing||(p.sizeSKUs?Object.keys(p.sizeSKUs).join(', '):'');
     function img(url,alt){
       if(url) return '<div class="btv-ld-imgwrap"><a href="'+x(url)+'" target="_blank"><img src="'+x(url)+'" alt="'+alt+'" onerror="this.parentNode.className+=\' btv-ld-imgblank\'"></a></div>';
       return '<div class="btv-ld-imgwrap btv-ld-imgblank"><span>'+alt+'</span></div>';
@@ -1148,10 +1151,17 @@ function btvShowLaunchDetail(entryId) {
         +'<div class="btv-ld-pname">'+title+'</div>'
         +(p.hscode?'<div class="btv-ld-hs">HS Code: '+x(p.hscode)+'</div>':'')
         +'<div class="btv-ld-fields">'
-          +fld('CATEGORY',p.category)+fld('LAUNCH DATE',p.launchDate)+fld('FABRIC',p.fabric)
+          +fld('CATEGORY',p.category)
+          +fld('LAUNCH DATE',p.launchDate)
+          +fld('MARKETS',markets)
+          +(channels?'<div class="btv-ld-field"><span class="btv-ld-label">LAUNCH CHANNELS:</span><div class="btv-ld-channels">'+x(channels)+'</div></div>':'')
+          +fld('SIZES',sizing)
+          +fld('WEIGHT',p.weightGrams?p.weightGrams+'g':'')
+          +fld('FABRIC',p.fabric)
           +(p.washcare?'<div class="btv-ld-field"><span class="btv-ld-label">WASHCARE:</span> <span style="white-space:pre-line">'+x(p.washcare)+'</span></div>':fld('WASHCARE',''))
+          +fld('MEASUREMENTS',p.measurementSummary,true)
+          +fld('DESCRIPTION',p.description,true)
         +'</div>'
-        +(p.description?'<div class="btv-ld-desc">'+x(p.description)+'</div>':'')
         +'<div class="btv-ld-ph">Pricing</div>'
         +'<div class="btv-ld-pgrid">'
           +'<div class="btv-ld-pcell"><div class="btv-ld-plabel">SGD</div><div class="btv-ld-pval">'+(p.sgd?'S$'+x(p.sgd):'—')+'</div></div>'

@@ -13716,9 +13716,9 @@ function btvShowLaunchDetail(entryId) {
       '.btv-ld-badgepend{background:#fdf3e7;color:#b07030;border:1px solid #dfd0b5;border-radius:8px;font-size:10px;padding:2px 10px;font-weight:600;font-family:sans-serif;letter-spacing:.02em}',
       '.btv-ld-sku{min-width:0}',
       '.btv-ld-skuhead{font-size:10px;font-weight:700;letter-spacing:.08em;color:#888;text-transform:uppercase;margin-bottom:8px}',
-      '.btv-ld-sktable{width:100%;border-collapse:collapse;font-size:11px}',
-      '.btv-ld-skth{padding:6px 8px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.06em;color:#666;border-bottom:2px solid #e0dbd2;white-space:nowrap}',
-      '.btv-ld-skcell{padding:5px 8px;border-bottom:1px solid #f0ebe4;color:#333;vertical-align:top;word-break:break-all}',
+      '.btv-ld-sktable{width:100%;border-collapse:collapse;font-size:11px;border:1px solid #e0dbd2}',
+      '.btv-ld-skth{padding:6px 8px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.06em;color:#666;border:1px solid #e0dbd2;border-bottom:2px solid #e0dbd2;white-space:nowrap}',
+      '.btv-ld-skcell{padding:5px 8px;border:1px solid #e0dbd2;color:#333;vertical-align:top;word-break:break-all}',
       '.btv-ld-sknum{font-family:monospace;font-size:10px;color:#555}'
     ].join('');
     document.head.appendChild(s);
@@ -13867,8 +13867,6 @@ function btvShowLaunchDetail(entryId) {
         + (p.hscode   ? '<div class="btv-ld-hs">HS Code (8): ' + x(p.hscode)   + '</div>' : '')
         + (p.hscode10 ? '<div class="btv-ld-hs">HS Code (10): ' + x(p.hscode10) + '</div>' : '')
         + '<div class="btv-ld-fields">'
-          + fld('BRAND', 'Beyond The Vines')
-          + fld('LAUNCH TITLE', p.launchTitle)
           + fld('CATEGORY', p.category)
           + fld('LAUNCH DATE', p.launchDate)
           + fld('MARKETS', markets)
@@ -13877,8 +13875,9 @@ function btvShowLaunchDetail(entryId) {
           + fld('WEIGHT', p.weightGrams ? p.weightGrams + 'g' : '')
           + fld('FABRIC', p.fabric)
           + (p.washcare ? '<div class="btv-ld-field"><span class="btv-ld-label">WASHCARE:</span> <span style="white-space:pre-line">' + x(p.washcare) + '</span></div>' : fld('WASHCARE',''))
+          + fld('MEASUREMENTS', p.measurementSummary, true)
+          + fld('DESCRIPTION', p.description, true)
         + '</div>'
-        + (p.description ? '<div class="btv-ld-desc">' + x(p.description) + '</div>' : '')
         + '<div class="btv-ld-ph">Pricing / Details</div>'
         + '<div class="btv-ld-pgrid">'
           + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">SGD</div><div class="btv-ld-pval">' + (p.sgd      ? 'S$'+x(p.sgd)      : '—') + '</div></div>'
