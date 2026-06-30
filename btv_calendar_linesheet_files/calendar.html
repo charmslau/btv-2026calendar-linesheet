@@ -8862,6 +8862,7 @@ function renderGlobal(entry){
 
           <div style="display:flex;flex-direction:column;align-items:stretch;min-width:58px">
             <button class="small-btn" onclick="openEditor('${entry.section}','${entry.weekId}','${entry.id}')">Edit</button>
+            <button class="small-btn" onclick="window.btvOpenInLinesheet('${entry.launchDate||''}')" title="View in Linesheet" style="background:#f0f4ff;border-color:#b0bfdd;color:#2a4a8a;margin-top:2px">&#8599; LS</button>
             <button class="pub-btn${_publishedIds.has(entry.id)?' pub-on':''}" data-pub-id="${entry.id}" data-pub-week="${entry.weekId}" data-pub-section="${entry.section}" title="${_publishedIds.has(entry.id)?'Remove from public calendar':'Publish to public calendar'}">${_publishedIds.has(entry.id)?'\u2714 Live':'\u2191 Publish'}</button>
           </div>
 
@@ -12457,6 +12458,8 @@ if(e("globalMarketingView")) renderGlobalMarketingView();
 
 if(e("marketMarketingView")) renderMarketMarketingView();
 
+// Bust stale linesheetCalendarData on every page load so linesheet always gets correct field mappings
+(function(){ var _p = _btvHasUnsavedChanges; saveState(state); _btvHasUnsavedChanges = _p; })();
 
 window.btvConfigCalWebhook = btvConfigCalWebhook;
 window.btvConfigWebhook = btvConfigWebhook;
@@ -12482,6 +12485,10 @@ window.loadAdminConfig = loadAdminConfig;
 window.saveAdminConfig = saveAdminConfig;
 window.getActiveStores = getActiveStores;
 window.btvEsc = esc;
+window.btvOpenInLinesheet = function(launchDate, launchTitle) {
+  localStorage.setItem('btv-ls-focus', JSON.stringify({launchDate: launchDate || '', launchTitle: launchTitle || ''}));
+  try { window.parent.showFrame('ls'); } catch(e) {}
+};
 window._btvCalImportEntries = function(entries) {
   var added = 0, skipped = 0;
   entries.forEach(function(entry) {
@@ -13670,7 +13677,6 @@ window.btvTogglePublish = btvTogglePublish;
 
 
 </body></html>
-
 
 
 
