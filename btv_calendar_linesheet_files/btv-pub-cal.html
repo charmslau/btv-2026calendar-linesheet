@@ -1075,15 +1075,18 @@ function btvShowLaunchDetail(entryId) {
   try { allProducts = JSON.parse(localStorage.getItem('btv_linesheet_products')||'[]'); } catch(ex) {}
 
   // Collect product names from sibling entries' lines for precise name-based matching
-  var _lineNames = new Set();
+  var _lineKeys  = new Set(); // "normName|normColour" — exact pair when colour specified
+  var _lineNames = new Set(); // normName only — when colour unspecified, show all variants
   try {
     ['global','china','nea','sea'].forEach(function(sec2) {
       Object.values(_btvCalSt[sec2]||{}).forEach(function(wE){
         (Array.isArray(wE)?wE:[]).forEach(function(e){
           if(!_sibIds.has(e.id)) return;
           (e.lines||[]).forEach(function(l){
-            var nm=(l.productName||l.productTitle||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-            if(nm) _lineNames.add(nm);
+            var nm =(l.productName||l.productTitle||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+            var col=(l.colour||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+            if(!nm) return;
+            if(col){ _lineKeys.add(nm+'|'+col); } else { _lineNames.add(nm); }
           });
         });
       });
@@ -1096,9 +1099,16 @@ function btvShowLaunchDetail(entryId) {
   var products = allProducts.filter(function(p){
     if(_seen.has(p.id)) return false;
     if(p.calEntryId && _sibIds.has(p.calEntryId)){ _seen.add(p.id); return true; }
-    if(_lineNames.size>0){
+    if(_lineKeys.size>0 || _lineNames.size>0){
       var pn=_norm(p.name);
+      var pv=_norm(p.variant||'');
+      if(pn && _lineKeys.has(pn+'|'+pv)){ _seen.add(p.id); return true; }
       if(pn && _lineNames.has(pn)){ _seen.add(p.id); return true; }
+      if(pn && !pv){
+        var _pfx2=pn+'|'; var _hit2=false;
+        _lineKeys.forEach(function(k){ if(!_hit2 && k.substring(0,_pfx2.length)===_pfx2) _hit2=true; });
+        if(_hit2){ _seen.add(p.id); return true; }
+      }
       return false;
     }
     if(_calDate && p.launchDate && p.launchDate===_calDate){ _seen.add(p.id); return true; }

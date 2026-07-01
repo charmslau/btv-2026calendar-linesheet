@@ -6631,6 +6631,10 @@ function __btvClassifyHSCode(category, description, fabric, name){
 
 
   if(category === 'ACC'){
+    // Bag-type accessories tagged as ACC -> route to 42.02 (handbags/travel goods)
+    if(/\btote\b|\bpouch\b|\bhandbag\b|\bclutch\b|\bwallet\b|crossbody|cross.body|\bsatchel\b/i.test(txtAll)){
+      return __btvPickCodeFromHeading('42.02', fabricKind, txtAll);
+    }
 
 
 
@@ -6640,7 +6644,7 @@ function __btvClassifyHSCode(category, description, fabric, name){
 
 
 
-    if(/necklace|bracelet|ring|earring|pendant|jewellery|jewelry/i.test(txtAll)){
+    if(/\bnecklace\b|\bbracelet\b|\bearring\b|\bpendant\b|\bjewellery\b|\bjewelry\b/i.test(txtAll)){
 
 
 
@@ -6650,7 +6654,7 @@ function __btvClassifyHSCode(category, description, fabric, name){
 
 
 
-      if(/gold|silver|platinum|precious|diamond|pearl/i.test(txtAll)) return __btvPickCodeFromHeading('71.13', fabricKind, txtAll);
+      if(/\bgold\b|\bsilver\b|\bplatinum\b|\bprecious\b|\bdiamond\b|\bpearl\b/i.test(txtAll)) return __btvPickCodeFromHeading('71.13', fabricKind, txtAll);
 
 
 
@@ -9173,6 +9177,8 @@ return __btvEnrichRowWithPrices(__btvRow);
 
 
   const __ltEl=document.getElementById('collectionName');if(__ltEl)__ltEl.value=getCalendarLaunchTitleForLinesheet(selectedProducts()) || '';
+  // Persist updated calEntryId assignments so popups in other views always read fresh data
+  try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch(e) {}
 
 
 
@@ -9263,6 +9269,11 @@ window.addEventListener('storage', function(e){
 
 
     if(document.getElementById('changeLogList')) renderDashboard();
+  }
+  // Re-render when product data updates arrive from another iframe or tab
+  if(e.key === 'btv_linesheet_products' && e.newValue){
+    try { products = JSON.parse(e.newValue); } catch(ex) {}
+    renderMaster(); renderLinesheet(); updateCount(); populateCategoryFilter();
 
 
 
@@ -13160,6 +13171,8 @@ async function saveProductGroup(){
 
 
   const __ltEl=document.getElementById('collectionName');if(__ltEl)__ltEl.value=getCalendarLaunchTitleForLinesheet(selectedProducts()) || '';
+  // Persist updated calEntryId assignments so popups in other views always read fresh data
+  try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch(e) {}
 
 
 
@@ -14033,6 +14046,8 @@ function deleteGroup(groupId){
 
 
   const __ltEl=document.getElementById('collectionName');if(__ltEl)__ltEl.value=getCalendarLaunchTitleForLinesheet(selectedProducts()) || '';
+  // Persist updated calEntryId assignments so popups in other views always read fresh data
+  try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch(e) {}
 
 
 
@@ -14486,6 +14501,8 @@ function toggleSelectAllVisible(checked){
 
 
   const __ltEl=document.getElementById('collectionName');if(__ltEl)__ltEl.value=getCalendarLaunchTitleForLinesheet(selectedProducts()) || '';
+  // Persist updated calEntryId assignments so popups in other views always read fresh data
+  try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch(e) {}
 
 
 
@@ -16433,6 +16450,11 @@ function importLinesheetJSON(input){
     renderMaster();
     renderLinesheet();
     if(document.getElementById('changeLogList')) renderDashboard();
+  }
+  // Re-render when product data updates arrive from another iframe or tab
+  if(e.key === 'btv_linesheet_products' && e.newValue){
+    try { products = JSON.parse(e.newValue); } catch(ex) {}
+    renderMaster(); renderLinesheet(); updateCount(); populateCategoryFilter();
     _btvSetDirty(false);
     alert('Import complete - ' + products.length + ' variant row(s) loaded.');
     input.value = '';
@@ -18218,6 +18240,8 @@ function btvCheckMondayReminder(){
 
 
   const __ltEl=document.getElementById('collectionName');if(__ltEl)__ltEl.value=getCalendarLaunchTitleForLinesheet(selectedProducts()) || '';
+  // Persist updated calEntryId assignments so popups in other views always read fresh data
+  try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch(e) {}
 
 
 

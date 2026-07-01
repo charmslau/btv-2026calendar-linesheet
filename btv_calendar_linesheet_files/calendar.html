@@ -13767,15 +13767,18 @@ function btvShowLaunchDetail(entryId) {
   try { allProducts = JSON.parse(localStorage.getItem('btv_linesheet_products') || '[]'); } catch(ex) {}
 
   // Collect product names from ALL sibling entries' lines array for name-based matching
-  var _btvLineNames = new Set(); // normalised product names that belong to this launch
+  var _btvLineKeys  = new Set(); // "normName|normColour" — exact pair when colour specified
+  var _btvLineNames = new Set(); // normName only — when colour unspecified, show all variants
   try {
     ['global','china','nea','sea'].forEach(function(sec) {
       Object.values(_btvCalSt[sec] || {}).forEach(function(wEntries) {
         (Array.isArray(wEntries) ? wEntries : []).forEach(function(e) {
           if (!_btvSibIds.has(e.id)) return;
           (e.lines || []).forEach(function(l) {
-            var nm = (l.productName || l.productTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (nm) _btvLineNames.add(nm);
+            var nm  = (l.productName || l.productTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            var col = (l.colour || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (!nm) return;
+            if (col) { _btvLineKeys.add(nm + '|' + col); } else { _btvLineNames.add(nm); }
           });
         });
       });
@@ -13789,11 +13792,18 @@ function btvShowLaunchDetail(entryId) {
     if (_btvSeen.has(p.id)) return false;
     // 1. Explicit calEntryId link (any sibling market entry for this launch)
     if (p.calEntryId && _btvSibIds.has(p.calEntryId)) { _btvSeen.add(p.id); return true; }
-    // 2. Product name matches a line item in the calendar entry — most specific, correct match
-    if (_btvLineNames.size > 0) {
+    // 2. Match by productName + colour (unique product per user spec); name-only shows all variants
+    if (_btvLineKeys.size > 0 || _btvLineNames.size > 0) {
       var pn = _btvNorm(p.name);
+      var pv = _btvNorm(p.variant || '');
+      if (pn && _btvLineKeys.has(pn + '|' + pv)) { _btvSeen.add(p.id); return true; }
       if (pn && _btvLineNames.has(pn)) { _btvSeen.add(p.id); return true; }
-      return false; // entry has product lines defined — don't fall through to date match
+      if (pn && !pv) {
+        var _pfx = pn + '|'; var _hit = false;
+        _btvLineKeys.forEach(function(k){ if (!_hit && k.substring(0,_pfx.length)===_pfx) _hit=true; });
+        if (_hit) { _btvSeen.add(p.id); return true; }
+      }
+      return false; // lines defined — don't fall through to date match
     }
     // 3. Date fallback only when calendar entry has NO product lines at all
     if (_btvCalDate && p.launchDate && p.launchDate === _btvCalDate) { _btvSeen.add(p.id); return true; }
