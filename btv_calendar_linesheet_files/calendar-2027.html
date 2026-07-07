@@ -30,10 +30,6 @@
 
     --global:#d4d4d4;
 
-    --nea:#4a8eb5;
-
-    --sea:#c43030;
-
     --china:#c47800;
 
     --restocks:#7a5a35;
@@ -52,7 +48,40 @@
 
     --delay-border:#b03020;
 
+    /* market colour-coding, ported from Global Calendar (creative-calendar.html) for visual consistency */
+    --mkt-global-bg:#fffde0; --mkt-global-bd:#e6c200; --mkt-global-tx:#6e5a00;
+    --mkt-sg-bg:#ffe8d6; --mkt-sg-bd:#e07030; --mkt-sg-tx:#7a2e00;
+    --mkt-id-bg:#d6f0db; --mkt-id-bd:#3aaa55; --mkt-id-tx:#165a25;
+    --mkt-th-bg:#ffe5d5; --mkt-th-bd:#e8885a; --mkt-th-tx:#7a3200;
+    --mkt-ph-bg:#eaeaea; --mkt-ph-bd:#999; --mkt-ph-tx:#444;
+    --mkt-cn-bg:#ead6f5; --mkt-cn-bd:#9b59b6; --mkt-cn-tx:#4a1070;
+    --mkt-jp-bg:#d6e8f7; --mkt-jp-bd:#4a90d9; --mkt-jp-tx:#1a4472;
+
   }
+
+  .mkt-chip{display:inline-block;padding:1px 5px;border-radius:4px;font-size:8px;font-weight:800;
+    letter-spacing:.05em;text-transform:uppercase;margin-left:3px;vertical-align:middle}
+  .mkt-chip.mkt-global{background:var(--mkt-global-bg);color:var(--mkt-global-tx);border:1px solid var(--mkt-global-bd)}
+  .mkt-chip.mkt-sg{background:var(--mkt-sg-bg);color:var(--mkt-sg-tx);border:1px solid var(--mkt-sg-bd)}
+  .mkt-chip.mkt-id{background:var(--mkt-id-bg);color:var(--mkt-id-tx);border:1px solid var(--mkt-id-bd)}
+  .mkt-chip.mkt-th{background:var(--mkt-th-bg);color:var(--mkt-th-tx);border:1px solid var(--mkt-th-bd)}
+  .mkt-chip.mkt-ph{background:var(--mkt-ph-bg);color:var(--mkt-ph-tx);border:1px solid var(--mkt-ph-bd)}
+  .mkt-chip.mkt-cn{background:var(--mkt-cn-bg);color:var(--mkt-cn-tx);border:1px solid var(--mkt-cn-bd)}
+  .mkt-chip.mkt-jp{background:var(--mkt-jp-bg);color:var(--mkt-jp-tx);border:1px solid var(--mkt-jp-bd)}
+
+  .mkt-filter-bar{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:4px 8px}
+  .mkt-filter-lbl{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+  .mkt-fp{padding:3px 9px;border:1.5px solid var(--grid);border-radius:20px;font:inherit;font-size:10px;
+    font-weight:700;cursor:pointer;background:#fff;color:var(--muted);transition:all .12s}
+  .mkt-fp:hover{border-color:#999;color:var(--text)}
+  .mkt-fp.on{border-color:currentColor;color:var(--text);background:#fff}
+  .mkt-fp.mkt-fp-sg.on{background:var(--mkt-sg-bg);color:var(--mkt-sg-tx);border-color:var(--mkt-sg-bd)}
+  .mkt-fp.mkt-fp-th.on{background:var(--mkt-th-bg);color:var(--mkt-th-tx);border-color:var(--mkt-th-bd)}
+  .mkt-fp.mkt-fp-id.on{background:var(--mkt-id-bg);color:var(--mkt-id-tx);border-color:var(--mkt-id-bd)}
+  .mkt-fp.mkt-fp-ph.on{background:var(--mkt-ph-bg);color:var(--mkt-ph-tx);border-color:var(--mkt-ph-bd)}
+  .mkt-fp.mkt-fp-cn.on{background:var(--mkt-cn-bg);color:var(--mkt-cn-tx);border-color:var(--mkt-cn-bd)}
+  .mkt-fp.mkt-fp-jp.on{background:var(--mkt-jp-bg);color:var(--mkt-jp-tx);border-color:var(--mkt-jp-bd)}
+  .mkt-fp.mkt-fp-all.on{background:#111;color:#fff;border-color:#111}
 
 
 
@@ -337,10 +366,6 @@
 
 
   .bg-global{background:var(--global); color:#2d2d2d}
-
-  .bg-nea{background:var(--nea)}
-
-  .bg-sea{background:var(--sea)}
 
   .bg-china{background:var(--china)}
 
@@ -2181,10 +2206,6 @@
 
   .bg-global{background:var(--global) !important;color:#2d2d2d !important}
 
-  .bg-nea{background:var(--nea) !important;color:#fff !important}
-
-  .bg-sea{background:var(--sea) !important;color:#fff !important}
-
   .bg-china{background:var(--china) !important;color:#fff !important}
 
   .bg-restocks{background:var(--restocks) !important;color:#fff !important}
@@ -2380,12 +2401,6 @@
   }
 
 
-
-  /* ── Publish to public calendar button ───────────────────────────────────── */
-  .pub-btn{display:block;width:100%;padding:2px 6px;margin-top:2px;border:1px solid #ccc;background:#f5f3ef;color:#888;font-size:10px;font-weight:700;letter-spacing:.03em;border-radius:6px;cursor:pointer;text-align:center;transition:background .15s,color .15s,border-color .15s}
-  .pub-btn:hover{background:#e8e4dc;color:#555;border-color:#aaa}
-  .pub-btn.pub-on{background:#2a6e2a;color:#fff;border-color:#1d4d1d}
-  .pub-btn.pub-on:hover{background:#1f5a1f}
 
   @media print{
 
@@ -2780,9 +2795,7 @@ select, input[type='text'], input[type='date'], input[type='number'], textarea {
 /* BTV patch: hide all Calendar toolbar buttons/controls when KPI Dashboard is active */
 body.btv-dashboard-mode .toolbar{display:none!important;}
   /* ── Viewer mode: hide edit controls ──────────────────────────────────── */
-  body.view-only .add-btn,
-  body.view-only .pub-btn,
-  body.view-only [data-pub-id]
+  body.view-only .add-btn
   { display: none !important; }
   body.view-only [draggable="true"] { cursor: default !important; }
   /* ───────────────────────────────────────────────────────────────────────── */
@@ -3092,6 +3105,19 @@ body.btv-dashboard-mode #quarterGroup{display:none!important}
       <label>Search</label>
       <input id="searchInput" type="text" placeholder="Type to find a launch..." autocomplete="off">
       <div id="btvSearchDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:#fff;border:1px solid #d0c9be;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.15);max-height:280px;overflow-y:auto;margin-top:3px;min-width:260px"></div>
+    </div>
+
+    <div class="control">
+      <label>Market</label>
+      <div class="mkt-filter-bar">
+        <button class="mkt-fp mkt-fp-all on" id="mktFp-all" onclick="btvToggleMarketFilter('all')">All</button>
+        <button class="mkt-fp mkt-fp-sg" id="mktFp-sg" onclick="btvToggleMarketFilter('SG')">SG</button>
+        <button class="mkt-fp mkt-fp-th" id="mktFp-th" onclick="btvToggleMarketFilter('TH')">TH</button>
+        <button class="mkt-fp mkt-fp-id" id="mktFp-id" onclick="btvToggleMarketFilter('ID')">ID</button>
+        <button class="mkt-fp mkt-fp-ph" id="mktFp-ph" onclick="btvToggleMarketFilter('PH')">PH</button>
+        <button class="mkt-fp mkt-fp-jp" id="mktFp-jp" onclick="btvToggleMarketFilter('JP')">JP</button>
+        <button class="mkt-fp mkt-fp-cn" id="mktFp-cn" onclick="btvToggleMarketFilter('CN')">CN</button>
+      </div>
     </div>
 
     <div class="control btv-calendar-view-control">
@@ -7037,7 +7063,6 @@ body.btv-dashboard-mode #quarterGroup{display:none!important}
 
 const STORAGE_KEY = "calendar-2027-working-v5";
   window._btvStorageKey = STORAGE_KEY;
-var _publishedIds = new Set(); // populated async by _btvLoadPublished
 
 const HISTORY_KEY = "calendar-2027-working-v5-history";
 
@@ -7060,10 +7085,6 @@ const SECTIONS = [
   {key:"global", label:"Global", cls:"bg-global"},
 
   {key:"china", label:"China", cls:"bg-china"},
-
-  {key:"sea", label:"SEA", cls:"bg-sea"},
-
-  {key:"nea", label:"NEA", cls:"bg-nea"},
 
   {key:"restocks", label:"Restocks", cls:"bg-restocks"},
 
@@ -7175,7 +7196,7 @@ const KEY_DOTS = {
 
 const STATUS_OPTIONS = [{value:"draft", label:"Draft"},{value:"published", label:"Published"}];
 
-const GM_ROWS = ["Calendar","SEA","NEA","China","Restock","Digital Activations","Events","GWP","Ads","Influencer Marketing"];
+const GM_ROWS = ["Calendar","China","Restock","Digital Activations","Events","GWP","Ads","Influencer Marketing"];
 
 const MARKET_CAL_ROWS = ["Launch","Key Moments","Brand Events","Retail Events","Digital Activations","Social Activations","Support","Seeding","GWP"];
 
@@ -7241,6 +7262,30 @@ function entryMatchesSearch(entry){
 
 }
 
+// Transient, in-memory-only market filter (never persisted to localStorage/Supabase) —
+// mirrors Global Calendar's toggleMarketFilter/F.markets pattern.
+const btvMarketFilter = new Set();
+
+function btvToggleMarketFilter(mkt){
+  if(mkt === "all"){
+    btvMarketFilter.clear();
+    document.querySelectorAll('[id^="mktFp-"]').forEach(b => b.classList.remove("on"));
+    e("mktFp-all").classList.add("on");
+  } else {
+    e("mktFp-all").classList.remove("on");
+    const btn = e("mktFp-" + mkt.toLowerCase());
+    if(btvMarketFilter.has(mkt)){ btvMarketFilter.delete(mkt); btn && btn.classList.remove("on"); }
+    else { btvMarketFilter.add(mkt); btn && btn.classList.add("on"); }
+    if(btvMarketFilter.size === 0) e("mktFp-all").classList.add("on");
+  }
+  render();
+}
+
+function entryMatchesMarketFilter(section, entry){
+  if(btvMarketFilter.size === 0) return true;
+  return entryMarkets(section, entry).some(m => btvMarketFilter.has(m));
+}
+
 function weekIdsInRange(startISO, endISO){
 
   if(!startISO || !endISO) return [];
@@ -7266,6 +7311,56 @@ function saveMarketingState(v){ localStorage.setItem(MARKETING_STORAGE_KEY, JSON
 let marketingState = loadMarketingState();
 
 
+
+function migrateSeaNeaIntoGlobal(){
+  let changed = false;
+  ["sea","nea"].forEach(sec => {
+    const byWeek = state[sec] || {};
+    Object.entries(byWeek).forEach(([weekId, entries]) => {
+      (entries || []).forEach(entry => {
+        const mkts = entry.lines
+          ? MARKETS_ALL.filter(m => !(entry.noLaunchMarkets||[]).includes(m))
+          : entryMarkets(sec, entry);
+        const safeMkts = mkts.length ? mkts : MARKETS_ALL.slice(); // defensive: never silently hide a launch
+        const noLaunchMarkets = MARKETS_ALL.filter(m => !safeMkts.includes(m));
+
+        entry.section = "global";
+        entry.noLaunchMarkets = noLaunchMarkets;
+        if(entry.allMarkets){ entry.countries = safeMkts.slice(); entry.allMarkets = false; }
+
+        if(!entry.lines){
+          // Regional-shaped entry (this file's default nea/sea shape, or CSV import) — synthesize
+          // a lines[] entry. optionType (GWP / Country Exclusive) has no clean category mapping —
+          // prefix into productName, leave category blank.
+          entry.lines = [{
+            category:    "",
+            productName: (entry.optionType ? entry.optionType + " — " : "") + (entry.productTitle || ""),
+            colour:      entry.colour || (entry.colorSize ? entry.colorSize.split(' / ')[0] : "") || "",
+            size:        entry.size   || (entry.colorSize && entry.colorSize.includes(' / ') ? entry.colorSize.split(' / ').slice(1).join(' / ') : "") || "",
+            price:       entry.price || ""
+          }];
+          // Do NOT delete optionType/productTitle/colour/countries — renderDashboard()'s Country
+          // Exclusives KPI reads these directly off migrated entries.
+        }
+
+        if(!entry.launchTitle) entry.launchTitle = entry.productTitle || entry.optionType || "Untitled";
+        if(!entry.keyLevel) entry.keyLevel = "brand";
+
+        state.global ||= {};
+        state.global[weekId] ||= [];
+        state.global[weekId].push(entry);
+        changed = true;
+      });
+    });
+  });
+  delete state.sea;
+  delete state.nea;
+  if(changed) saveState(state);
+}
+
+// IMPORTANT: entryMarkets("nea"/"sea", entry) only reads entry.allMarkets/entry.countries, never
+// entry.noLaunchMarkets — but migrateSeaNeaIntoGlobal() above accounts for this with a dual-path
+// check so a real launch is never silently hidden by the migration.
 
 function migrateLegacyGlobalEntries(){
 
@@ -7332,6 +7427,15 @@ function entryMarkets(section, entry){
 
 }
 
+const MKT_CHIP_CLASS = {SG:"mkt-sg",ID:"mkt-id",TH:"mkt-th",PH:"mkt-ph",CN:"mkt-cn",JP:"mkt-jp"};
+
+function mktChipsHtml(section, entry){
+  const mkts = entryMarkets(section, entry);
+  if(!mkts.length) return "";
+  if(mkts.length >= MARKETS_ALL.length) return '<span class="mkt-chip mkt-global">Global</span>';
+  return mkts.map(m => `<span class="mkt-chip ${MKT_CHIP_CLASS[m] || ""}">${esc(m)}</span>`).join("");
+}
+
 function getPublishedMainEntries(){
 
   const out = [];
@@ -7386,25 +7490,28 @@ function syncMarketingPublishToMain(market, weekId, row, title, relatedLaunch){
 
   if(row === "GWP"){
 
-    const targetSection = ["CN","JP"].includes(market) ? "nea" : "sea";
+    state.global ||= {};
 
-    state[targetSection] ||= {};
-
-    state[targetSection][weekId] ||= [];
+    state.global[weekId] ||= [];
 
     const key = `${market}|${row}|${title}`;
 
-    if(!state[targetSection][weekId].some(x => x.linkedMarketingKey === key)){
+    if(!state.global[weekId].some(x => x.linkedMarketingKey === key)){
 
-      state[targetSection][weekId].push({
+      state.global[weekId].push({
 
         id: String(Date.now()) + Math.random().toString(36).slice(2,7),
 
-        section: targetSection, weekId,
+        section: "global", weekId,
+
+        launchTitle: "GWP — " + (relatedLaunch || title),
+        lines: [{category: "", productName: "GWP — " + (relatedLaunch || title), colour: "", size: "", price: ""}],
+        noLaunchMarkets: MARKETS_ALL.filter(m => m !== market),
+        keyLevel: "brand",
 
         optionType: "GWP", startDateISO: "", endDateISO: "", startDate: "", endDate: "",
 
-        tillSoldOut: false, allMarkets: false, countries: [market], stores: [],
+        tillSoldOut: false, stores: [],
 
         productTitle: relatedLaunch || title, colorSize: "", price: "", mechanics: title,
 
@@ -7447,22 +7554,6 @@ function renderGlobalMarketingView(){
         published.filter(x => x.section === "global" && x.weekId === w.id).forEach(x => {
 
           items.push({title:x.entry.launchTitle || "", date:x.entry.launchDate || "", products:(x.entry.lines || []).map(y => y.productName).filter(Boolean), status:getEntryStatus(x.entry)});
-
-        });
-
-      } else if(row === "NEA"){
-
-        published.filter(x => x.section === "nea" && x.weekId === w.id).forEach(x => {
-
-          items.push({title:x.entry.productTitle || x.entry.optionType || "NEA", meta:(x.entry.allMarkets ? "CN, JP" : (x.entry.countries || []).join(", ")) || "CN, JP", status:getEntryStatus(x.entry)});
-
-        });
-
-      } else if(row === "SEA"){
-
-        published.filter(x => x.section === "sea" && x.weekId === w.id).forEach(x => {
-
-          items.push({title:x.entry.productTitle || x.entry.optionType || "SEA", meta:(x.entry.allMarkets ? "SG, TH, ID, PH" : (x.entry.countries || []).join(", ")) || "SG, TH, ID, PH", status:getEntryStatus(x.entry)});
 
         });
 
@@ -7576,15 +7667,9 @@ function renderMarketMarketingView(){
 
           if(x.weekId !== w.id) return;
 
-          if(x.section === "nea" && entryMarkets("nea", x.entry).includes(currentMarketCal)){
+          if(x.section === "global" && entryMarkets("global", x.entry).includes(currentMarketCal)){
 
-            items.push({title:x.entry.productTitle || x.entry.optionType || "NEA", date:x.entry.startDateISO || "", status:getEntryStatus(x.entry)});
-
-          }
-
-          if(x.section === "sea" && entryMarkets("sea", x.entry).includes(currentMarketCal)){
-
-            items.push({title:x.entry.productTitle || x.entry.optionType || "SEA", date:x.entry.startDateISO || "", status:getEntryStatus(x.entry)});
+            items.push({title:x.entry.launchTitle || x.entry.productTitle || x.entry.optionType || "Launch", date:x.entry.launchDate || x.entry.startDateISO || "", status:getEntryStatus(x.entry)});
 
           }
 
@@ -8168,7 +8253,7 @@ function computeSmartDiff(previousState, currentState){
 
   const curr = flattenEntries(currentState || {});
 
-  const grouped = {Global:[], NEA:[], SEA:[], Restock:[], "Events/Activations":[]};
+  const grouped = {Global:[], Restock:[], "Events/Activations":[]};
 
 
 
@@ -8324,7 +8409,7 @@ function computeSmartDiff(previousState, currentState){
 
 function groupsToBulletList(groups){
 
-  const order = ["Global","NEA","SEA","Restock","Events/Activations"];
+  const order = ["Global","Restock","Events/Activations"];
 
   const flat = [];
 
@@ -8336,7 +8421,7 @@ function groupsToBulletList(groups){
 
 function buildTeamsSummary(versionLabel, grouped){
 
-  const order = ["Global","NEA","SEA","Restock","Events/Activations"];
+  const order = ["Global","Restock","Events/Activations"];
 
   const lines = [`Update Summary – ${versionLabel}`, ""];
 
@@ -8778,7 +8863,7 @@ function renderGlobal(entry){
 
             <div>
 
-              <div class="entry-date">${fmtDDMMM(entry.launchDate)}${entry.launchDate ? " (" + dayNameFromISO(entry.launchDate) + ")" : ""}</div>
+              <div class="entry-date">${fmtDDMMM(entry.launchDate)}${entry.launchDate ? " (" + dayNameFromISO(entry.launchDate) + ")" : ""}${mktChipsHtml(entry.section, entry)}</div>
 
               <div class="entry-title">${esc(entry.launchTitle || "")}</div>
 
@@ -8788,7 +8873,6 @@ function renderGlobal(entry){
 
           <div style="display:flex;flex-direction:column;align-items:stretch;min-width:58px">
             <button class="small-btn" onclick="openEditor('${entry.section}','${entry.weekId}','${entry.id}')">Edit</button>
-            <button class="pub-btn${_publishedIds.has(entry.id)?' pub-on':''}" data-pub-id="${entry.id}" data-pub-week="${entry.weekId}" data-pub-section="${entry.section}" title="${_publishedIds.has(entry.id)?'Remove from public calendar':'Publish to public calendar'}">${_publishedIds.has(entry.id)?'\u2714 Live':'\u2191 Publish'}</button>
           </div>
 
         </div>
@@ -8855,7 +8939,7 @@ function renderRegional(entry){
 
             <div>
 
-              <div class="entry-date">${dateStr}</div>
+              <div class="entry-date">${dateStr}${mktChipsHtml(entry.section, entry)}</div>
 
               <div class="entry-title">${esc(displayTitle)}</div>
 
@@ -8865,7 +8949,6 @@ function renderRegional(entry){
 
           <div style="display:flex;flex-direction:column;align-items:stretch;min-width:58px">
             <button class="small-btn" onclick="openEditor('${entry.section}','${entry.weekId}','${entry.id}')">Edit</button>
-            <button class="pub-btn${_publishedIds.has(entry.id)?' pub-on':''}" data-pub-id="${entry.id}" data-pub-week="${entry.weekId}" data-pub-section="${entry.section}" title="${_publishedIds.has(entry.id)?'Remove from public calendar':'Publish to public calendar'}">${_publishedIds.has(entry.id)?'\u2714 Live':'\u2191 Publish'}</button>
           </div>
 
         </div>
@@ -8958,7 +9041,6 @@ function renderRestock(entry){
 
           <div style="display:flex;flex-direction:column;align-items:stretch;min-width:58px">
             <button class="small-btn" onclick="openEditor('${entry.section}','${entry.weekId}','${entry.id}')">Edit</button>
-            <button class="pub-btn${_publishedIds.has(entry.id)?' pub-on':''}" data-pub-id="${entry.id}" data-pub-week="${entry.weekId}" data-pub-section="${entry.section}" title="${_publishedIds.has(entry.id)?'Remove from public calendar':'Publish to public calendar'}">${_publishedIds.has(entry.id)?'\u2714 Live':'\u2191 Publish'}</button>
           </div>
 
         </div>
@@ -9059,7 +9141,7 @@ function renderEvent(entry){
 
 function renderCell(section, weekId){
 
-  const entries = ((((state || {})[section] || {})[weekId]) || []).filter(entryMatchesSearch);
+  const entries = ((((state || {})[section] || {})[weekId]) || []).filter(entry => entryMatchesSearch(entry) && entryMatchesMarketFilter(section, entry));
 
   return `
 
@@ -9068,8 +9150,6 @@ function renderCell(section, weekId){
       ${entries.map(entry => {
 
         if(section === "global" || section === "china") return renderGlobal(entry);
-
-        if(section === "nea" || section === "sea") return (entry.lines ? renderGlobal(entry) : renderRegional(entry));
 
         if(section === "restocks") return renderRestock(entry);
 
@@ -9213,7 +9293,6 @@ function render(){
   e("calendar").innerHTML = html;
 
   bindDragDrop();
-  _bindPubButtons();
 
 }
 
@@ -9488,167 +9567,6 @@ function buildGlobalForm(existing, weekId){
         <div id="delayRows">${delayRows(existing?.delayMarkets || [])}</div>
 
         <button type="button" id="addDelayBtn">+ Add Delay Market</button>
-
-      </div>
-
-    </div>
-
-  `;
-
-}
-
-function buildRegionalForm(section, existing, weekId){
-
-  const markets = section === "nea" ? ["CN","JP"] : ["SG","ID","TH","PH"];
-
-  const refDate = existing?.startDateISO || existing?.launchDate || weekId || "";
-
-  const channelsByMarket = {};
-
-  markets.forEach(mkt => { channelsByMarket[mkt] = getActiveStores(mkt, refDate); });
-
-
-
-  const existingColour = existing?.colour || (existing?.colorSize ? existing.colorSize.split(' / ')[0] : '') || '';
-  const existingSize   = existing?.size   || (existing?.colorSize && existing.colorSize.includes(' / ') ? existing.colorSize.split(' / ').slice(1).join(' / ') : '') || '';
-
-  return `
-
-    <div class="grid">
-
-      <div class="field span8"><label>Launch Title<span class="team-badge merch">Merch</span></label><input id="launchTitle" type="text" value="${esc(existing?.launchTitle || "")}"></div>
-
-      <div class="field span4"><label>Priority<span class="team-badge merch">Merch</span></label>
-        <select id="keyLevel">
-          <option value="brand" ${(!existing?.keyLevel || existing?.keyLevel==="brand")?"selected":""}>🟡 Brand</option>
-          <option value="revenue" ${existing?.keyLevel==="revenue"?"selected":""}>🔵 Revenue</option>
-          <option value="both" ${existing?.keyLevel==="both"?"selected":""}>🟢 Both</option>
-        </select>
-      </div>
-
-      <div class="field span4"><label>Type</label>
-
-        <select id="optionType">
-
-          <option value="Country Exclusive" ${existing?.optionType==="Country Exclusive"?"selected":""}>Country Exclusive</option>
-
-          <option value="Store Exclusive" ${existing?.optionType==="Store Exclusive"?"selected":""}>Store Exclusive</option>
-
-          <option value="GWP" ${existing?.optionType==="GWP"?"selected":""}>GWP</option>
-
-        </select>
-
-      </div>
-
-      <div class="field span4"><label>Start Date<span class="team-badge merch">Merch</span></label><input id="startDate" type="date" value="${esc(existing?.startDateISO || "")}"></div>
-
-      <div class="field span4">
-
-        <label>End Date<span class="team-badge merch">Merch</span></label>
-
-        <input id="endDate" type="date" value="${esc(existing?.endDateISO || "")}" class="${existing?.tillSoldOut ? 'disabled-date' : ''}" ${existing?.tillSoldOut ? 'disabled' : ''}>
-
-        <label class="check" style="margin-top:8px"><input id="tillSoldOut" type="checkbox" ${existing?.tillSoldOut ? "checked" : ""}> Till Sold Out</label>
-
-        <div class="muted" id="daysCount">${existing?.tillSoldOut ? 'Till Sold Out' : (existing?.startDateISO && existing?.endDateISO ? calcDays(existing.startDateISO, existing.endDateISO) + ' days' : '')}</div>
-
-      </div>
-
-
-
-      <div class="field span12">
-
-        <label>Product Details</label>
-
-        <div class="product-details">
-
-          <div class="inline-two">
-
-            <div>
-
-              <label>Product Title<span class="team-badge design">Design</span></label>
-
-              <input id="productTitle" type="text" value="${esc(existing?.productTitle || "")}">
-
-            </div>
-
-            <div>
-
-              <label>Price<span class="team-badge merch">Merch</span></label>
-
-              <input id="price" type="number" step="0.01" value="${esc(existing?.price || "")}">
-
-            </div>
-
-          </div>
-
-          <div class="field-gap">
-
-            <label>Colour / Variant<span class="team-badge design">Design</span></label>
-
-            <textarea id="regionalColour" rows="2">${esc(existingColour)}</textarea>
-
-          </div>
-
-          <div class="field-gap">
-
-            <label>Size<span class="team-badge design">Design</span></label>
-
-            <textarea id="regionalSize" rows="2">${esc(existingSize)}</textarea>
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-
-      <div id="regionWrap" class="span12">
-
-        <div class="field span12"><label>Markets<span class="team-badge merch">Merch</span></label>${marketChecks("countries", markets, existing?.allMarkets ? markets : (existing?.countries || []), section + "AllMarkets")}</div>
-
-        <div class="field span12"><label>Channels<span class="team-badge merch">Merch</span></label>
-
-          ${markets.map(mkt => `
-
-            <div class="market-box">
-
-              <div class="market-head">
-
-                <h4>${mkt}</h4>
-
-                ${channelsByMarket[mkt] && channelsByMarket[mkt].length ? `<label class="check"><input type="checkbox" data-region-all="${mkt}"> All</label>` : ``}
-
-              </div>
-
-              <div class="checks">
-
-                ${channelsByMarket[mkt] && channelsByMarket[mkt].length ? channelsByMarket[mkt].slice().sort().map(store => {
-
-                  const val = `${mkt} - ${store}`;
-
-                  return `<label class="check"><input type="checkbox" data-group="regionStores" data-region-market="${mkt}" value="${val}" ${(existing?.stores || []).includes(val) ? "checked" : ""}> ${store}</label>`;
-
-                }).join("") : `<span class="muted">No channels configured</span>`}
-
-              </div>
-
-            </div>
-
-          `).join("")}
-
-        </div>
-
-      </div>
-
-
-
-      <div class="field span12 ${existing?.optionType==="GWP"?"":"hidden"}" id="gwpWrap">
-
-        <label>GWP Mechanics<span class="team-badge merch">Merch</span></label>
-
-        <textarea id="mechanics" rows="4">${esc(existing?.mechanics || "")}</textarea>
 
       </div>
 
@@ -10225,7 +10143,7 @@ if(versionsOnLoad.length){
 
   if(e("teamsSummaryTitle")) e("teamsSummaryTitle").textContent = versionsOnLoad[0].label;
 
-  if(e("teamsSummaryText")) e("teamsSummaryText").value = buildTeamsSummary(versionsOnLoad[0].label, versionsOnLoad[0].grouped || {Global:[],NEA:[],SEA:[],Restock:[],"Events/Activations":[]});
+  if(e("teamsSummaryText")) e("teamsSummaryText").value = buildTeamsSummary(versionsOnLoad[0].label, versionsOnLoad[0].grouped || {Global:[],Restock:[],"Events/Activations":[]});
 
 }
 
@@ -10489,8 +10407,6 @@ window.openEditor = function(section, weekId, entryId){
 
   if(section === "global" || section === "china") inner = buildGlobalForm(existing, weekId) + actions(existing);
 
-  else if(section === "nea" || section === "sea") inner = buildRegionalForm(section, existing, weekId) + actions(existing);
-
   else if(section === "restocks") inner = buildRestockForm(existing) + actions(existing);
 
   else if(section === "store_openings") inner = buildStoreOpeningForm(existing) + actions(existing);
@@ -10692,65 +10608,6 @@ window.openEditor = function(section, weekId, entryId){
 
   }
 
-  if(section === "nea" || section === "sea"){
-
-    bindAllToggle(section + "AllMarkets", "countries");
-
-    document.querySelectorAll('[data-region-all]').forEach(allBox => {
-
-      const mkt = allBox.getAttribute('data-region-all');
-
-      const items = Array.from(document.querySelectorAll(`input[data-region-market="${mkt}"]`));
-
-      const syncAll = () => { allBox.checked = items.length && items.every(x => x.checked); };
-
-      allBox.onchange = () => { items.forEach(x => x.checked = allBox.checked); };
-
-      items.forEach(item => item.addEventListener('change', syncAll));
-
-      syncAll();
-
-    });
-
-    const sync = () => {
-
-      const isGWP = e("optionType").value === "GWP";
-
-      e("gwpWrap").classList.toggle("hidden", !isGWP);
-
-    };
-
-    const syncDates = () => {
-
-      const tso = e("tillSoldOut");
-
-      const end = e("endDate");
-
-      const days = e("daysCount");
-
-      if(!tso || !end || !days) return;
-
-      end.disabled = tso.checked;
-
-      end.classList.toggle("disabled-date", tso.checked);
-
-      days.textContent = tso.checked ? "Till Sold Out" : ((e("startDate").value && end.value) ? calcDays(e("startDate").value, end.value) + " days" : "");
-
-    };
-
-    e("optionType").onchange = sync;
-
-    e("startDate").addEventListener("input", syncDates);
-
-    e("endDate").addEventListener("input", syncDates);
-
-    e("tillSoldOut").addEventListener("change", syncDates);
-
-    sync();
-
-    syncDates();
-
-  }
 
   if(section === "restocks"){
 
@@ -10904,54 +10761,6 @@ window.openEditor = function(section, weekId, entryId){
           })).filter(x => x.market && x.eta)
 
         : [];
-
-    } else if(section === "nea" || section === "sea"){
-
-      payload.launchTitle = e("launchTitle").value.trim();
-
-      payload.keyLevel = e("keyLevel").value;
-
-      payload.optionType = e("optionType").value;
-
-      payload.startDateISO = e("startDate").value;
-
-      payload.endDateISO = e("endDate").value;
-
-      payload.startDate = payload.startDateISO ? fmtDDMMM(payload.startDateISO) : "";
-
-      payload.endDate = payload.endDateISO ? fmtDDMMM(payload.endDateISO) : "";
-
-      targetWeekId = findWeekIdForDate(payload.startDateISO || payload.endDateISO) || targetWeekId;
-
-      payload.tillSoldOut = e("tillSoldOut").checked;
-
-      const selectedMarkets = checkedByName("countries");
-
-      payload.allMarkets = selectedMarkets.length === (section === "nea" ? NEA_MARKETS.length : SEA_MARKETS.length);
-
-      payload.countries = payload.allMarkets ? [] : selectedMarkets;
-
-      payload.productTitle = e("productTitle").value.trim();
-
-      payload.colour = e("regionalColour").value.trim();
-
-      payload.size = e("regionalSize").value.trim();
-
-      payload.colorSize = payload.colour + (payload.size ? ' / ' + payload.size : '');
-
-      payload.price = e("price").value.trim();
-
-      if(payload.optionType === "GWP"){
-
-        payload.mechanics = e("mechanics").value.trim();
-
-        payload.stores = [];
-
-      } else {
-
-        payload.stores = Array.from(document.querySelectorAll('input[data-group="regionStores"]:checked')).map(el => el.value);
-
-      }
 
     } else if(section === "restocks"){
 
@@ -11597,15 +11406,11 @@ function renderDashboard(){
 
         }
 
-        if(section === "nea" || section === "sea"){
+        if(entry.optionType === "Country Exclusive"){
 
-          if(entry.optionType === "Country Exclusive"){
+          const mkts = entry.countries || [];
 
-            const mkts = entry.allMarkets ? (section === "nea" ? NEA_MARKETS : SEA_MARKETS) : (entry.countries || []);
-
-            mkts.forEach(m=>countryExclusives[m] = (countryExclusives[m] || 0) + 1);
-
-          }
+          mkts.forEach(m=>countryExclusives[m] = (countryExclusives[m] || 0) + 1);
 
         }
 
@@ -12246,6 +12051,9 @@ function btvImportJSON(input) {
 
     pushHistory(state);
     Object.assign(state, incoming);
+    // Imported file may be an older export that still has sea/nea sections (e.g. the
+    // pre-migration backup) — fold them into global immediately, same as on page load.
+    migrateSeaNeaIntoGlobal();
     saveState(state);
     render();
     if (e("globalMarketingView")) renderGlobalMarketingView();
@@ -12256,6 +12064,7 @@ function btvImportJSON(input) {
 }
 
 migrateLegacyGlobalEntries();
+migrateSeaNeaIntoGlobal();
 
 render();
 
@@ -12360,11 +12169,6 @@ function btvExportCSV() {
         lines.push('  ' + parts.join(' | '));
       });
       if ((entry.noLaunchMarkets||[]).length) lines.push('  No launch: '+entry.noLaunchMarkets.join(', '));
-    } else if (sec === 'nea' || sec === 'sea') {
-      var mkts = entry.allMarkets ? (sec==='nea'?'CN,JP':'SG,TH,ID,PH') : (entry.countries||[]).join(',');
-      lines.push(status + ' ' + (entry.optionType||'') + ': ' + (entry.productTitle||entry.launchTitle||''));
-      if (entry.colour) lines.push('  Colour: '+entry.colour);
-      if (mkts) lines.push('  Mkt: '+mkts);
     } else if (sec === 'restocks') {
       var mkts = entry.allMarkets ? 'All' : (entry.markets||[]).join(',');
       lines.push(status + ' Restock' + (entry.etaISO ? '  ETA:'+fd(entry.etaISO) : ''));
@@ -12980,13 +12784,6 @@ function btvExportCalendarXLS() {
         return item.market + ': ' + (item.stores && item.stores.length ? item.stores.join(', ') : '—');
       }).join(' | ');
       if (chans) lines.push('  Ch: ' + chans);
-    } else if (sec === 'nea' || sec === 'sea') {
-      lines.push((entry.optionType ? entry.optionType + ': ' : '') + (entry.productTitle || entry.launchTitle || '') + status);
-      if (entry.colour) lines.push('  ' + entry.colour);
-      var mkts = entry.allMarkets ? (sec === 'nea' ? 'CN, JP' : 'SG, TH, ID, PH') : (entry.countries || []).join(', ');
-      if (mkts) lines.push('  Mkts: ' + mkts);
-      if (entry.stores && entry.stores.length) lines.push('  Ch: ' + entry.stores.join(', '));
-      if (entry.mechanics) lines.push('  Mech: ' + entry.mechanics);
     } else if (sec === 'restocks') {
       lines.push((entry.productTitle || entry.title || 'Restock') + (entry.etaISO ? '  ETA ' + fd(entry.etaISO) : '') + status);
       (entry.lines || []).forEach(function(ln) { if (ln.productTitle || ln.productName) lines.push('  ' + (ln.productTitle || ln.productName)); });
@@ -13028,8 +12825,8 @@ function btvExportCalendarXLS() {
   xml += ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
   xml += '<Styles>\n';
 
-  var SEC_BG = { global: '#d4d4d4', china: '#c47800', sea: '#c43030', nea: '#4a8eb5', restocks: '#7a5a35', events: '#edecea', store_openings: '#d4d4d4' };
-  var SEC_FG = { global: '#2d2d2d', china: '#ffffff', sea: '#ffffff', nea: '#ffffff', restocks: '#ffffff', events: '#2d2d2d', store_openings: '#2d2d2d' };
+  var SEC_BG = { global: '#d4d4d4', china: '#c47800', restocks: '#7a5a35', events: '#edecea', store_openings: '#d4d4d4' };
+  var SEC_FG = { global: '#2d2d2d', china: '#ffffff', restocks: '#ffffff', events: '#2d2d2d', store_openings: '#2d2d2d' };
 
   function sty(id, bg, fg, bold, halign, size) {
     var sz = size || 10;
@@ -13148,9 +12945,9 @@ function btvPrintPDF(rangeMode) {
   var yearTag = STORAGE_KEY.match(/calendar-(\d{4})-/);
   var year = yearTag ? yearTag[1] : '2026';
 
-  var SEC_BG = {global:'#d4d4d4',china:'#c47800',sea:'#c43030',nea:'#4a8eb5',
+  var SEC_BG = {global:'#d4d4d4',china:'#c47800',
     restocks:'#7a5a35',events:'#edecea',store_openings:'#d4d4d4'};
-  var SEC_FG = {global:'#2d2d2d',china:'#ffffff',sea:'#ffffff',nea:'#ffffff',
+  var SEC_FG = {global:'#2d2d2d',china:'#ffffff',
     restocks:'#ffffff',events:'#2d2d2d',store_openings:'#2d2d2d'};
 
   // ── Group weeks by month (each month = one PDF page) ──────────────────────
@@ -13192,13 +12989,6 @@ function btvPrintPDF(rangeMode) {
         return esc(item.market)+': '+(item.stores&&item.stores.length ? esc(item.stores.join(', ')) : '\u2014');
       }).join(' | ');
       if (chans) h += '<div class="em">Ch: ' + chans + '</div>';
-    } else if (sec === 'nea' || sec === 'sea') {
-      if (entry.optionType) h += '<div class="el">' + esc(entry.optionType) + '</div>';
-      if (entry.colour) h += '<div class="el">' + esc(entry.colour) + '</div>';
-      var mkts = entry.allMarkets ? (sec==='nea' ? 'CN, JP' : 'SG, TH, ID, PH') : (entry.countries||[]).join(', ');
-      if (mkts) h += '<div class="em">Mkts: ' + esc(mkts) + '</div>';
-      if (entry.stores && entry.stores.length) h += '<div class="em">Ch: ' + esc((entry.stores||[]).join(', ')) + '</div>';
-      if (entry.mechanics) h += '<div class="em">Mech: ' + esc(entry.mechanics) + '</div>';
     } else if (sec === 'restocks') {
       (entry.lines||[]).forEach(function(ln) {
         if (ln.productTitle||ln.productName) h += '<div class="el">' + esc(ln.productTitle||ln.productName) + '</div>';
@@ -13382,72 +13172,6 @@ function btvPrintPDF(rangeMode) {
   else { alert('Please allow pop-ups to export PDF.'); }
 }
 window.btvPrintPDF = btvPrintPDF;
-function _bindPubButtons() {
-  document.querySelectorAll('[data-pub-id]').forEach(function(btn) {
-    btn.onclick = function(evt) {
-      evt.stopPropagation();
-      var entryId = btn.getAttribute('data-pub-id');
-      var weekId  = btn.getAttribute('data-pub-week');
-      var section = btn.getAttribute('data-pub-section');
-      if (!entryId) return;
-      btvTogglePublish(entryId, weekId, section);
-    };
-  });
-}
-
-// ── Public Calendar: Publish / Unpublish ─────────────────────────────────────
-// _publishedIds declared early (after STORAGE_KEY) to avoid render-time TypeError
-
-function _btvLoadPublished() {
-  if (!window._btvSb) return;
-  var yr = parseInt(((window._btvStorageKey||'').match(/calendar-(\d{4})-/)||[])[1]||'0');
-  window._btvSb.from('public_calendar_entries')
-    .select('entry_id').eq('year', yr)
-    .then(function(res) {
-      _publishedIds = new Set((res.data || []).map(function(r) { return r.entry_id; }));
-      render();
-    });
-}
-
-async function btvTogglePublish(entryId, weekId, section) {
-  if (!window._btvSb) { alert('Sync not ready. Please wait and try again.'); return; }
-  var yr = parseInt(((window._btvStorageKey||'').match(/calendar-(\d{4})-/)||[])[1]||'0');
-  var _st = window._btvState || {};
-  var entry = ((_st[section] || {})[weekId] || []).find(function(e) { return e.id === entryId; });
-  if (!entry) return;
-
-  if (_publishedIds.has(entryId)) {
-    var { error } = await window._btvSb.from('public_calendar_entries')
-      .delete().eq('entry_id', entryId).eq('year', yr);
-    if (error) { alert('Error removing from public calendar: ' + error.message); return; }
-    _publishedIds.delete(entryId);
-  } else {
-    var { error } = await window._btvSb.from('public_calendar_entries')
-      .upsert({
-        entry_id: entryId, year: yr, week_id: weekId, section: section,
-        entry_data: entry,
-        published_by: window._btvSyncEmail || '',
-        published_at: new Date().toISOString()
-      }, { onConflict: 'entry_id,year' });
-    if (error) { alert('Error publishing to public calendar: ' + error.message); return; }
-    _publishedIds.add(entryId);
-  }
-  // Update all buttons for this entry without full re-render
-  document.querySelectorAll('[data-entry-id="' + entryId + '"] .pub-btn').forEach(function(btn) {
-    var on = _publishedIds.has(entryId);
-    btn.classList.toggle('pub-on', on);
-    btn.textContent = on ? '\u2714 Live' : '\u2191 Publish';
-    btn.title = on ? 'Remove from public calendar' : 'Publish to public calendar';
-  });
-}
-window.btvTogglePublish = btvTogglePublish;
-
-// Retry until _btvSb is available, then load published state
-(function _waitForSb() {
-  if (window._btvSb) { _btvLoadPublished(); }
-  else { setTimeout(_waitForSb, 600); }
-})();
-// ─────────────────────────────────────────────────────────────────────────────
 // ── Apply viewer mode when edit permission is resolved ───────────────────────
 (function _btvApplyViewMode() {
   function _apply() {

@@ -12541,6 +12541,29 @@ async function saveProductGroup(){
 
   if(editingGroupId){ products = products.filter(p => p.groupId !== editingGroupId); }
 
+  // Version-conflict check -- mirrors the same guard calendar.html already uses before saving.
+  // This module writes the ENTIRE products array on every save, so if a teammate saved a
+  // different product since this form opened, saving blindly would silently overwrite their
+  // change with this browser's now-stale copy of the rest of the list.
+  if (typeof window.btvCheckVersionConflict === 'function') {
+    const _lsConflict = await window.btvCheckVersionConflict('btv_linesheet_products');
+    if (_lsConflict) {
+      // Pull in the latest saved data first so this save layers on top of it instead of
+      // overwriting it outright.
+      try {
+        const _latest = localStorage.getItem('btv_linesheet_products');
+        if (_latest) products = JSON.parse(_latest);
+      } catch (e) {}
+      const _proceed = confirm(
+        'The linesheet was updated by a teammate since this editor opened.\n\n' +
+        'Saving now will apply your changes on top of the latest linesheet data.\n\n' +
+        'Click OK to save, or Cancel to review first.'
+      );
+      if (!_proceed) return;
+    }
+  }
+
+
 
 
 

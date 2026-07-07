@@ -79,6 +79,7 @@
   let _started              = false;
   let _interceptorInstalled = false;
   let _realtimeChannel      = null;
+  let _realtimeConnected    = false; // true only while the postgres_changes channel is SUBSCRIBED; gates the polling fallback below
   let _presenceIntervalId   = null;  // tracks the 3-second dispatch interval so it can be cleared on reconnect
   let _reconnectTimer       = null;  // debounces realtime reconnect attempts
   let _presenceReconnTimer  = null;  // debounces presence reconnect attempts
@@ -352,11 +353,13 @@
         console.log('[BTV Sync] Realtime:', status, err || '');
         if (status === 'SUBSCRIBED') {
           console.log('[BTV Sync] Realtime connected — live sync active.');
+          _realtimeConnected = true;
           if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           // Channel dropped — schedule a reconnect. Clear the reference first so
           // setupRealtime() is willing to run again.
           console.warn('[BTV Sync] Realtime channel lost (' + status + ') — will reconnect in 8 s');
+          _realtimeConnected = false;
           _realtimeChannel = null;
           if (!_reconnectTimer) {
             _reconnectTimer = setTimeout(function () {
@@ -515,10 +518,15 @@
   };
 
   // ── Polling fallback every 15 s ───────────────────────────────────────────
+  // Realtime (setupRealtime, above) is the source of live updates. This poll
+  // used to run unconditionally in parallel — a duplicate read of the same
+  // rows Realtime already pushes — which was a major contributor to Supabase
+  // Disk IO usage. It now only queries when Realtime is actually disconnected,
+  // acting purely as a safety net until the reconnect logic above restores it.
 
   function setupPolling() {
     setInterval(async function () {
-      if (!_sb) return;
+      if (!_sb || _realtimeConnected) return;
       try {
         const { data } = await _sb
           .from('app_state')

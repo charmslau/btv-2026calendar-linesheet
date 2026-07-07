@@ -30,10 +30,6 @@
 
     --global:#d4d4d4;
 
-    --nea:#4a8eb5;
-
-    --sea:#c43030;
-
     --china:#c47800;
 
     --restocks:#7a5a35;
@@ -52,7 +48,40 @@
 
     --delay-border:#b03020;
 
+    /* market colour-coding, ported from Global Calendar (creative-calendar.html) for visual consistency */
+    --mkt-global-bg:#fffde0; --mkt-global-bd:#e6c200; --mkt-global-tx:#6e5a00;
+    --mkt-sg-bg:#ffe8d6; --mkt-sg-bd:#e07030; --mkt-sg-tx:#7a2e00;
+    --mkt-id-bg:#d6f0db; --mkt-id-bd:#3aaa55; --mkt-id-tx:#165a25;
+    --mkt-th-bg:#ffe5d5; --mkt-th-bd:#e8885a; --mkt-th-tx:#7a3200;
+    --mkt-ph-bg:#eaeaea; --mkt-ph-bd:#999; --mkt-ph-tx:#444;
+    --mkt-cn-bg:#ead6f5; --mkt-cn-bd:#9b59b6; --mkt-cn-tx:#4a1070;
+    --mkt-jp-bg:#d6e8f7; --mkt-jp-bd:#4a90d9; --mkt-jp-tx:#1a4472;
+
   }
+
+  .mkt-chip{display:inline-block;padding:1px 5px;border-radius:4px;font-size:8px;font-weight:800;
+    letter-spacing:.05em;text-transform:uppercase;margin-left:3px;vertical-align:middle}
+  .mkt-chip.mkt-global{background:var(--mkt-global-bg);color:var(--mkt-global-tx);border:1px solid var(--mkt-global-bd)}
+  .mkt-chip.mkt-sg{background:var(--mkt-sg-bg);color:var(--mkt-sg-tx);border:1px solid var(--mkt-sg-bd)}
+  .mkt-chip.mkt-id{background:var(--mkt-id-bg);color:var(--mkt-id-tx);border:1px solid var(--mkt-id-bd)}
+  .mkt-chip.mkt-th{background:var(--mkt-th-bg);color:var(--mkt-th-tx);border:1px solid var(--mkt-th-bd)}
+  .mkt-chip.mkt-ph{background:var(--mkt-ph-bg);color:var(--mkt-ph-tx);border:1px solid var(--mkt-ph-bd)}
+  .mkt-chip.mkt-cn{background:var(--mkt-cn-bg);color:var(--mkt-cn-tx);border:1px solid var(--mkt-cn-bd)}
+  .mkt-chip.mkt-jp{background:var(--mkt-jp-bg);color:var(--mkt-jp-tx);border:1px solid var(--mkt-jp-bd)}
+
+  .mkt-filter-bar{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:4px 8px}
+  .mkt-filter-lbl{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+  .mkt-fp{padding:3px 9px;border:1.5px solid var(--grid);border-radius:20px;font:inherit;font-size:10px;
+    font-weight:700;cursor:pointer;background:#fff;color:var(--muted);transition:all .12s}
+  .mkt-fp:hover{border-color:#999;color:var(--text)}
+  .mkt-fp.on{border-color:currentColor;color:var(--text);background:#fff}
+  .mkt-fp.mkt-fp-sg.on{background:var(--mkt-sg-bg);color:var(--mkt-sg-tx);border-color:var(--mkt-sg-bd)}
+  .mkt-fp.mkt-fp-th.on{background:var(--mkt-th-bg);color:var(--mkt-th-tx);border-color:var(--mkt-th-bd)}
+  .mkt-fp.mkt-fp-id.on{background:var(--mkt-id-bg);color:var(--mkt-id-tx);border-color:var(--mkt-id-bd)}
+  .mkt-fp.mkt-fp-ph.on{background:var(--mkt-ph-bg);color:var(--mkt-ph-tx);border-color:var(--mkt-ph-bd)}
+  .mkt-fp.mkt-fp-cn.on{background:var(--mkt-cn-bg);color:var(--mkt-cn-tx);border-color:var(--mkt-cn-bd)}
+  .mkt-fp.mkt-fp-jp.on{background:var(--mkt-jp-bg);color:var(--mkt-jp-tx);border-color:var(--mkt-jp-bd)}
+  .mkt-fp.mkt-fp-all.on{background:#111;color:#fff;border-color:#111}
 
 
 
@@ -337,10 +366,6 @@
 
 
   .bg-global{background:var(--global); color:#2d2d2d}
-
-  .bg-nea{background:var(--nea)}
-
-  .bg-sea{background:var(--sea)}
 
   .bg-china{background:var(--china)}
 
@@ -2181,10 +2206,6 @@
 
   .bg-global{background:var(--global) !important;color:#2d2d2d !important}
 
-  .bg-nea{background:var(--nea) !important;color:#fff !important}
-
-  .bg-sea{background:var(--sea) !important;color:#fff !important}
-
   .bg-china{background:var(--china) !important;color:#fff !important}
 
   .bg-restocks{background:var(--restocks) !important;color:#fff !important}
@@ -2380,12 +2401,6 @@
   }
 
 
-
-  /* ── Publish to public calendar button ───────────────────────────────────── */
-  .pub-btn{display:block;width:100%;padding:2px 6px;margin-top:2px;border:1px solid #ccc;background:#f5f3ef;color:#888;font-size:10px;font-weight:700;letter-spacing:.03em;border-radius:6px;cursor:pointer;text-align:center;transition:background .15s,color .15s,border-color .15s}
-  .pub-btn:hover{background:#e8e4dc;color:#555;border-color:#aaa}
-  .pub-btn.pub-on{background:#2a6e2a;color:#fff;border-color:#1d4d1d}
-  .pub-btn.pub-on:hover{background:#1f5a1f}
 
   @media print{
 
@@ -2780,9 +2795,7 @@ select, input[type='text'], input[type='date'], input[type='number'], textarea {
 /* BTV patch: hide all Calendar toolbar buttons/controls when KPI Dashboard is active */
 body.btv-dashboard-mode .toolbar{display:none!important;}
   /* ── Viewer mode: hide edit controls ──────────────────────────────────── */
-  body.view-only .add-btn,
-  body.view-only .pub-btn,
-  body.view-only [data-pub-id]
+  body.view-only .add-btn
   { display: none !important; }
   body.view-only [draggable="true"] { cursor: default !important; }
   /* ───────────────────────────────────────────────────────────────────────── */
@@ -3092,6 +3105,19 @@ body.btv-dashboard-mode #quarterGroup{display:none!important}
       <label>Search</label>
       <input id="searchInput" type="text" placeholder="Type to find a launch..." autocomplete="off">
       <div id="btvSearchDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:#fff;border:1px solid #d0c9be;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.15);max-height:280px;overflow-y:auto;margin-top:3px;min-width:260px"></div>
+    </div>
+
+    <div class="control">
+      <label>Market</label>
+      <div class="mkt-filter-bar">
+        <button class="mkt-fp mkt-fp-all on" id="mktFp-all" onclick="btvToggleMarketFilter('all')">All</button>
+        <button class="mkt-fp mkt-fp-sg" id="mktFp-sg" onclick="btvToggleMarketFilter('SG')">SG</button>
+        <button class="mkt-fp mkt-fp-th" id="mktFp-th" onclick="btvToggleMarketFilter('TH')">TH</button>
+        <button class="mkt-fp mkt-fp-id" id="mktFp-id" onclick="btvToggleMarketFilter('ID')">ID</button>
+        <button class="mkt-fp mkt-fp-ph" id="mktFp-ph" onclick="btvToggleMarketFilter('PH')">PH</button>
+        <button class="mkt-fp mkt-fp-jp" id="mktFp-jp" onclick="btvToggleMarketFilter('JP')">JP</button>
+        <button class="mkt-fp mkt-fp-cn" id="mktFp-cn" onclick="btvToggleMarketFilter('CN')">CN</button>
+      </div>
     </div>
 
     <div class="control btv-calendar-view-control">
@@ -7037,14 +7063,6 @@ body.btv-dashboard-mode #quarterGroup{display:none!important}
 
 const STORAGE_KEY = "calendar-2026-working-v5";
   window._btvStorageKey = STORAGE_KEY;
-const _PUB_IDS_LS_KEY = 'btv-pub-cal-ids-2026';
-// Pre-populate from localStorage so the initial render shows Live buttons immediately.
-// Supabase confirms/corrects async via _btvLoadPublished().
-var _publishedIds = (function(){
-  try { var c = JSON.parse(localStorage.getItem(_PUB_IDS_LS_KEY)||'[]'); return new Set(Array.isArray(c)?c:[]); }
-  catch(e){ return new Set(); }
-})();
-
 const HISTORY_KEY = "calendar-2026-working-v5-history";
 
 const VERSION_KEY = "calendar-2026-working-v5-versions";
@@ -7066,10 +7084,6 @@ const SECTIONS = [
   {key:"global", label:"Global", cls:"bg-global"},
 
   {key:"china", label:"China", cls:"bg-china"},
-
-  {key:"sea", label:"SEA", cls:"bg-sea"},
-
-  {key:"nea", label:"NEA", cls:"bg-nea"},
 
   {key:"restocks", label:"Restocks", cls:"bg-restocks"},
 
@@ -7181,7 +7195,7 @@ const KEY_DOTS = {
 
 const STATUS_OPTIONS = [{value:"draft", label:"Draft"},{value:"published", label:"Published"}];
 
-const GM_ROWS = ["Calendar","SEA","NEA","China","Restock","Digital Activations","Events","GWP","Ads","Influencer Marketing"];
+const GM_ROWS = ["Calendar","China","Restock","Digital Activations","Events","GWP","Ads","Influencer Marketing"];
 
 const MARKET_CAL_ROWS = ["Launch","Key Moments","Brand Events","Community Activation","Retail Events","Digital Activations","Social Activations","Support","Seeding","GWP"];
 
@@ -7247,6 +7261,30 @@ function entryMatchesSearch(entry){
 
 }
 
+// Transient, in-memory-only market filter (never persisted to localStorage/Supabase) —
+// mirrors Global Calendar's toggleMarketFilter/F.markets pattern.
+const btvMarketFilter = new Set();
+
+function btvToggleMarketFilter(mkt){
+  if(mkt === "all"){
+    btvMarketFilter.clear();
+    document.querySelectorAll('[id^="mktFp-"]').forEach(b => b.classList.remove("on"));
+    e("mktFp-all").classList.add("on");
+  } else {
+    e("mktFp-all").classList.remove("on");
+    const btn = e("mktFp-" + mkt.toLowerCase());
+    if(btvMarketFilter.has(mkt)){ btvMarketFilter.delete(mkt); btn && btn.classList.remove("on"); }
+    else { btvMarketFilter.add(mkt); btn && btn.classList.add("on"); }
+    if(btvMarketFilter.size === 0) e("mktFp-all").classList.add("on");
+  }
+  render();
+}
+
+function entryMatchesMarketFilter(section, entry){
+  if(btvMarketFilter.size === 0) return true;
+  return entryMarkets(section, entry).some(m => btvMarketFilter.has(m));
+}
+
 function weekIdsInRange(startISO, endISO){
 
   if(!startISO || !endISO) return [];
@@ -7272,6 +7310,57 @@ function saveMarketingState(v){ localStorage.setItem(MARKETING_STORAGE_KEY, JSON
 let marketingState = loadMarketingState();
 
 
+
+function migrateSeaNeaIntoGlobal(){
+  let changed = false;
+  ["sea","nea"].forEach(sec => {
+    const byWeek = state[sec] || {};
+    Object.entries(byWeek).forEach(([weekId, entries]) => {
+      (entries || []).forEach(entry => {
+        const mkts = entry.lines
+          ? MARKETS_ALL.filter(m => !(entry.noLaunchMarkets||[]).includes(m))
+          : entryMarkets(sec, entry);
+        const safeMkts = mkts.length ? mkts : MARKETS_ALL.slice(); // defensive: never silently hide a launch
+        const noLaunchMarkets = MARKETS_ALL.filter(m => !safeMkts.includes(m));
+
+        entry.section = "global";
+        entry.noLaunchMarkets = noLaunchMarkets;
+        if(entry.allMarkets){ entry.countries = safeMkts.slice(); entry.allMarkets = false; }
+
+        if(!entry.lines){
+          // Regional-shaped entry (CSV import / GWP auto-sync) — synthesize a lines[] entry.
+          // optionType (GWP / Country Exclusive) has no clean category mapping — prefix into
+          // productName, leave category blank.
+          entry.lines = [{
+            category:    "",
+            productName: (entry.optionType ? entry.optionType + " — " : "") + (entry.productTitle || ""),
+            colour:      entry.colour || (entry.colorSize ? entry.colorSize.split(' / ')[0] : "") || "",
+            size:        entry.size   || (entry.colorSize && entry.colorSize.includes(' / ') ? entry.colorSize.split(' / ').slice(1).join(' / ') : "") || "",
+            price:       entry.price || ""
+          }];
+          // Do NOT delete optionType/productTitle/colour/countries — renderDashboard()'s Country
+          // Exclusives KPI reads these directly off migrated entries.
+        }
+
+        if(!entry.launchTitle) entry.launchTitle = entry.productTitle || entry.optionType || "Untitled";
+        if(!entry.keyLevel) entry.keyLevel = "brand";
+
+        state.global ||= {};
+        state.global[weekId] ||= [];
+        state.global[weekId].push(entry);
+        changed = true;
+      });
+    });
+  });
+  delete state.sea;
+  delete state.nea;
+  if(changed) saveState(state);
+}
+
+// IMPORTANT: entryMarkets("nea"/"sea", entry) only reads entry.allMarkets/entry.countries, never
+// entry.noLaunchMarkets — but UI-edited nea/sea entries here are global-shaped (buildGlobalForm writes
+// noLaunchMarkets, not countries). migrateSeaNeaIntoGlobal() above accounts for this with a dual-path
+// check so a real launch is never silently hidden by the migration.
 
 function migrateLegacyGlobalEntries(){
 
@@ -7338,6 +7427,15 @@ function entryMarkets(section, entry){
 
 }
 
+const MKT_CHIP_CLASS = {SG:"mkt-sg",ID:"mkt-id",TH:"mkt-th",PH:"mkt-ph",CN:"mkt-cn",JP:"mkt-jp"};
+
+function mktChipsHtml(section, entry){
+  const mkts = entryMarkets(section, entry);
+  if(!mkts.length) return "";
+  if(mkts.length >= MARKETS_ALL.length) return '<span class="mkt-chip mkt-global">Global</span>';
+  return mkts.map(m => `<span class="mkt-chip ${MKT_CHIP_CLASS[m] || ""}">${esc(m)}</span>`).join("");
+}
+
 function getPublishedMainEntries(){
 
   const out = [];
@@ -7393,25 +7491,28 @@ function syncMarketingPublishToMain(market, weekId, row, title, relatedLaunch, d
 
   if(row === "GWP"){
 
-    const targetSection = ["CN","JP"].includes(market) ? "nea" : "sea";
+    state.global ||= {};
 
-    state[targetSection] ||= {};
-
-    state[targetSection][weekId] ||= [];
+    state.global[weekId] ||= [];
 
     const key = `${market}|${row}|${title}`;
 
-    if(!state[targetSection][weekId].some(x => x.linkedMarketingKey === key)){
+    if(!state.global[weekId].some(x => x.linkedMarketingKey === key)){
 
-      state[targetSection][weekId].push({
+      state.global[weekId].push({
 
         id: String(Date.now()) + Math.random().toString(36).slice(2,7),
 
-        section: targetSection, weekId,
+        section: "global", weekId,
+
+        launchTitle: "GWP — " + (relatedLaunch || title),
+        lines: [{category: "", productName: "GWP — " + (relatedLaunch || title), colour: "", size: "", price: ""}],
+        noLaunchMarkets: MARKETS_ALL.filter(m => m !== market),
+        keyLevel: "brand",
 
         optionType: "GWP", startDateISO: "", endDateISO: "", startDate: "", endDate: "",
 
-        tillSoldOut: false, allMarkets: false, countries: [market], stores: [],
+        tillSoldOut: false, stores: [],
 
         productTitle: relatedLaunch || title, colorSize: "", price: "", mechanics: title,
 
@@ -7454,22 +7555,6 @@ function renderGlobalMarketingView(){
         published.filter(x => x.section === "global" && x.weekId === w.id).forEach(x => {
 
           items.push({title:x.entry.launchTitle || "", date:x.entry.launchDate || "", products:(x.entry.lines || []).map(y => y.productName).filter(Boolean), status:getEntryStatus(x.entry)});
-
-        });
-
-      } else if(row === "NEA"){
-
-        published.filter(x => x.section === "nea" && x.weekId === w.id).forEach(x => {
-
-          items.push({title:x.entry.productTitle || x.entry.optionType || "NEA", meta:(x.entry.allMarkets ? "CN, JP" : (x.entry.countries || []).join(", ")) || "CN, JP", status:getEntryStatus(x.entry)});
-
-        });
-
-      } else if(row === "SEA"){
-
-        published.filter(x => x.section === "sea" && x.weekId === w.id).forEach(x => {
-
-          items.push({title:x.entry.productTitle || x.entry.optionType || "SEA", meta:(x.entry.allMarkets ? "SG, TH, ID, PH" : (x.entry.countries || []).join(", ")) || "SG, TH, ID, PH", status:getEntryStatus(x.entry)});
 
         });
 
@@ -7583,15 +7668,9 @@ function renderMarketMarketingView(){
 
           if(x.weekId !== w.id) return;
 
-          if(x.section === "nea" && entryMarkets("nea", x.entry).includes(currentMarketCal)){
+          if(x.section === "global" && entryMarkets("global", x.entry).includes(currentMarketCal)){
 
-            items.push({title:x.entry.productTitle || x.entry.optionType || "NEA", date:x.entry.startDateISO || "", status:getEntryStatus(x.entry)});
-
-          }
-
-          if(x.section === "sea" && entryMarkets("sea", x.entry).includes(currentMarketCal)){
-
-            items.push({title:x.entry.productTitle || x.entry.optionType || "SEA", date:x.entry.startDateISO || "", status:getEntryStatus(x.entry)});
+            items.push({title:x.entry.launchTitle || x.entry.productTitle || x.entry.optionType || "Launch", date:x.entry.launchDate || x.entry.startDateISO || "", status:getEntryStatus(x.entry)});
 
           }
 
@@ -8242,7 +8321,7 @@ function computeSmartDiff(previousState, currentState){
 
   const curr = flattenEntries(currentState || {});
 
-  const grouped = {Global:[], NEA:[], SEA:[], Restock:[], "Events/Activations":[]};
+  const grouped = {Global:[], Restock:[], "Events/Activations":[]};
 
 
 
@@ -8400,7 +8479,7 @@ function computeSmartDiff(previousState, currentState){
 
 function groupsToBulletList(groups){
 
-  const order = ["Global","NEA","SEA","Restock","Events/Activations"];
+  const order = ["Global","Restock","Events/Activations"];
 
   const flat = [];
 
@@ -8412,7 +8491,7 @@ function groupsToBulletList(groups){
 
 function buildTeamsSummary(versionLabel, grouped){
 
-  const order = ["Global","NEA","SEA","Restock","Events/Activations"];
+  const order = ["Global","Restock","Events/Activations"];
 
   const lines = [`Update Summary – ${versionLabel}`, ""];
 
@@ -8852,9 +8931,9 @@ function renderGlobal(entry){
 
             <div>
 
-              <div class="entry-date">${fmtDDMMM(entry.launchDate)}${entry.launchDate ? " (" + dayNameFromISO(entry.launchDate) + ")" : ""}</div>
+              <div class="entry-date">${fmtDDMMM(entry.launchDate)}${entry.launchDate ? " (" + dayNameFromISO(entry.launchDate) + ")" : ""}${mktChipsHtml(entry.section, entry)}</div>
 
-              <div class="entry-title" onclick="btvShowLaunchDetail('${entry.id}')" style="cursor:pointer;text-decoration:underline dotted #aaa 1px;text-underline-offset:2px" title="View product details">${esc(entry.launchTitle || "")}</div>
+              <div class="entry-title">${esc(entry.launchTitle || "")}</div>
 
             </div>
 
@@ -8862,7 +8941,6 @@ function renderGlobal(entry){
 
           <div style="display:flex;flex-direction:column;align-items:stretch;min-width:58px">
             <button class="small-btn" onclick="openEditor('${entry.section}','${entry.weekId}','${entry.id}')">Edit</button>
-            <button class="pub-btn${_publishedIds.has(entry.id)?' pub-on':''}" data-pub-id="${entry.id}" data-pub-week="${entry.weekId}" data-pub-section="${entry.section}" title="${_publishedIds.has(entry.id)?'Remove from public calendar':'Publish to public calendar'}">${_publishedIds.has(entry.id)?'\u2714 Live':'\u2191 Publish'}</button>
           </div>
 
         </div>
@@ -8931,7 +9009,7 @@ function renderRegional(entry){
 
             <div>
 
-              <div class="entry-date">${dateStr}</div>
+              <div class="entry-date">${dateStr}${mktChipsHtml(entry.section, entry)}</div>
 
               <div class="entry-title">${esc(displayTitle)}</div>
 
@@ -8941,7 +9019,6 @@ function renderRegional(entry){
 
           <div style="display:flex;flex-direction:column;align-items:stretch;min-width:58px">
             <button class="small-btn" onclick="openEditor('${entry.section}','${entry.weekId}','${entry.id}')">Edit</button>
-            <button class="pub-btn${_publishedIds.has(entry.id)?' pub-on':''}" data-pub-id="${entry.id}" data-pub-week="${entry.weekId}" data-pub-section="${entry.section}" title="${_publishedIds.has(entry.id)?'Remove from public calendar':'Publish to public calendar'}">${_publishedIds.has(entry.id)?'\u2714 Live':'\u2191 Publish'}</button>
           </div>
 
         </div>
@@ -9030,7 +9107,6 @@ function renderRestock(entry){
 
           <div style="display:flex;flex-direction:column;align-items:stretch;min-width:58px">
             <button class="small-btn" onclick="openEditor('${entry.section}','${entry.weekId}','${entry.id}')">Edit</button>
-            <button class="pub-btn${_publishedIds.has(entry.id)?' pub-on':''}" data-pub-id="${entry.id}" data-pub-week="${entry.weekId}" data-pub-section="${entry.section}" title="${_publishedIds.has(entry.id)?'Remove from public calendar':'Publish to public calendar'}">${_publishedIds.has(entry.id)?'\u2714 Live':'\u2191 Publish'}</button>
           </div>
 
         </div>
@@ -9131,7 +9207,7 @@ function renderEvent(entry){
 
 function renderCell(section, weekId){
 
-  const entries = ((((state || {})[section] || {})[weekId]) || []).filter(entryMatchesSearch);
+  const entries = ((((state || {})[section] || {})[weekId]) || []).filter(entry => entryMatchesSearch(entry) && entryMatchesMarketFilter(section, entry));
 
   return `
 
@@ -9140,8 +9216,6 @@ function renderCell(section, weekId){
       ${entries.map(entry => {
 
         if(section === "global" || section === "china") return renderGlobal(entry);
-
-        if(section === "nea" || section === "sea") return (entry.lines ? renderGlobal(entry) : renderRegional(entry));
 
         if(section === "restocks") return renderRestock(entry);
 
@@ -9269,10 +9343,8 @@ function render(){
             const isEnd   = cov[cov.length-1] === w.id;
             const spanCls = (isStart && isEnd) ? '' : (isStart ? 'md-start' : (isEnd ? 'md-end' : 'md-mid'));
             const topPx   = _laneOf[idx] * _trackH;
-            const mdPubOn = !!md.publishedToCal;
-            const mdPubBtn = isStart ? `<button class="pub-btn${mdPubOn?' pub-on':''}" onclick="window.btvToggleMarkdownPublish('${md.id}',event)" style="margin-top:4px" title="${mdPubOn?'Remove from BTV Calendar':'Push to BTV Calendar'}">${mdPubOn?'✔ Live':'↑ Publish'}</button>` : '';
             html += `<div class="markdown-track" style="position:absolute;top:${topPx}px;left:0;right:0"><div class="markdown-bubble-span ${spanCls}" onclick="openMarkdownEditor('${md.id}')" style="cursor:pointer">` +
-              (isStart ? `<div class="markdown-title">${esc(md.title||'')}</div><div>${fmtDDMMM(md.startDate)}→${fmtDDMMM(md.endDate)}</div>${mdPubBtn}` : '') +
+              (isStart ? `<div class="markdown-title">${esc(md.title||'')}</div><div>${fmtDDMMM(md.startDate)}→${fmtDDMMM(md.endDate)}</div>` : '') +
               `</div></div>`;
           }
         });
@@ -9308,7 +9380,6 @@ function render(){
   if(_tw){ _tw.scrollLeft = _sl; _tw.scrollTop = _st; }
 
   bindDragDrop();
-  _bindPubButtons();
 
 }
 
@@ -10193,14 +10264,6 @@ window.openMarkdownEditor = function(id){
 
 
 
-window.btvToggleMarkdownPublish = function(mdId, ev){
-  if(ev) ev.stopPropagation();
-  if(!markdownState[mdId]) return;
-  markdownState[mdId].publishedToCal = !markdownState[mdId].publishedToCal;
-  saveMarkdownState(markdownState);
-  render();
-};
-
 function actions(existing, sectionKey){
 
   const current = existing?.workflowStatus || "draft";
@@ -10401,7 +10464,7 @@ if(versionsOnLoad.length){
 
   if(e("teamsSummaryTitle")) e("teamsSummaryTitle").textContent = versionsOnLoad[0].label;
 
-  if(e("teamsSummaryText")) e("teamsSummaryText").value = buildTeamsSummary(versionsOnLoad[0].label, versionsOnLoad[0].grouped || {Global:[],NEA:[],SEA:[],Restock:[],"Events/Activations":[]});
+  if(e("teamsSummaryText")) e("teamsSummaryText").value = buildTeamsSummary(versionsOnLoad[0].label, versionsOnLoad[0].grouped || {Global:[],Restock:[],"Events/Activations":[]});
 
 }
 
@@ -10608,7 +10671,7 @@ function btvValidateCalendarModal(section){
   var missing = [];
   function val(id){ var el=e(id); return el ? String(el.value || '').trim() : ''; }
   function anyChecked(name){ return Array.from(document.querySelectorAll('input[name="'+name+'"]')).some(function(x){ return x.checked; }); }
-  if(section === "global" || section === "china" || section === "nea" || section === "sea"){
+  if(section === "global" || section === "china"){
     if(!val("launchDate")) missing.push("Launch Date");
     if(!anyChecked("noLaunchMarkets")) missing.push("Markets");
     var rows = Array.from(document.querySelectorAll(".line-category"));
@@ -10663,7 +10726,7 @@ window.openEditor = function(section, weekId, entryId){
 
   let inner = "";
 
-  if(section === "global" || section === "china" || section === "nea" || section === "sea") inner = buildGlobalForm(existing, weekId) + actions(existing, section);
+  if(section === "global" || section === "china") inner = buildGlobalForm(existing, weekId) + actions(existing, section);
 
   else if(section === "restocks") inner = buildRestockForm(existing) + actions(existing, section);
 
@@ -10846,7 +10909,7 @@ window.openEditor = function(section, weekId, entryId){
 
 
 
-  if(section === "global" || section === "china" || section === "nea" || section === "sea"){
+  if(section === "global" || section === "china"){
 
     bindAllToggle("noLaunchAll", "noLaunchMarkets");
 
@@ -11062,38 +11125,6 @@ window.openEditor = function(section, weekId, entryId){
 
         : [];
 
-    } else if(section === "nea" || section === "sea"){
-
-      payload.launchTitle = e("launchTitle").value.trim();
-
-      payload.launchDate = e("launchDate").value;
-
-      payload.keyLevel = e("keyLevel").value;
-
-      targetWeekId = findWeekIdForDate(payload.launchDate) || targetWeekId;
-
-      payload.lines = getCurrentProductLines().filter(x => x.category || x.productName || x.colour || x.size || x.price);
-
-      payload.noLaunchMarkets = checkedByName("noLaunchMarkets");
-
-      payload.skuCount = Number(e("skuCount").value || 0);
-
-      payload.noLaunchChannelsCollapsed = collectCollapsedChannels();
-
-      payload.launchStatus = e("launchStatus").value;
-
-      payload.delayMarkets = payload.launchStatus === "delay"
-
-        ? Array.from(document.querySelectorAll(".delay-row")).map(row => ({
-
-            market: row.querySelector(".delay-market").value,
-
-            eta: row.querySelector(".delay-eta").value
-
-          })).filter(x => x.market && x.eta)
-
-        : [];
-
     } else if(section === "restocks"){
 
       payload.keyLevel = e("keyLevel").value;
@@ -11189,18 +11220,6 @@ window.openEditor = function(section, weekId, entryId){
     state[section][targetWeekId].push(payload);
 
     saveState(state);
-
-    // If this entry was already Live, keep it in sync with the public calendar
-    if (_publishedIds.has(payload.id) && window._btvSb) {
-      var _liveYr = parseInt(((window._btvStorageKey||'').match(/calendar-(\d{4})-/)||[])[1]||'0');
-      window._btvSb.from('public_calendar_entries').upsert({
-        entry_id: payload.id, year: _liveYr, week_id: targetWeekId, section: section,
-        entry_data: payload, published_by: window._btvSyncEmail || '',
-        published_at: new Date().toISOString()
-      }, { onConflict: 'entry_id,year' }).then(function(res){
-        if(res.error) console.warn('[BTV] Live update failed:', res.error.message);
-      });
-    }
 
     // Track changes in BTV Linesheet KPI Dashboard
 
@@ -11786,15 +11805,11 @@ function renderDashboard(){
 
         }
 
-        if(section === "nea" || section === "sea"){
+        if(entry.optionType === "Country Exclusive"){
 
-          if(entry.optionType === "Country Exclusive"){
+          const mkts = entry.countries || [];
 
-            const mkts = entry.allMarkets ? (section === "nea" ? NEA_MARKETS : SEA_MARKETS) : (entry.countries || []);
-
-            mkts.forEach(m=>countryExclusives[m] = (countryExclusives[m] || 0) + 1);
-
-          }
+          mkts.forEach(m=>countryExclusives[m] = (countryExclusives[m] || 0) + 1);
 
         }
 
@@ -12440,6 +12455,9 @@ function btvImportJSON(input) {
 
     pushHistory(state);
     Object.assign(state, incoming);
+    // Imported file may be an older export that still has sea/nea sections (e.g. the
+    // pre-migration backup) — fold them into global immediately, same as on page load.
+    migrateSeaNeaIntoGlobal();
     saveState(state);
     render();
     if (e("globalMarketingView")) renderGlobalMarketingView();
@@ -12450,6 +12468,7 @@ function btvImportJSON(input) {
 }
 
 migrateLegacyGlobalEntries();
+migrateSeaNeaIntoGlobal();
 
 render();
 
@@ -12475,7 +12494,6 @@ window.btvReloadAndRender = function() {
   if (e("globalMarketingView")) renderGlobalMarketingView();
   if (e("marketMarketingView")) renderMarketMarketingView();
   if (typeof _btvCalApplyLockBadges === 'function') _btvCalApplyLockBadges();
-  _btvLoadPublished(); // refresh Live button state after every sync-triggered re-render
 };
 window.loadAdminConfig = loadAdminConfig;
 window.saveAdminConfig = saveAdminConfig;
@@ -12546,13 +12564,6 @@ function btvExportCSV() {
               (ln.category || '').toUpperCase(), ln.productName || '',
               ln.colour || '', ln.size || '', ln.price ? '$' + ln.price : '', '', status].map(csvQ).join(','));
           });
-        } else if (sec === 'nea' || sec === 'sea') {
-          var mkts = entry.allMarkets ? (sec === 'nea' ? 'CN, JP' : 'SG, TH, ID, PH') : (entry.countries || []).join(', ');
-          rows.push([year, secLabel, 'Wk ' + w.weekOfYear, weekDates,
-            entry.launchTitle || entry.optionType || '',
-            entry.startDateISO ? fd(entry.startDateISO) : (entry.launchDate ? fd(entry.launchDate) : ''),
-            entry.optionType || '', entry.productTitle || '',
-            entry.colour || '', entry.size || '', entry.price ? '$' + entry.price : '', mkts, status].map(csvQ).join(','));
         } else if (sec === 'restocks') {
           var mkts = entry.allMarkets ? 'All Markets' : (entry.markets || []).join(', ');
           var plines = entry.lines && entry.lines.length ? entry.lines : [{}];
@@ -12627,13 +12638,6 @@ function btvExportCalendarXLS() {
         return item.market + ': ' + (item.stores && item.stores.length ? item.stores.join(', ') : '—');
       }).join(' | ');
       if (chans) lines.push('  Ch: ' + chans);
-    } else if (sec === 'nea' || sec === 'sea') {
-      lines.push((entry.optionType ? entry.optionType + ': ' : '') + (entry.productTitle || entry.launchTitle || '') + status);
-      if (entry.colour) lines.push('  ' + entry.colour);
-      var mkts = entry.allMarkets ? (sec === 'nea' ? 'CN, JP' : 'SG, TH, ID, PH') : (entry.countries || []).join(', ');
-      if (mkts) lines.push('  Mkts: ' + mkts);
-      if (entry.stores && entry.stores.length) lines.push('  Ch: ' + entry.stores.join(', '));
-      if (entry.mechanics) lines.push('  Mech: ' + entry.mechanics);
     } else if (sec === 'restocks') {
       lines.push((entry.productTitle || entry.title || 'Restock') + (entry.etaISO ? '  ETA ' + fd(entry.etaISO) : '') + status);
       (entry.lines || []).forEach(function(ln) { if (ln.productTitle || ln.productName) lines.push('  ' + (ln.productTitle || ln.productName)); });
@@ -12675,8 +12679,8 @@ function btvExportCalendarXLS() {
   xml += ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
   xml += '<Styles>\n';
 
-  var SEC_BG = { global: '#d4d4d4', china: '#c47800', sea: '#c43030', nea: '#4a8eb5', restocks: '#7a5a35', events: '#edecea', store_openings: '#d4d4d4' };
-  var SEC_FG = { global: '#2d2d2d', china: '#ffffff', sea: '#ffffff', nea: '#ffffff', restocks: '#ffffff', events: '#2d2d2d', store_openings: '#2d2d2d' };
+  var SEC_BG = { global: '#d4d4d4', china: '#c47800', restocks: '#7a5a35', events: '#edecea', store_openings: '#d4d4d4' };
+  var SEC_FG = { global: '#2d2d2d', china: '#ffffff', restocks: '#ffffff', events: '#2d2d2d', store_openings: '#2d2d2d' };
 
   function sty(id, bg, fg, bold, halign, size) {
     var sz = size || 10;
@@ -12795,9 +12799,9 @@ function btvPrintPDF(rangeMode) {
   var yearTag = STORAGE_KEY.match(/calendar-(\d{4})-/);
   var year = yearTag ? yearTag[1] : '2026';
 
-  var SEC_BG = {global:'#d4d4d4',china:'#c47800',sea:'#c43030',nea:'#4a8eb5',
+  var SEC_BG = {global:'#d4d4d4',china:'#c47800',
     restocks:'#7a5a35',events:'#edecea',store_openings:'#d4d4d4'};
-  var SEC_FG = {global:'#2d2d2d',china:'#ffffff',sea:'#ffffff',nea:'#ffffff',
+  var SEC_FG = {global:'#2d2d2d',china:'#ffffff',
     restocks:'#ffffff',events:'#2d2d2d',store_openings:'#2d2d2d'};
 
   // ── Group weeks by month (each month = one PDF page) ──────────────────────
@@ -12839,13 +12843,6 @@ function btvPrintPDF(rangeMode) {
         return esc(item.market)+': '+(item.stores&&item.stores.length ? esc(item.stores.join(', ')) : '\u2014');
       }).join(' | ');
       if (chans) h += '<div class="em">Ch: ' + chans + '</div>';
-    } else if (sec === 'nea' || sec === 'sea') {
-      if (entry.optionType) h += '<div class="el">' + esc(entry.optionType) + '</div>';
-      if (entry.colour) h += '<div class="el">' + esc(entry.colour) + '</div>';
-      var mkts = entry.allMarkets ? (sec==='nea' ? 'CN, JP' : 'SG, TH, ID, PH') : (entry.countries||[]).join(', ');
-      if (mkts) h += '<div class="em">Mkts: ' + esc(mkts) + '</div>';
-      if (entry.stores && entry.stores.length) h += '<div class="em">Ch: ' + esc((entry.stores||[]).join(', ')) + '</div>';
-      if (entry.mechanics) h += '<div class="em">Mech: ' + esc(entry.mechanics) + '</div>';
     } else if (sec === 'restocks') {
       (entry.lines||[]).forEach(function(ln) {
         if (ln.productTitle||ln.productName) h += '<div class="el">' + esc(ln.productTitle||ln.productName) + '</div>';
@@ -13565,84 +13562,6 @@ function btvImportCSV(input) {
   };
   reader.readAsText(file, 'UTF-8');
 }
-function _bindPubButtons() {
-  document.querySelectorAll('[data-pub-id]').forEach(function(btn) {
-    btn.onclick = function(evt) {
-      evt.stopPropagation();
-      var entryId = btn.getAttribute('data-pub-id');
-      var weekId  = btn.getAttribute('data-pub-week');
-      var section = btn.getAttribute('data-pub-section');
-      if (!entryId) return;
-      btvTogglePublish(entryId, weekId, section);
-    };
-  });
-}
-
-// ── Public Calendar: Publish / Unpublish ─────────────────────────────────────
-// _publishedIds declared early (after STORAGE_KEY) to avoid render-time TypeError
-
-function _btvLoadPublished() {
-  if (!window._btvSb) return;
-  // Guard: only query when authenticated — an unauthenticated RLS response returns
-  // data:[] (no error), which would overwrite the localStorage cache with an empty
-  // array and make every Live button revert to Publish on the next refresh.
-  window._btvSb.auth.getSession().then(function(sessionRes) {
-    if (!sessionRes.data || !sessionRes.data.session) return;
-    var yr = parseInt(((window._btvStorageKey||'').match(/calendar-(\d{4})-/)||[])[1]||'0');
-    window._btvSb.from('public_calendar_entries')
-      .select('entry_id').eq('year', yr)
-      .then(function(res) {
-        if (res.error) { console.warn('[BTV] _btvLoadPublished error:', res.error.message); return; }
-        _publishedIds = new Set((res.data || []).map(function(r) { return r.entry_id; }));
-        try { localStorage.setItem(_PUB_IDS_LS_KEY, JSON.stringify(Array.from(_publishedIds))); } catch(e){}
-        render();
-      });
-  });
-}
-
-async function btvTogglePublish(entryId, weekId, section) {
-  if (!window._btvSb) { alert('Sync not ready. Please wait and try again.'); return; }
-  var yr = parseInt(((window._btvStorageKey||'').match(/calendar-(\d{4})-/)||[])[1]||'0');
-
-  if (_publishedIds.has(entryId)) {
-    // UNPUBLISH \u2014 only needs entry_id + year, no state lookup required
-    var { error: delErr } = await window._btvSb.from('public_calendar_entries')
-      .delete().eq('entry_id', entryId).eq('year', yr);
-    if (delErr) { alert('Error removing from public calendar: ' + delErr.message); return; }
-    _publishedIds.delete(entryId);
-    try { localStorage.setItem(_PUB_IDS_LS_KEY, JSON.stringify(Array.from(_publishedIds))); } catch(e){}
-  } else {
-    // PUBLISH \u2014 needs entry data to write entry_data
-    var _st = window._btvState || {};
-    var entry = ((_st[section] || {})[weekId] || []).find(function(e) { return e.id === entryId; });
-    if (!entry) { alert('Entry not found \u2014 please refresh and try again.'); return; }
-    var { error: pubErr } = await window._btvSb.from('public_calendar_entries')
-      .upsert({
-        entry_id: entryId, year: yr, week_id: weekId, section: section,
-        entry_data: entry,
-        published_by: window._btvSyncEmail || '',
-        published_at: new Date().toISOString()
-      }, { onConflict: 'entry_id,year' });
-    if (pubErr) { alert('Error publishing to public calendar: ' + pubErr.message); return; }
-    _publishedIds.add(entryId);
-    try { localStorage.setItem(_PUB_IDS_LS_KEY, JSON.stringify(Array.from(_publishedIds))); } catch(e){}
-  }
-  // Update all buttons for this entry without full re-render
-  document.querySelectorAll('[data-entry-id="' + entryId + '"] .pub-btn').forEach(function(btn) {
-    var on = _publishedIds.has(entryId);
-    btn.classList.toggle('pub-on', on);
-    btn.textContent = on ? '\u2714 Live' : '\u2191 Publish';
-    btn.title = on ? 'Remove from public calendar' : 'Publish to public calendar';
-  });
-}
-window.btvTogglePublish = btvTogglePublish;
-
-// Retry until _btvSb is available, then load published state
-(function _waitForSb() {
-  if (window._btvSb) { _btvLoadPublished(); }
-  else { setTimeout(_waitForSb, 600); }
-})();
-// ─────────────────────────────────────────────────────────────────────────────
 // ── Apply viewer mode when edit permission is resolved ───────────────────────
 (function _btvApplyViewMode() {
   function _apply() {
@@ -13668,282 +13587,6 @@ window.btvTogglePublish = btvTogglePublish;
 <div id="btvWebhookModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center"><div style="background:#fffdfa;border:1px solid #c7b493;border-radius:16px;padding:24px;max-width:520px;width:90%;box-shadow:0 12px 40px rgba(0,0,0,.2)"><h3 style="margin:0 0 8px 0;font-size:16px" id="btvWhkTitle">Configure Webhook</h3><p style="margin:0 0 14px;font-size:13px;color:#75695c">Paste your Microsoft Teams incoming webhook URL below. Leave blank to disable.</p><input type="url" id="btvWhkInput" placeholder="https://prod.webhooks.office.com/..." style="width:100%;padding:10px 12px;border:1px solid #c7b493;border-radius:10px;font:inherit;font-size:13px;margin-bottom:14px"><div style="display:flex;gap:10px;justify-content:flex-end"><button type="button" onclick="document.getElementById('btvWebhookModal').style.display='none'" style="padding:9px 18px;border:1px solid #c7b493;border-radius:10px;background:#faf6ef;cursor:pointer;font:inherit">Cancel</button><button type="button" onclick="__btvSaveWebhook()" style="padding:9px 18px;border:1px solid #8B6F4E;border-radius:10px;background:#8B6F4E;color:#fff;cursor:pointer;font:inherit;font-weight:700">Save</button></div></div></div>
 
 
-<!-- BTV Launch Detail Popup -->
-<div id="btvLDOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9900;align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto" onclick="if(event.target===this)btvCloseLaunchDetail()">
-  <div style="background:#fbf8f1;border-radius:18px;width:100%;max-width:1100px;box-shadow:0 12px 48px rgba(0,0,0,.22);overflow:hidden;margin:auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px 14px;border-bottom:1px solid #e6e0d4;background:#fbf8f1">
-      <div>
-        <div id="btvLDTitle" style="font-size:17px;font-weight:700;color:#1a1a1a"></div>
-        <div id="btvLDSub" style="font-size:12px;color:#888;margin-top:2px"></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <button onclick="btvExportLaunchPDF()" style="background:#f5f0e8;border:1px solid #d8d0c4;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:#555;padding:6px 14px" title="Export PDF">&#x2399; PDF</button>
-        <button onclick="btvCloseLaunchDetail()" style="background:none;border:none;cursor:pointer;font-size:22px;color:#666;line-height:1;padding:4px 8px" title="Close">&times;</button>
-      </div>
-    </div>
-    <div style="overflow:auto;max-height:72vh">
-      <div id="btvLDBody"></div>
-    </div>
-  </div>
-</div>
-<script>
-function btvShowLaunchDetail(entryId) {
-  // Inject card styles once
-  if (!document.getElementById('btvLDStyles')) {
-    var s = document.createElement('style');
-    s.id = 'btvLDStyles';
-    s.textContent = [
-      '.btv-ld-card{background:#fff;border-radius:14px;border:1px solid #e8e2d8;padding:24px 20px;margin-bottom:18px}',
-      '.btv-ld-grid{display:grid;grid-template-columns:120px 1fr 260px;gap:20px;align-items:start}',
-      '.btv-ld-imgs{display:flex;flex-direction:column;gap:10px}',
-      '.btv-ld-imgwrap{width:110px;height:110px;border-radius:10px;overflow:hidden;border:1px solid #e0dbd2;background:#f5f3ef;display:flex;align-items:center;justify-content:center}',
-      '.btv-ld-imgwrap img{width:100%;height:100%;object-fit:cover;display:block}',
-      '.btv-ld-imgblank{color:#ccc;font-size:10px;text-align:center;padding:4px}',
-      '.btv-ld-info{min-width:0}',
-      '.btv-ld-pname{font-size:17px;font-weight:700;color:#1a1a1a;margin-bottom:6px;line-height:1.3}',
-      '.btv-ld-hs{font-size:12px;color:#c07830;font-weight:500;margin-bottom:2px}',
-      '.btv-ld-fields{margin-top:10px;display:flex;flex-direction:column;gap:3px}',
-      '.btv-ld-field{font-size:12px;color:#333;line-height:1.5}',
-      '.btv-ld-label{font-weight:700;color:#555;letter-spacing:.04em}',
-      '.btv-ld-channels{white-space:pre-line;font-size:12px;color:#333;padding-left:8px;margin-top:2px}',
-      '.btv-ld-desc{font-size:12px;color:#555;line-height:1.6;margin-top:12px;padding-top:12px;border-top:1px solid #f0ebe4}',
-      '.btv-ld-ph{font-size:10px;font-weight:700;letter-spacing:.08em;color:#888;margin-top:14px;margin-bottom:6px;text-transform:uppercase}',
-      '.btv-ld-pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#e8e2d8;border:1px solid #e8e2d8;border-radius:8px;overflow:hidden}',
-      '.btv-ld-pcell{background:#fbf8f1;padding:8px 10px;text-align:center}',
-      '.btv-ld-plabel{font-size:9px;font-weight:700;color:#888;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}',
-      '.btv-ld-pval{font-size:13px;font-weight:600;color:#1a1a1a}',
-      '.btv-ld-approval{margin-top:12px;font-size:12px;font-family:monospace;letter-spacing:.08em;color:#555;display:flex;align-items:center;gap:8px}',
-      '.btv-ld-appr{color:#1a7f3a;font-weight:700}',
-      '.btv-ld-appgrey{color:#ccc}',
-      '.btv-ld-badgeok{background:#e6f6ec;color:#1a7f3a;border:1px solid #b5dfc5;border-radius:8px;font-size:10px;padding:2px 10px;font-weight:600;font-family:sans-serif;letter-spacing:.02em}',
-      '.btv-ld-badgepend{background:#fdf3e7;color:#b07030;border:1px solid #dfd0b5;border-radius:8px;font-size:10px;padding:2px 10px;font-weight:600;font-family:sans-serif;letter-spacing:.02em}',
-      '.btv-ld-sku{min-width:0}',
-      '.btv-ld-skuhead{font-size:10px;font-weight:700;letter-spacing:.08em;color:#888;text-transform:uppercase;margin-bottom:8px}',
-      '.btv-ld-sktable{width:100%;border-collapse:collapse;font-size:11px;border:1px solid #e0dbd2}',
-      '.btv-ld-skth{padding:6px 8px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.06em;color:#666;border:1px solid #e0dbd2;border-bottom:2px solid #e0dbd2;white-space:nowrap}',
-      '.btv-ld-skcell{padding:5px 8px;border:1px solid #e0dbd2;color:#333;vertical-align:top;word-break:break-all}',
-      '.btv-ld-sknum{font-family:monospace;font-size:10px;color:#555}'
-    ].join('');
-    document.head.appendChild(s);
-  }
-
-  var overlay = document.getElementById('btvLDOverlay');
-  var bodyEl  = document.getElementById('btvLDBody');
-  var titleEl = document.getElementById('btvLDTitle');
-  var subEl   = document.getElementById('btvLDSub');
-
-  var calEntry = null;
-  var _btvCalSt = {};
-  try {
-    _btvCalSt = JSON.parse(localStorage.getItem('calendar-2026-working-v5') || '{}');
-    ['global','china','nea','sea'].forEach(function(sec) {
-      var weeks = _btvCalSt[sec] || {};
-      Object.values(weeks).forEach(function(wEntries) {
-        (Array.isArray(wEntries) ? wEntries : []).forEach(function(e) {
-          if (e.id === entryId) calEntry = e;
-        });
-      });
-    });
-  } catch(ex) {}
-
-  // Build set of sibling entry IDs: same launch title across markets (strips "- SG", "- TH" etc.)
-  var _btvMktSuffix = /\s*[-–—]\s*(SG|TH|ID|PH|JP|CN|MY|HK|TW|VN|KR|AU|UK|US|EU)(\s.*)?$/i;
-  var _btvBaseTitle = calEntry ? (calEntry.launchTitle || '').replace(_btvMktSuffix, '').trim() : '';
-  var _btvSibIds = new Set([entryId]);
-  if (_btvBaseTitle) {
-    try {
-      ['global','china','nea','sea'].forEach(function(sec) {
-        Object.values(_btvCalSt[sec] || {}).forEach(function(wEntries) {
-          (Array.isArray(wEntries) ? wEntries : []).forEach(function(e) {
-            if (!e.launchTitle) return;
-            if (e.launchTitle.replace(_btvMktSuffix, '').trim() === _btvBaseTitle) _btvSibIds.add(e.id);
-          });
-        });
-      });
-    } catch(ex2) {}
-  }
-
-  var allProducts = [];
-  try { allProducts = JSON.parse(localStorage.getItem('btv_linesheet_products') || '[]'); } catch(ex) {}
-
-  // Collect product names from ALL sibling entries' lines array for name-based matching
-  var _btvLineKeys  = new Set(); // "normName|normColour" — exact pair when colour specified
-  var _btvLineNames = new Set(); // normName only — when colour unspecified, show all variants
-  try {
-    ['global','china','nea','sea'].forEach(function(sec) {
-      Object.values(_btvCalSt[sec] || {}).forEach(function(wEntries) {
-        (Array.isArray(wEntries) ? wEntries : []).forEach(function(e) {
-          if (!_btvSibIds.has(e.id)) return;
-          (e.lines || []).forEach(function(l) {
-            var nm  = (l.productName || l.productTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            var col = (l.colour || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (!nm) return;
-            if (col) { _btvLineKeys.add(nm + '|' + col); } else { _btvLineNames.add(nm); }
-          });
-        });
-      });
-    });
-  } catch(ex3) {}
-
-  var _btvNorm = function(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
-  var _btvCalDate = calEntry ? (calEntry.launchDate || '') : '';
-  var _btvSeen = new Set();
-  var products = allProducts.filter(function(p) {
-    if (_btvSeen.has(p.id)) return false;
-    // 1. Explicit calEntryId link (any sibling market entry for this launch)
-    if (p.calEntryId && _btvSibIds.has(p.calEntryId)) { _btvSeen.add(p.id); return true; }
-    // 2. Match by productName + colour (unique product per user spec); name-only shows all variants
-    if (_btvLineKeys.size > 0 || _btvLineNames.size > 0) {
-      var pn = _btvNorm(p.name);
-      var pv = _btvNorm(p.variant || '');
-      if (pn && _btvLineKeys.has(pn + '|' + pv)) { _btvSeen.add(p.id); return true; }
-      if (pn && _btvLineNames.has(pn)) { _btvSeen.add(p.id); return true; }
-      if (pn && !pv) {
-        var _pfx = pn + '|'; var _hit = false;
-        _btvLineKeys.forEach(function(k){ if (!_hit && k.substring(0,_pfx.length)===_pfx) _hit=true; });
-        if (_hit) { _btvSeen.add(p.id); return true; }
-      }
-      return false; // lines defined — don't fall through to date match
-    }
-    // 3. Date fallback only when calendar entry has NO product lines at all
-    if (_btvCalDate && p.launchDate && p.launchDate === _btvCalDate) { _btvSeen.add(p.id); return true; }
-    return false;
-  });
-
-  titleEl.textContent = calEntry ? (calEntry.launchTitle || entryId) : entryId;
-  subEl.textContent   = (calEntry && calEntry.launchDate) ? 'Launch Date: ' + calEntry.launchDate : '';
-
-  if (!products.length) {
-    bodyEl.innerHTML = '<div style="padding:40px;text-align:center;color:#999;font-size:14px">No linesheet products linked to this launch yet.<br><small style="color:#bbb;margin-top:6px;display:block">Products appear here once the linesheet is synced from the calendar.</small></div>';
-    overlay.style.display = 'flex';
-    return;
-  }
-
-  var x = function(v) { return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
-
-  function fld(label, value, pre) {
-    if (!value && value !== 0) return '<div class="btv-ld-field"><span class="btv-ld-label">' + label + ':</span> <span style="color:#ccc">—</span></div>';
-    var v = pre ? '<span style="white-space:pre-line">' + x(String(value)) + '</span>' : x(String(value));
-    return '<div class="btv-ld-field"><span class="btv-ld-label">' + label + ':</span> ' + v + '</div>';
-  }
-
-  function skuTable(p) {
-    var sizes = [];
-    if (p.sizeSKUs && Object.keys(p.sizeSKUs).length) {
-      var order = ['XXS','XS','S','M','L','XL','XXL'];
-      Object.keys(p.sizeSKUs).sort(function(a,b){
-        var ai=order.indexOf(a), bi=order.indexOf(b);
-        return (ai>=0&&bi>=0) ? ai-bi : a.localeCompare(b);
-      }).forEach(function(sz) {
-        sizes.push({sz:sz, sk:p.sizeSKUs[sz]||'', bc:(p.sizeBarcodes||{})[sz]||''});
-      });
-    } else {
-      sizes.push({sz:'ONE SIZE', sk:p.sku||'', bc:p.barcode||''});
-    }
-    return '<table class="btv-ld-sktable"><thead><tr>'
-      + '<th class="btv-ld-skth">SIZE</th><th class="btv-ld-skth">SKU</th><th class="btv-ld-skth">BARCODE</th>'
-      + '</tr></thead><tbody>'
-      + sizes.map(function(r){
-          return '<tr><td class="btv-ld-skcell">' + x(r.sz) + '</td>'
-            + '<td class="btv-ld-skcell btv-ld-sknum">' + x(r.sk) + '</td>'
-            + '<td class="btv-ld-skcell btv-ld-sknum">' + x(r.bc) + '</td></tr>';
-        }).join('')
-      + '</tbody></table>';
-  }
-
-  function approvalRow(p) {
-    var d = p.approvedDesigner ? '<span class="btv-ld-appr">D</span>' : '<span class="btv-ld-appgrey">D</span>';
-    var s = p.approvedSC       ? '<span class="btv-ld-appr">SC</span>' : '<span class="btv-ld-appgrey">SC</span>';
-    var m = p.approvedMerch    ? '<span class="btv-ld-appr">M</span>' : '<span class="btv-ld-appgrey">M</span>';
-    var all = p.approvedDesigner && p.approvedSC && p.approvedMerch;
-    var badge = all ? '<span class="btv-ld-badgeok">&#10003; Approved</span>' : '<span class="btv-ld-badgepend">Pending</span>';
-    return '<div class="btv-ld-approval">' + d + ' / ' + s + ' / ' + m + ' ' + badge + '</div>';
-  }
-
-  var html = products.map(function(p) {
-    var title = x(p.name||'') + (p.variant ? ' — ' + x(p.variant) : '');
-    var markets  = (p.calMarkets||[]).join(', ');
-    var channels = (p.calStores||[]).join('\n');
-    var sizing   = p.sizing || (p.sizeSKUs ? Object.keys(p.sizeSKUs).join(', ') : '');
-
-    function img(url, alt) {
-      if (url) return '<div class="btv-ld-imgwrap"><a href="'+x(url)+'" target="_blank" rel="noopener"><img src="'+x(url)+'" alt="'+alt+'" onerror="this.parentNode.className+=\' btv-ld-imgblank\'"></a></div>';
-      return '<div class="btv-ld-imgwrap btv-ld-imgblank"><span>' + alt + '</span></div>';
-    }
-
-    return '<div class="btv-ld-card"><div class="btv-ld-grid">'
-      // ── Images ──
-      + '<div class="btv-ld-imgs">' + img(p.productImg,'Product') + img(p.lookbookImg,'Lookbook') + '</div>'
-      // ── Info ──
-      + '<div class="btv-ld-info">'
-        + '<div class="btv-ld-pname">' + title + '</div>'
-        + (p.hscode   ? '<div class="btv-ld-hs">HS Code (8): ' + x(p.hscode)   + '</div>' : '')
-        + (p.hscode10 ? '<div class="btv-ld-hs">HS Code (10): ' + x(p.hscode10) + '</div>' : '')
-        + '<div class="btv-ld-fields">'
-          + fld('CATEGORY', p.category)
-          + fld('LAUNCH DATE', p.launchDate)
-          + fld('MARKETS', markets)
-          + (channels ? '<div class="btv-ld-field"><span class="btv-ld-label">LAUNCH CHANNELS:</span><div class="btv-ld-channels">' + x(channels) + '</div></div>' : '')
-          + fld('SIZES', sizing)
-          + fld('WEIGHT', p.weightGrams ? p.weightGrams + 'g' : '')
-          + fld('FABRIC', p.fabric)
-          + (p.washcare ? '<div class="btv-ld-field"><span class="btv-ld-label">WASHCARE:</span> <span style="white-space:pre-line">' + x(p.washcare) + '</span></div>' : fld('WASHCARE',''))
-          + fld('MEASUREMENTS', p.measurementSummary, true)
-          + fld('DESCRIPTION', p.description, true)
-        + '</div>'
-        + '<div class="btv-ld-ph">Pricing / Details</div>'
-        + '<div class="btv-ld-pgrid">'
-          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">SGD</div><div class="btv-ld-pval">' + (p.sgd      ? 'S$'+x(p.sgd)      : '—') + '</div></div>'
-          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">SGD EX GST</div><div class="btv-ld-pval">' + (p.sgdNoGST ? 'S$'+x(p.sgdNoGST) : '—') + '</div></div>'
-          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">JPY</div><div class="btv-ld-pval">' + (p.jp       ? '¥'+x(p.jp)  : '—') + '</div></div>'
-          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">IDR</div><div class="btv-ld-pval">' + (p.idRrp    ? 'Rp '+x(p.idRrp) : '—') + '</div></div>'
-          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">THB</div><div class="btv-ld-pval">' + (p.th       ? '฿'+x(p.th)  : '—') + '</div></div>'
-          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">PHP</div><div class="btv-ld-pval">' + (p.ph       ? '₱'+x(p.ph)  : '—') + '</div></div>'
-          + '<div class="btv-ld-pcell"><div class="btv-ld-plabel">CNY</div><div class="btv-ld-pval">' + (p.cn       ? '¥'+x(p.cn)  : '—') + '</div></div>'
-        + '</div>'
-        + approvalRow(p)
-      + '</div>'
-      // ── SKU / Barcode table ──
-      + '<div class="btv-ld-sku"><div class="btv-ld-skuhead">SKU / Barcode by Size</div>' + skuTable(p) + '</div>'
-    + '</div></div>';
-  }).join('');
-
-  bodyEl.innerHTML = html;
-  overlay.style.display = 'flex';
-}
-function btvCloseLaunchDetail() {
-  document.getElementById('btvLDOverlay').style.display = 'none';
-}
-function btvExportLaunchPDF() {
-  var xe = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-  var title = document.getElementById('btvLDTitle').textContent;
-  var sub   = document.getElementById('btvLDSub').textContent;
-  var body  = document.getElementById('btvLDBody').innerHTML;
-  var css   = document.getElementById('btvLDStyles') ? document.getElementById('btvLDStyles').textContent : '';
-  var win = window.open('', '_blank');
-  if (!win) { alert('Please allow popups to export PDF.'); return; }
-  win.document.write(
-    '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + xe(title) + '</title>'
-    + '<style>'
-    + 'body{font-family:"DM Sans","Helvetica Neue",Helvetica,Arial,sans-serif;background:#fff;color:#111;margin:0;padding:12px 20px}'
-    + '@page{size:landscape;margin:10mm}'
-    + '.btv-ld-card{page-break-inside:avoid!important;break-inside:avoid!important;margin-bottom:16px}'
-    + '.btv-pdf-hdr{padding-bottom:12px;border-bottom:2px solid #e8e2d8;margin-bottom:18px}'
-    + '.btv-pdf-t{font-size:20px;font-weight:700;color:#1a1a1a}'
-    + '.btv-pdf-s{font-size:12px;color:#888;margin-top:4px}'
-    + css
-    + '</style></head><body>'
-    + '<div class="btv-pdf-hdr"><div class="btv-pdf-t">' + xe(title) + '</div>'
-    + (sub ? '<div class="btv-pdf-s">' + xe(sub) + '</div>' : '')
-    + '</div>'
-    + body
-    + '<scr'+'ipt>window.onload=function(){window.print();}<\/scr'+'ipt>'
-    + '</body></html>'
-  );
-  win.document.close();
-}
-document.addEventListener('keydown', function(e) { if (e.key === 'Escape') btvCloseLaunchDetail(); });
-</script>
 </body></html>
 
 
