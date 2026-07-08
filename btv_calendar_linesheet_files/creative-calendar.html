@@ -298,6 +298,17 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
   .btvcard-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:10.5px;font-weight:700}
   .btvcard-pub{background:#d5f0dc;color:#155724}
   .btvcard-draft{background:#fff3cd;color:#7a5800}
+  /* ── Inline cell placement of the full BTV reference card (instead of a compact chip) ── */
+  .btvcard-cell{margin-bottom:8px;cursor:pointer}
+  .btvcard-cell:last-child{margin-bottom:0}
+  .btvcard-td .btvcard{padding:8px;border-radius:8px}
+  .btvcard-td .btvcard-entry-title{font-size:12px;margin-bottom:4px}
+  .btvcard-td .btvcard-group{grid-template-columns:1fr;gap:2px;margin-top:6px}
+  .btvcard-td .btvcard-cat{margin-top:4px}
+  .btvcard-td .btvcard-prod{margin-bottom:4px}
+  .btvcard-td .btvcard-prod-name,.btvcard-td .btvcard-prod-price{font-size:11px}
+  .btvcard-td .btvcard-info,.btvcard-td .btvcard-status{font-size:10.5px;margin-top:4px}
+  .btvcard-td .btvcard-date{font-size:10.5px}
 </style>
 </head>
 <body>
@@ -499,7 +510,7 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
         <label class="f-lbl" for="fDate">Specific Date (optional)</label>
         <input type="date" id="fDate" class="f-inp">
       </div>
-      <div>
+      <div id="fStatusWrap">
         <label class="f-lbl" for="fStatus">Status</label>
         <select id="fStatus" class="f-sel">
           <option value="Not Started">Not Started</option>
@@ -717,10 +728,10 @@ const ROW_DEFS=[
   {key:'theme',            label:'Theme / Season',        group:'context',    editable:true},
   {key:'key_moments',      label:'Key Moments',           group:'context',    editable:true},
   {key:'public_holidays',  label:'Public Holidays',       group:'context',    editable:true},
+  {key:'p_markdown',label:'Markdown',       group:'product', btvMarkdown:true},
   {key:'p_launch',  label:'Launch',         group:'product', btvPerMarket:true, btvSections:['global','china']},
   {key:'p_restock', label:'Restock',        group:'product', btvPerMarket:true, btvSections:['restocks']},
   {key:'p_store',   label:'Store Opening',  group:'product', btvPerMarket:true, btvSections:['store_openings']},
-  {key:'p_markdown',label:'Markdown',       group:'product', btvMarkdown:true},
   {key:'Brand Events',         label:'Brand Events',         group:'marketing', marketingRow:true},
   {key:'Community Activation', label:'Community Activation', group:'marketing', marketingRow:true},
   {key:'Retail Events',        label:'Retail Activation',    group:'marketing', marketingRow:true},
@@ -850,19 +861,52 @@ function loadBtvMarkdownState(){
   try { return JSON.parse(localStorage.getItem(BTV_CAL_STORAGE_KEY.replace('working-v5','markdown-bars-v1')))||{}; }
   catch(e){ return {}; }
 }
-// Returns markdown entries whose date range covers week `wn`, optionally scoped to `market`
-// (entries with no markets selected are treated as applying to every market).
-function getMarkdownEntriesForWeek(wn,market){
+// Markdown groups with their full week range (for colspan rendering) and market colour —
+// optionally scoped to one market (per-market tabs) or unscoped (Global tab, market:null).
+// Entries with no markets selected are treated as applying to every market ('mkt-global').
+function buildMarkdownSpanGroups(marketScope){
   const mdState=loadBtvMarkdownState();
-  const out=[];
+  const groups=[];
   Object.values(mdState).forEach(md=>{
     if(!md||!md.startDate||!md.endDate) return;
     const startWn=dateToWeekNum(md.startDate), endWn=dateToWeekNum(md.endDate);
-    if(!startWn||!endWn||wn<startWn||wn>endWn) return;
-    if(market && (md.markets||[]).length && !md.markets.includes(market)) return;
-    out.push(md);
+    if(!startWn||!endWn) return;
+    const mdMkts=(md.markets&&md.markets.length)?md.markets:BTV_MARKETS_ALL.slice();
+    if(marketScope && !mdMkts.includes(marketScope)) return;
+    if(F.markets.size && !mdMkts.some(m=>F.markets.has(m))) return;
+    if(F.search && !(md.title||'').toLowerCase().includes(F.search.toLowerCase())) return;
+    groups.push({title:md.title||'Markdown',week:startWn,weekEnd:endWn,markets:mdMkts,
+      isGlobal:mdMkts.length>1,mktList:mdMkts.slice().sort().join(', '),md});
   });
-  return out;
+  return groups;
+}
+
+// Renders markdown groups as true multi-week colspan bars (mirrors buildGlobalSpannableRowHtml),
+// colour-coded by market instead of status.
+function renderMarkdownSpanRow(groups,gc){
+  const coveredCells=new Set();
+  groups.forEach(g=>{ if(g.weekEnd>g.week) for(let w=g.week+1;w<=g.weekEnd&&w<=53;w++) coveredCells.add(w); });
+  let html='';
+  WEEKS.forEach(w=>{
+    if(coveredCells.has(w.n)) return;
+    const starts=groups.filter(g=>g.week===w.n);
+    const spanGroup=starts.filter(g=>g.weekEnd>w.n).sort((a,b)=>b.weekEnd-a.weekEnd)[0];
+    const colspan=spanGroup?(spanGroup.weekEnd-w.n+1):1;
+    const colspanAttr=colspan>1?` colspan="${colspan}"`:'';
+    let chips='';
+    starts.forEach(g=>{
+      const cssClass=g.isGlobal?'mkt-global':(MKT_CSS[g.markets[0]]||'c-ns');
+      const spanTag=g.weekEnd>w.n?`<span class="span-tag">→Wk${g.weekEnd}</span>`:'';
+      const dateLabel=g.md.startDate?formatDateWithDay(g.md.startDate):weekStartDateLabel(w.n);
+      chips+=`<div class="chip ${cssClass}" title="${esc(g.title+'\n'+g.mktList)}">
+        <span class="date-tag">${esc(dateLabel)}</span>
+        <span class="country-tag">${esc(g.mktList)}</span>
+        ${spanTag}${esc(g.title)}
+      </div>`;
+    });
+    html+=`<td${colspanAttr} class="${gc} readonly">${chips}</td>`;
+  });
+  return html;
 }
 function btvEntrySummary(section,entry){
   if(section==='global'||section==='china'){
@@ -1770,48 +1814,31 @@ function renderMarket(market){
     if(row.btvPerMarket){
       // Read-only — live-pulled straight from the BTV Management Calendar (same
       // Supabase-synced localStorage key, shared cross-iframe), scoped to this market only.
-      WEEKS.forEach(w=>{
-        const matches=getBtvEntriesForSectionsWeek(row.btvSections,w.n,[market]);
-        let chips='';
-        matches.forEach(({section,entry})=>{
-          const title=btvEntryTitle(entry);
-          if(F.search && !title.toLowerCase().includes(F.search.toLowerCase())) return;
-          const cid=_cacheBtvCard(section,entry);
-          const pubStatus=btvGetEntryStatus(entry,section);
-          // Launch entries (global/china) open the linesheet product-detail view; restocks
-          // and store-openings have no linesheet-product concept, so they keep the read-only
-          // reference-card modal.
-          const isLaunch=(section==='global'||section==='china');
-          chips+=buildRichCard({
-            date:btvEntryDateLabel(section,entry)||weekStartDateLabel(w.n),
-            title,summary:btvEntrySummary(section,entry),
-            hoverText:btvEntryHoverText(section,entry),
-            badgeLabel:pubStatus==='published'?'Published':'Draft',
-            badgeClass:pubStatus==='published'?'s-published':'s-draft',
-            accentMkt:market,
-            onclick:isLaunch?`btvShowLaunchDetail('${esc(entry.id)}');event.stopPropagation();`:`openBtvCardModal('${esc(cid)}');event.stopPropagation();`
+      // Rendered as the same full summary card Product Calendar Input itself shows inline.
+      if(!F.markets.size || F.markets.has(market)){
+        WEEKS.forEach(w=>{
+          const matches=getBtvEntriesForSectionsWeek(row.btvSections,w.n,[market]);
+          let cards='';
+          matches.forEach(({section,entry})=>{
+            const title=btvEntryTitle(entry);
+            if(F.search && !title.toLowerCase().includes(F.search.toLowerCase())) return;
+            const cid=_cacheBtvCard(section,entry);
+            // Launch entries (global/china) open the linesheet product-detail view; restocks
+            // and store-openings have no linesheet-product concept, so they keep the read-only
+            // reference-card modal.
+            const isLaunch=(section==='global'||section==='china');
+            const onClick=isLaunch?`btvShowLaunchDetail('${esc(entry.id)}')`:`openBtvCardModal('${esc(cid)}')`;
+            cards+=`<div class="btvcard-cell" onclick="${onClick};event.stopPropagation();">${btvRenderCard(section,entry)}</div>`;
           });
+          html+=`<td class="${gc} readonly btvcard-td">${cards}</td>`;
         });
-        html+=`<td class="${gc} readonly">${chips}</td>`;
-      });
+      } else {
+        WEEKS.forEach(w=>{ html+=`<td class="${gc} readonly"></td>`; });
+      }
     } else if(row.btvMarkdown){
-      // Read-only markdown/promo periods, pulled from Product Calendar Input's
-      // markdown data, scoped to markets that include this market (or have no
-      // market restriction set).
-      WEEKS.forEach(w=>{
-        const mds=getMarkdownEntriesForWeek(w.n,market);
-        let chips='';
-        mds.forEach(md=>{
-          if(F.search && !(md.title||'').toLowerCase().includes(F.search.toLowerCase())) return;
-          chips+=buildRichCard({
-            date:(md.startDate?formatDateWithDay(md.startDate):'')+(md.endDate?' – '+formatDateWithDay(md.endDate):''),
-            title:md.title||'Markdown',
-            summary:(md.markets&&md.markets.length)?md.markets.join(', '):'All Markets',
-            accentMkt:market
-          });
-        });
-        html+=`<td class="${gc} readonly">${chips}</td>`;
-      });
+      // Read-only markdown/promo periods, pulled from Product Calendar Input's markdown
+      // data, scoped to this market, rendered as multi-week colspan bars colour-coded by market.
+      html+=renderMarkdownSpanRow(buildMarkdownSpanGroups(market),gc);
     } else if(row.marketingRow){
       html+=renderMarketingRow(market,row,gc);
     } else if(SOCIAL_ROWS.has(row.key)){
@@ -1858,8 +1885,11 @@ function renderSpannableRow(market, row, gc){
         });
       });
     } else {
+      // Theme/Season, Key Moments and Public Holidays have no status (confirmed on entry) —
+      // colour by market instead of status for those rows.
+      const chipCls=e=>row.group==='context'?(MKT_CSS[market]||'c-ns'):statusClass(e.status);
       if(spanEntry&&matchesFilter(spanEntry)){
-        chips+=`<div class="chip ${statusClass(spanEntry.status)}" onclick="openEditModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();">
+        chips+=`<div class="chip ${chipCls(spanEntry)}" onclick="openEditModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();">
           <span class="date-tag">${esc(spanEntry.date?formatDateWithDay(spanEntry.date):weekStartDateLabel(w.n))}</span>
           <span class="span-tag">→Wk${spanEntry.weekEnd}</span>
           ${spanEntry._seeded?'<span class="seeded-tag">●</span>':''}
@@ -1868,7 +1898,7 @@ function renderSpannableRow(market, row, gc){
         </div>`;
       }
       starts.filter(e=>(!e.weekEnd||e.weekEnd<=e.week)&&matchesFilter(e)).forEach(e=>{
-        chips+=`<div class="chip ${statusClass(e.status)}" onclick="openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();" title="${esc(e.title)}">
+        chips+=`<div class="chip ${chipCls(e)}" onclick="openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();" title="${esc(e.title)}">
           <span class="date-tag">${esc(e.date?formatDateWithDay(e.date):weekStartDateLabel(w.n))}</span>
           ${e._seeded?'<span class="seeded-tag">●</span>':''}
           ${e.pillar?`<span class="pillar-tag">${esc(e.pillar)}</span>`:''}
@@ -2047,45 +2077,32 @@ function renderGlobal(){
   // ── FROM BTV CALENDAR section ──────────────────────────────────────────
   html+=`<tr class="group-row g-btvrow"><td class="row-head" colspan="${W+1}">From BTV Calendar (Reference Only)</td></tr>`;
 
+  // Markdown/promo periods — read-only, from Product Calendar Input's markdown data.
+  // Shown first (above Calendar/China/Restock/Store Opening), matching Product Calendar
+  // Input's own layout, as multi-week colspan bars colour-coded by market.
+  html+=`<tr class="g-btvrow"><td class="row-head g-btvrow">Markdown</td>${renderMarkdownSpanRow(buildMarkdownSpanGroups(null),'g-btvrow')}</tr>`;
+
   GLOBAL_BTV_ROWS.forEach(brow=>{
     html+=`<tr class="g-btvrow"><td class="row-head g-btvrow">${esc(brow.label)}</td>`;
     WEEKS.forEach(w=>{
-      const matches=getBtvEntriesForSectionsWeek(brow.sections,w.n,brow.mkts);
-      let chips='';
-      matches.forEach(({section,entry,_mkts})=>{
+      const matches=getBtvEntriesForSectionsWeek(brow.sections,w.n,brow.mkts)
+        .filter(({_mkts})=>!F.markets.size || _mkts.some(m=>F.markets.has(m)));
+      let cards='';
+      matches.forEach(({section,entry})=>{
         const title=btvEntryTitle(entry);
         if(F.search && !title.toLowerCase().includes(F.search.toLowerCase())) return;
         const cid=_cacheBtvCard(section,entry);
-        const isGlobalMkt=_mkts.length>1;
-        const cls=isGlobalMkt?'mkt-global':(MKT_CSS[_mkts[0]]||'c-ns');
-        const dateLabel=btvEntryDateLabel(section,entry)||weekStartDateLabel(w.n);
         // Launch entries (global/china) open the linesheet product-detail view; restocks
         // and store-openings have no linesheet-product concept, so they keep the read-only
         // reference-card modal.
         const isLaunch=(section==='global'||section==='china');
         const onClick=isLaunch?`btvShowLaunchDetail('${esc(entry.id)}')`:`openBtvCardModal('${esc(cid)}')`;
-        const hoverText=btvEntryHoverText(section,entry);
-        chips+=`<div class="chip ${cls}" onclick="${onClick};event.stopPropagation();" title="${esc(hoverText)}"><span class="date-tag">${esc(dateLabel)}</span><span class="country-tag">${esc(_mkts.join(', ')||'—')}</span>${esc(title)}</div>`;
+        cards+=`<div class="btvcard-cell" onclick="${onClick};event.stopPropagation();">${btvRenderCard(section,entry)}</div>`;
       });
-      html+=`<td class="g-btvrow readonly">${chips}</td>`;
+      html+=`<td class="g-btvrow readonly btvcard-td">${cards}</td>`;
     });
     html+=`</tr>`;
   });
-
-  // Markdown/promo periods — read-only, from Product Calendar Input's markdown data.
-  html+=`<tr class="g-btvrow"><td class="row-head g-btvrow">Markdown</td>`;
-  WEEKS.forEach(w=>{
-    const mds=getMarkdownEntriesForWeek(w.n,null);
-    let chips='';
-    mds.forEach(md=>{
-      if(F.search && !(md.title||'').toLowerCase().includes(F.search.toLowerCase())) return;
-      const mkts=(md.markets&&md.markets.length)?md.markets.join(', '):'All Markets';
-      const dateLabel=(md.startDate?formatDateWithDay(md.startDate):'')||weekStartDateLabel(w.n);
-      chips+=`<div class="chip mkt-global" title="${esc((md.title||'Markdown')+'\n'+mkts)}"><span class="date-tag">${esc(dateLabel)}</span><span class="country-tag">${esc(mkts)}</span>${esc(md.title||'Markdown')}</div>`;
-    });
-    html+=`<td class="g-btvrow readonly">${chips}</td>`;
-  });
-  html+=`</tr>`;
 
   // ── CREATIVE CALENDAR section ──────────────────────────────────────────
   html+=`<tr class="group-row g-activation"><td class="row-head" colspan="${W+1}">Creative Calendar</td></tr>`;
@@ -2207,6 +2224,9 @@ const EDM_ROWS=new Set(['edm']),KOL_ROWS=new Set(['seeding']),PROMO_ROWS=new Set
 // none of the content-production fields (pillar, EDM, brief, links, owner, status, week
 // numbers) apply to them.
 const SIMPLE_CONTEXT_ROWS=new Set(['key_moments','public_holidays']);
+// Theme/Season, Key Moments and Public Holidays are confirmed the moment they're entered —
+// there's no draft/approval workflow for them, so they never show a Status field or badge.
+const NO_STATUS_ROWS=new Set(['theme','key_moments','public_holidays']);
 
 function onRowChange(){
   const row=document.getElementById('fRow').value;
@@ -2217,6 +2237,7 @@ function onRowChange(){
   document.getElementById('fPromoWrap').classList.toggle('show',!isSimple&&PROMO_ROWS.has(row));
   document.getElementById('fPerfWrap').classList.toggle('show',!isSimple&&PERF_ROWS.has(row));
   document.getElementById('fCtxDateWrap').classList.toggle('show',isSimple);
+  document.getElementById('fStatusWrap').style.display=NO_STATUS_ROWS.has(row)?'none':'';
   ['fWeekRow','fDateStatusRow','fBriefWrap','fLinksWrap','fOwnerWrap'].forEach(function(id){
     var el=document.getElementById(id);
     if(el) el.style.display=isSimple?'none':'';
@@ -2318,7 +2339,7 @@ function saveEntry(){
     const brief=document.getElementById('fBrief').value.trim();
     const links=document.getElementById('fLinks').value.split('\n').map(l=>l.trim()).filter(Boolean);
     const owner=document.getElementById('fOwner').value.trim();
-    const status=document.getElementById('fStatus').value;
+    const status=NO_STATUS_ROWS.has(row)?'':document.getElementById('fStatus').value;
     let finalWeek=week; if(date){const wn=dateToWeekNum(date);if(wn>=1&&wn<=53)finalWeek=wn;}
     const finalWeekEnd=(weekEnd&&weekEnd>finalWeek)?weekEnd:null;
     fields={week:finalWeek,weekEnd:finalWeekEnd,date,pillar,edmMarket:edmM,edmType:edmT,kol,promo,perfObj,brief,links,owner,status};
