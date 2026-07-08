@@ -275,6 +275,34 @@
   }
 
   // ── Write interceptor — mirrors localStorage writes to Supabase ────────────
+  // Errors like "Timed out acquiring connection from connection pool" are usually
+  // momentary (the pool frees up within a second or two under concurrent load from
+  // multiple team members' open tabs) — retry a couple of times with backoff before
+  // surfacing the write-fail bar, instead of failing on the very first hiccup.
+  const _WRITE_RETRY_DELAYS_MS = [1000, 3000];
+
+  function _upsertAppState(key, parsed, now, attempt) {
+    return _sb.from('app_state')
+      .upsert(
+        { key, value: parsed, updated_at: now, updated_by: _userId },
+        { onConflict: 'key' }
+      )
+      .then(function (res) {
+        if (res.error) throw res.error;
+        _lastPullTimes[key] = now; // our own save — update baseline
+        _hideBar('btv-write-fail-bar'); // clear any previous failure
+      })
+      .catch(function (err) {
+        if (attempt < _WRITE_RETRY_DELAYS_MS.length) {
+          console.warn('[BTV Sync] Write failed (attempt ' + (attempt + 1) + '), retrying:', key, err.message || err);
+          return new Promise(function (resolve) {
+            setTimeout(resolve, _WRITE_RETRY_DELAYS_MS[attempt]);
+          }).then(function () { return _upsertAppState(key, parsed, now, attempt + 1); });
+        }
+        console.error('[BTV Sync] Write failed after retries:', key, err.message || err);
+        _showWriteFailure(key, err.message || 'Network error');
+      });
+  }
 
   function setupWriteInterceptor() {
     if (_interceptorInstalled) return;
@@ -286,24 +314,7 @@
       let parsed;
       try { parsed = JSON.parse(value); } catch (e) { parsed = value; }
       const now = new Date().toISOString();
-      _sb.from('app_state')
-        .upsert(
-          { key, value: parsed, updated_at: now, updated_by: _userId },
-          { onConflict: 'key' }
-        )
-        .then(function (res) {
-          if (res.error) {
-            console.error('[BTV Sync] Write failed:', key, res.error.message);
-            _showWriteFailure(key, res.error.message);
-          } else {
-            _lastPullTimes[key] = now; // our own save — update baseline
-            _hideBar('btv-write-fail-bar'); // clear any previous failure
-          }
-        })
-        .catch(function (err) {
-          console.error('[BTV Sync] Network error on write:', key, err);
-          _showWriteFailure(key, err.message || 'Network error');
-        });
+      _upsertAppState(key, parsed, now, 0);
     };
   }
 

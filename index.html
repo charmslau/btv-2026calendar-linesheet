@@ -721,12 +721,39 @@ html, body {
     btn.disabled     = true;
     btn.textContent  = 'Signing in…';
 
+    // Retry transient server-side failures (e.g. 502/503/504 during connection-pool
+    // pressure) — but never retry an actual wrong-password rejection.
+    async function _attemptSignIn(retriesLeft) {
+      try {
+        const res = await _sb.auth.signInWithPassword({ email, password: pwd });
+        const isTransient = res.error && (
+          [502, 503, 504].includes(res.error.status) ||
+          /timeout|fetch|network/i.test(res.error.message || '')
+        );
+        if (isTransient && retriesLeft > 0) {
+          btn.textContent = 'Server busy, retrying…';
+          await new Promise(function (resolve) { setTimeout(resolve, 1500); });
+          return _attemptSignIn(retriesLeft - 1);
+        }
+        return res;
+      } catch (ex) {
+        if (retriesLeft > 0) {
+          btn.textContent = 'Server busy, retrying…';
+          await new Promise(function (resolve) { setTimeout(resolve, 1500); });
+          return _attemptSignIn(retriesLeft - 1);
+        }
+        return { data: null, error: { message: ex.message || 'Network error — please try again.' } };
+      }
+    }
+
     try {
-      const { data, error } = await _sb.auth.signInWithPassword({ email, password: pwd });
+      const { data, error } = await _attemptSignIn(2);
       if (error) {
         err.textContent = error.message.includes('Invalid login credentials')
           ? 'Incorrect email or password. Please try again.'
-          : error.message;
+          : (error.message.includes('timeout') || error.message.includes('fetch')
+              ? 'The server is busy right now. Please wait a moment and try again.'
+              : error.message);
         pwdInp.value = '';
         pwdInp.focus();
         return;
@@ -750,6 +777,9 @@ html, body {
       document.getElementById('moduleLoginOverlay').classList.remove('show');
       showFrame(_loginFirst);
       _startSyncInCalFrame(data.session);
+    } catch (ex) {
+      console.error('[BTV Planner] Sign-in failed unexpectedly:', ex);
+      err.textContent = 'Something went wrong signing in. Please try again — if it keeps happening, let your admin know.';
     } finally {
       btn.disabled    = false;
       btn.textContent = 'Sign in';
