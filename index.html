@@ -722,12 +722,14 @@ html, body {
     btn.textContent  = 'Signing in…';
 
     // Retry transient server-side failures (e.g. 502/503/504 during connection-pool
-    // pressure) — but never retry an actual wrong-password rejection.
+    // pressure, or 404 when the auth route briefly drops during a project restart/
+    // resource crunch) — but never retry an actual wrong-password rejection (that's
+    // always a 400, never one of these codes).
     async function _attemptSignIn(retriesLeft) {
       try {
         const res = await _sb.auth.signInWithPassword({ email, password: pwd });
         const isTransient = res.error && (
-          [502, 503, 504].includes(res.error.status) ||
+          [404, 502, 503, 504].includes(res.error.status) ||
           /timeout|fetch|network/i.test(res.error.message || '')
         );
         if (isTransient && retriesLeft > 0) {

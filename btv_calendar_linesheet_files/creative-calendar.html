@@ -2511,39 +2511,51 @@ function btvShowLaunchDetail(entryId) {
   var allProducts = [];
   try { allProducts = JSON.parse(localStorage.getItem('btv_linesheet_products') || '[]'); } catch(ex) {}
 
-  // Collect product names from ALL sibling entries' lines array for name-based matching
-  var _btvLineKeys  = new Set(); // "normName|normColour" — exact pair when colour specified
-  var _btvLineNames = new Set(); // normName only — when colour unspecified, show all variants
+  var _btvNorm = function(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
+  // Calendar lines sometimes list several colourways in one field (e.g. "Navy, Terracotta")
+  // or use numeric placeholders ("1,2,3") when the colour isn't decided yet — split on commas
+  // and drop pure-numeric tokens so each real colourway is matched individually.
+  var _btvColourTokens = function(s) {
+    return String(s || '').split(',').map(_btvNorm).filter(function(t){ return t && !/^\d+$/.test(t); });
+  };
+
+  // Collect product name+colour keys from THIS launch's own lines — matched against ALL
+  // linesheet products globally (not just this entry's calEntryId), since the same product
+  // and colour can legitimately appear across several launches when different markets/
+  // countries launch it at different times.
+  var _btvLineKeys  = new Set(); // "normName|normColourToken" — one entry per colourway
+  var _btvLineNames = new Set(); // normName only — when no real colour specified, match any variant
   try {
     ['global','china'].forEach(function(sec) {
       Object.values(_btvCalSt[sec] || {}).forEach(function(wEntries) {
         (Array.isArray(wEntries) ? wEntries : []).forEach(function(e) {
           if (!_btvSibIds.has(e.id)) return;
           (e.lines || []).forEach(function(l) {
-            var nm  = (l.productName || l.productTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            var col = (l.colour || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            var nm = _btvNorm(l.productName || l.productTitle || '');
             if (!nm) return;
-            if (col) { _btvLineKeys.add(nm + '|' + col); } else { _btvLineNames.add(nm); }
+            var colTokens = _btvColourTokens(l.colour);
+            if (colTokens.length) { colTokens.forEach(function(t){ _btvLineKeys.add(nm + '|' + t); }); }
+            else { _btvLineNames.add(nm); }
           });
         });
       });
     });
   } catch(ex3) {}
 
-  var _btvNorm = function(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
   var _btvCalDate = calEntry ? (calEntry.launchDate || '') : '';
   var _btvSeen = new Set();
   var products = allProducts.filter(function(p) {
     if (_btvSeen.has(p.id)) return false;
     // 1. Explicit calEntryId link (any sibling market entry for this launch)
     if (p.calEntryId && _btvSibIds.has(p.calEntryId)) { _btvSeen.add(p.id); return true; }
-    // 2. Match by productName + colour (unique product per user spec); name-only shows all variants
+    // 2. Match by productName + colour (the product's own colour may itself be comma-joined,
+    //    so check each of its colourway tokens too), or by name only when unspecified.
     if (_btvLineKeys.size > 0 || _btvLineNames.size > 0) {
       var pn = _btvNorm(p.name);
-      var pv = _btvNorm(p.variant || '');
-      if (pn && _btvLineKeys.has(pn + '|' + pv)) { _btvSeen.add(p.id); return true; }
+      var pvTokens = _btvColourTokens(p.variant);
       if (pn && _btvLineNames.has(pn)) { _btvSeen.add(p.id); return true; }
-      if (pn && !pv) {
+      if (pn && pvTokens.length && pvTokens.some(function(t){ return _btvLineKeys.has(pn + '|' + t); })) { _btvSeen.add(p.id); return true; }
+      if (pn && !pvTokens.length) {
         var _pfx = pn + '|'; var _hit = false;
         _btvLineKeys.forEach(function(k){ if (!_hit && k.substring(0,_pfx.length)===_pfx) _hit=true; });
         if (_hit) { _btvSeen.add(p.id); return true; }
