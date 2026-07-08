@@ -705,6 +705,7 @@ const ROW_DEFS=[
   {key:'p_launch',  label:'Launch',         group:'product', btvPerMarket:true, btvSections:['global','china']},
   {key:'p_restock', label:'Restock',        group:'product', btvPerMarket:true, btvSections:['restocks']},
   {key:'p_store',   label:'Store Opening',  group:'product', btvPerMarket:true, btvSections:['store_openings']},
+  {key:'p_markdown',label:'Markdown',       group:'product', btvMarkdown:true},
   {key:'Brand Events',         label:'Brand Events',         group:'marketing', marketingRow:true},
   {key:'Community Activation', label:'Community Activation', group:'marketing', marketingRow:true},
   {key:'Retail Events',        label:'Retail Activation',    group:'marketing', marketingRow:true},
@@ -797,6 +798,56 @@ function btvEntryDateLabel(section,entry){
   if(section==='restocks') return entry.etaISO?('ETA '+formatDateWithDay(entry.etaISO)):(entry.eta?('ETA '+entry.eta):'');
   if(section==='store_openings') return entry.targetOpenDate?('Target '+formatDateWithDay(entry.targetOpenDate)):'';
   return '';
+}
+// Full category-grouped product breakdown (name, colour, RRP) matching Product Calendar
+// Input's card format — used as hover-tooltip text since chips here are too small to show
+// this inline. Plain text only (native title attribute), grouped/sorted by category.
+function btvEntryProductSummaryText(section,entry){
+  if(section!=='global' && section!=='china') return '';
+  const grouped={};
+  (entry.lines||[]).forEach(line=>{
+    if(!(line.category||line.productName||line.colour||line.size||line.price)) return;
+    const cat=line.category||'(Uncategorized)';
+    (grouped[cat]=grouped[cat]||[]).push(line);
+  });
+  const parts=[];
+  Object.keys(grouped).sort().forEach(cat=>{
+    parts.push(cat.toUpperCase());
+    grouped[cat].forEach(line=>{
+      const bits=[line.productName||'(unnamed)'];
+      if(line.colour) bits.push(line.colour);
+      if(line.price) bits.push('$'+line.price);
+      parts.push('  '+bits.join(' — '));
+    });
+  });
+  return parts.join('\n');
+}
+// Hover-tooltip text for a BTV reference chip/card: title plus the full product breakdown
+// (when available) so users can see category/name/colour/RRP without opening the popup.
+function btvEntryHoverText(section,entry){
+  const title=btvEntryTitle(entry);
+  const productSummary=btvEntryProductSummaryText(section,entry);
+  return productSummary?(title+'\n\n'+productSummary):title;
+}
+
+// ── Markdown/promo periods bridge — read-only, from Product Calendar Input's markdown data ──
+function loadBtvMarkdownState(){
+  try { return JSON.parse(localStorage.getItem(BTV_CAL_STORAGE_KEY.replace('working-v5','markdown-bars-v1')))||{}; }
+  catch(e){ return {}; }
+}
+// Returns markdown entries whose date range covers week `wn`, optionally scoped to `market`
+// (entries with no markets selected are treated as applying to every market).
+function getMarkdownEntriesForWeek(wn,market){
+  const mdState=loadBtvMarkdownState();
+  const out=[];
+  Object.values(mdState).forEach(md=>{
+    if(!md||!md.startDate||!md.endDate) return;
+    const startWn=dateToWeekNum(md.startDate), endWn=dateToWeekNum(md.endDate);
+    if(!startWn||!endWn||wn<startWn||wn>endWn) return;
+    if(market && (md.markets||[]).length && !md.markets.includes(market)) return;
+    out.push(md);
+  });
+  return out;
 }
 function btvEntrySummary(section,entry){
   if(section==='global'||section==='china'){
@@ -1552,12 +1603,14 @@ function formatDateWithDay(iso){ if(!iso)return''; const d=new Date(iso+'T00:00:
 function weekStartDateLabel(wn){ const w=WEEKS[wn-1]; if(!w)return''; return formatDateWithDay(w.startDate.toISOString().slice(0,10)); }
 function mktAccentClass(mkt){ return 'mkt-accent-'+(mkt?mkt.toLowerCase():'global'); }
 // Shared rich-card renderer — date + title + summary + badge, visible without opening the popup.
-// opts: {date, title, summary, badgeLabel, badgeClass, accentMkt, onclick}
+// opts: {date, title, summary, badgeLabel, badgeClass, accentMkt, onclick, hoverText}
+// hoverText overrides the native title-attribute tooltip only (visible title/summary unchanged) —
+// used to surface the full category-grouped product breakdown on hover for BTV launch entries.
 function buildRichCard(opts){
   const dateLine=opts.date?`<div class="rcard-date">${esc(opts.date)}</div>`:'';
   const summaryLine=opts.summary?`<div class="rcard-summary">${esc(opts.summary)}</div>`:'';
   const badge=opts.badgeLabel?`<span class="rcard-badge ${opts.badgeClass||''}">${esc(opts.badgeLabel)}</span>`:'';
-  return `<div class="rcard ${mktAccentClass(opts.accentMkt)}"${opts.onclick?` onclick="${opts.onclick}"`:''} title="${esc(opts.title||'')}">
+  return `<div class="rcard ${mktAccentClass(opts.accentMkt)}"${opts.onclick?` onclick="${opts.onclick}"`:''} title="${esc(opts.hoverText||opts.title||'')}">
     ${dateLine}
     <div class="rcard-title">${esc(opts.title||'')}</div>
     ${summaryLine}
@@ -1701,10 +1754,29 @@ function renderMarket(market){
           chips+=buildRichCard({
             date:btvEntryDateLabel(section,entry)||weekStartDateLabel(w.n),
             title,summary:btvEntrySummary(section,entry),
+            hoverText:btvEntryHoverText(section,entry),
             badgeLabel:pubStatus==='published'?'Published':'Draft',
             badgeClass:pubStatus==='published'?'s-published':'s-draft',
             accentMkt:market,
             onclick:isLaunch?`btvShowLaunchDetail('${esc(entry.id)}');event.stopPropagation();`:`openBtvCardModal('${esc(cid)}');event.stopPropagation();`
+          });
+        });
+        html+=`<td class="${gc} readonly">${chips}</td>`;
+      });
+    } else if(row.btvMarkdown){
+      // Read-only markdown/promo periods, pulled from Product Calendar Input's
+      // markdown data, scoped to markets that include this market (or have no
+      // market restriction set).
+      WEEKS.forEach(w=>{
+        const mds=getMarkdownEntriesForWeek(w.n,market);
+        let chips='';
+        mds.forEach(md=>{
+          if(F.search && !(md.title||'').toLowerCase().includes(F.search.toLowerCase())) return;
+          chips+=buildRichCard({
+            date:(md.startDate?formatDateWithDay(md.startDate):'')+(md.endDate?' – '+formatDateWithDay(md.endDate):''),
+            title:md.title||'Markdown',
+            summary:(md.markets&&md.markets.length)?md.markets.join(', '):'All Markets',
+            accentMkt:market
           });
         });
         html+=`<td class="${gc} readonly">${chips}</td>`;
@@ -1922,12 +1994,28 @@ function renderGlobal(){
         // reference-card modal.
         const isLaunch=(section==='global'||section==='china');
         const onClick=isLaunch?`btvShowLaunchDetail('${esc(entry.id)}')`:`openBtvCardModal('${esc(cid)}')`;
-        chips+=`<div class="chip ${cls}" onclick="${onClick};event.stopPropagation();" title="${esc(title)}"><span class="date-tag">${esc(dateLabel)}</span><span class="country-tag">${esc(_mkts.join(', ')||'—')}</span>${esc(title)}</div>`;
+        const hoverText=btvEntryHoverText(section,entry);
+        chips+=`<div class="chip ${cls}" onclick="${onClick};event.stopPropagation();" title="${esc(hoverText)}"><span class="date-tag">${esc(dateLabel)}</span><span class="country-tag">${esc(_mkts.join(', ')||'—')}</span>${esc(title)}</div>`;
       });
       html+=`<td class="g-btvrow readonly">${chips}</td>`;
     });
     html+=`</tr>`;
   });
+
+  // Markdown/promo periods — read-only, from Product Calendar Input's markdown data.
+  html+=`<tr class="g-btvrow"><td class="row-head g-btvrow">Markdown</td>`;
+  WEEKS.forEach(w=>{
+    const mds=getMarkdownEntriesForWeek(w.n,null);
+    let chips='';
+    mds.forEach(md=>{
+      if(F.search && !(md.title||'').toLowerCase().includes(F.search.toLowerCase())) return;
+      const mkts=(md.markets&&md.markets.length)?md.markets.join(', '):'All Markets';
+      const dateLabel=(md.startDate?formatDateWithDay(md.startDate):'')||weekStartDateLabel(w.n);
+      chips+=`<div class="chip mkt-global" title="${esc((md.title||'Markdown')+'\n'+mkts)}"><span class="date-tag">${esc(dateLabel)}</span><span class="country-tag">${esc(mkts)}</span>${esc(md.title||'Markdown')}</div>`;
+    });
+    html+=`<td class="g-btvrow readonly">${chips}</td>`;
+  });
+  html+=`</tr>`;
 
   // ── CREATIVE CALENDAR section ──────────────────────────────────────────
   html+=`<tr class="group-row g-activation"><td class="row-head" colspan="${W+1}">Creative Calendar</td></tr>`;
@@ -2201,6 +2289,9 @@ function btvShowLaunchDetail(entryId) {
     s.id = 'btvLDStyles';
     s.textContent = [
       '.btv-ld-card{background:#fff;border-radius:14px;border:1px solid #e8e2d8;padding:24px 20px;margin-bottom:18px}',
+      '.btv-ld-card.btv-ld-notready{border-color:#e0a89c;border-left:5px solid #c0392b}',
+      '.btv-ld-notready-banner{display:flex;align-items:center;gap:8px;background:#fdecea;color:#a23a2f;border:1px solid #f3b7ae;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;letter-spacing:.02em;margin-bottom:16px}',
+      '.btv-ld-ready-banner{display:flex;align-items:center;gap:8px;background:#e6f6ec;color:#1a7f3a;border:1px solid #b5dfc5;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;letter-spacing:.02em;margin-bottom:16px}',
       '.btv-ld-grid{display:grid;grid-template-columns:120px 1fr 260px;gap:20px;align-items:start}',
       '.btv-ld-imgs{display:flex;flex-direction:column;gap:10px}',
       '.btv-ld-imgwrap{width:110px;height:110px;border-radius:10px;overflow:hidden;border:1px solid #e0dbd2;background:#f5f3ef;display:flex;align-items:center;justify-content:center}',
@@ -2355,13 +2446,54 @@ function btvShowLaunchDetail(entryId) {
       + '</tbody></table>';
   }
 
+  function isFullyApproved(p) {
+    return !!(p.approvedDesigner && p.approvedSC && p.approvedMerch);
+  }
+
   function approvalRow(p) {
     var d = p.approvedDesigner ? '<span class="btv-ld-appr">D</span>' : '<span class="btv-ld-appgrey">D</span>';
     var s = p.approvedSC       ? '<span class="btv-ld-appr">SC</span>' : '<span class="btv-ld-appgrey">SC</span>';
     var m = p.approvedMerch    ? '<span class="btv-ld-appr">M</span>' : '<span class="btv-ld-appgrey">M</span>';
-    var all = p.approvedDesigner && p.approvedSC && p.approvedMerch;
+    var all = isFullyApproved(p);
     var badge = all ? '<span class="btv-ld-badgeok">&#10003; Approved</span>' : '<span class="btv-ld-badgepend">Pending</span>';
     return '<div class="btv-ld-approval">' + d + ' / ' + s + ' / ' + m + ' ' + badge + '</div>';
+  }
+
+  // Big, impossible-to-miss banner at the TOP of each card so viewers immediately know
+  // whether this product's linesheet entry is actually finished, without reading the
+  // small D/SC/M breakdown further down.
+  function notReadyBanner(p) {
+    if (isFullyApproved(p)) {
+      return '<div class="btv-ld-ready-banner">&#10003; Approved — ready for linesheet</div>';
+    }
+    var missing = [];
+    if (!p.approvedDesigner) missing.push('Designer');
+    if (!p.approvedSC) missing.push('SC');
+    if (!p.approvedMerch) missing.push('Merch');
+    return '<div class="btv-ld-notready-banner">&#9888; NOT READY — awaiting approval from ' + x(missing.join(', ')) + '</div>';
+  }
+
+  // Renders the measurement matrix (as entered in the linesheet's own input table) rather
+  // than the flattened text summary — same columns: Measurement Point, Inch/CM per size,
+  // Tolerance.
+  function measurementTableHtml(p) {
+    var matrix = p.measurementMatrix;
+    if (!matrix || !matrix.length) return '';
+    var sizes = ['XS','S','M','L','XL','XXL'];
+    var header = '<tr><th class="btv-ld-skth">Measurement Point</th>'
+      + sizes.map(function(sz){ return '<th class="btv-ld-skth" colspan="2">' + sz + '</th>'; }).join('')
+      + '<th class="btv-ld-skth">Tolerance</th></tr>'
+      + '<tr><th class="btv-ld-skth"></th>'
+      + sizes.map(function(){ return '<th class="btv-ld-skth">In</th><th class="btv-ld-skth">Cm</th>'; }).join('')
+      + '<th class="btv-ld-skth"></th></tr>';
+    var rows = matrix.map(function(row) {
+      var cells = sizes.map(function(sz) {
+        var v = (row.values && row.values[sz]) || {};
+        return '<td class="btv-ld-skcell btv-ld-sknum">' + x(v.inch || '—') + '</td><td class="btv-ld-skcell btv-ld-sknum">' + x(v.cm || '—') + '</td>';
+      }).join('');
+      return '<tr><td class="btv-ld-skcell">' + x(row.label || '') + '</td>' + cells + '<td class="btv-ld-skcell">' + x(row.tolerance || '—') + '</td></tr>';
+    }).join('');
+    return '<table class="btv-ld-sktable" style="margin-top:4px">' + header + rows + '</table>';
   }
 
   var html = products.map(function(p) {
@@ -2375,7 +2507,9 @@ function btvShowLaunchDetail(entryId) {
       return '<div class="btv-ld-imgwrap btv-ld-imgblank"><span>' + alt + '</span></div>';
     }
 
-    return '<div class="btv-ld-card"><div class="btv-ld-grid">'
+    return '<div class="btv-ld-card' + (isFullyApproved(p) ? '' : ' btv-ld-notready') + '">'
+      + notReadyBanner(p)
+      + '<div class="btv-ld-grid">'
       // ── Images ──
       + '<div class="btv-ld-imgs">' + img(p.productImg,'Product') + img(p.lookbookImg,'Lookbook') + '</div>'
       // ── Info ──
@@ -2392,7 +2526,9 @@ function btvShowLaunchDetail(entryId) {
           + fld('WEIGHT', p.weightGrams ? p.weightGrams + 'g' : '')
           + fld('FABRIC', p.fabric)
           + (p.washcare ? '<div class="btv-ld-field"><span class="btv-ld-label">WASHCARE:</span> <span style="white-space:pre-line">' + x(p.washcare) + '</span></div>' : fld('WASHCARE',''))
-          + fld('MEASUREMENTS', p.measurementSummary, true)
+          + (p.measurementMatrix && p.measurementMatrix.length
+              ? '<div class="btv-ld-field"><span class="btv-ld-label">MEASUREMENTS:</span></div>' + measurementTableHtml(p)
+              : fld('MEASUREMENTS', p.measurementSummary, true))
           + fld('DESCRIPTION', p.description, true)
         + '</div>'
         + '<div class="btv-ld-ph">Pricing / Details</div>'

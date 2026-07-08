@@ -3085,9 +3085,9 @@ body.btv-dashboard-mode #quarterGroup{display:none!important}
 
     <button class="tab-btn" id="dashboardTabBtn" type="button">KPI Dashboard</button>
 
-    <button class="tab-btn" id="globalMarketingTabBtn" type="button">Global Marketing Calendar</button>
+    <button class="tab-btn" id="globalMarketingTabBtn" type="button" style="display:none">Global Marketing Calendar</button>
 
-    <button class="tab-btn" id="marketMarketingTabBtn" type="button">Market Marketing Calendar</button>
+    <button class="tab-btn" id="marketMarketingTabBtn" type="button" style="display:none">Market Marketing Calendar</button>
 
     <button class="tab-btn" id="launchListTabBtn" type="button">Launch List</button>
 
@@ -7279,6 +7279,7 @@ function btvToggleMarketFilter(mkt){
   }
   render();
 }
+window.btvToggleMarketFilter = btvToggleMarketFilter;
 
 function entryMatchesMarketFilter(section, entry){
   if(btvMarketFilter.size === 0) return true;
