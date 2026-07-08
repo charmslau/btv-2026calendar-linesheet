@@ -183,8 +183,9 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
 .rcard:hover{z-index:15;box-shadow:0 10px 28px rgba(0,0,0,.16);transform:translateY(-1px)}
 .rcard-date{font-size:10px;font-weight:700;color:var(--muted);margin-bottom:2px;line-height:1.1}
 .rcard-title{font-size:12px;font-weight:700;line-height:1.25;margin-bottom:4px;color:var(--text);word-break:break-word}
-.rcard-summary{font-size:10.5px;color:#555;line-height:1.4;margin-bottom:5px;word-break:break-word;
+.rcard-summary{font-size:10.5px;color:#555;line-height:1.5;margin-bottom:5px;word-break:break-word;
   display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.rcard-summary b{color:#8a7a5c;font-weight:700}
 .rcard-info{font-size:9.5px;color:var(--muted);line-height:1.3;margin-top:2px}
 .rcard-info b{color:#777;font-weight:700}
 .rcard-badge{display:inline-block;margin-top:5px;padding:2px 8px;border-radius:20px;font-size:9px;
@@ -773,7 +774,15 @@ const BTV_MARKETS_ALL=['CN','ID','JP','PH','SG','TH'];
 const BTV_REF_SECTIONS=['global','china','restocks','store_openings'];
 
 function loadBtvCalState(){ try{ return JSON.parse(localStorage.getItem(BTV_CAL_STORAGE_KEY))||{}; }catch(e){ return {}; } }
+// weekIdForWeekNum intentionally keeps .toISOString() (which shifts to the PREVIOUS calendar
+// day in UTC+ timezones like SG/TH/ID/PH/JP/CN) — it must match Product Calendar Input's own
+// weekId generation (calendar.html's buildWeeks) exactly, since it's used as a lookup key into
+// that file's already-stored, Supabase-synced state. Changing it would silently break every
+// existing entry's lookup. Do not "fix" this without also migrating stored weekId keys.
 function weekIdForWeekNum(wn){ const w=WEEKS[wn-1]; return w?w.startDate.toISOString().slice(0,10):''; }
+// Local-timezone-safe ISO date string (no UTC shift) — use this for any DISPLAY LABEL or
+// date-input PREFILL value, never for storage keys that must match weekIdForWeekNum above.
+function toLocalISODate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function btvGetEntryStatus(entry,section){ if(entry&&entry.workflowStatus) return entry.workflowStatus; return (section==='global'||section==='china')?'published':'draft'; }
 function btvCountItems(str){ return String(str||'').split(/[,;]/).map(s=>s.trim()).filter(Boolean).length; }
 function btvCountEntrySkus(entry){ return (entry.lines||[]).reduce((sum,line)=>sum+btvCountItems(line&&line.colour),0); }
@@ -1494,60 +1503,73 @@ function exportMarketingEntry(){
   if(!ev.title){ ccToast('Please enter a title before exporting.'); return; }
   const crumb=exportBreadcrumb(ev.startDateISO,ev.market);
   const dateLine=ev.startDateISO?formatDateFull(ev.startDateISO)+(ev.endDateISO?' – '+formatDateFull(ev.endDateISO):''):'';
-  const metaRows=[
-    ['Date',dateLine],['Time',ev.time],['Market',ev.market],
-    ['Store',ev.store],['No. of Guests',ev.guests],
-  ].filter(r=>r[1]);
-  const section=(label,text)=>{ const html=bulletListHtml(text); return html?('<h2>'+esc(label)+'</h2>'+html):''; };
-  const sideCards=(ev.images||[]).map(img=>{
-    const head=img.title?('<div class="ref-card-head">'+esc(img.title)+'</div>'):'';
-    const notes=bulletListHtml(img.notes)||'<ul></ul>';
-    return '<div class="ref-card">'+head+'<div class="ref-card-body">'+notes+
-      '<div class="ref-card-img"><img src="'+esc(img.url)+'"></div></div></div>';
+  const isLive=ev.status==='published';
+  const statusBadge=`<span class="export-status ${isLive?'live':'draft'}">${isLive?'LIVE':'DRAFT'}</span>`;
+  // Every field renders the same way — bold uppercase label, plain text (or bullets) below —
+  // matching the reference layout instead of mixing plain meta-lines with h2 sections.
+  const field=(label,text,bulleted)=>{
+    if(!text) return '';
+    const body=bulleted?bulletListHtml(text):('<p>'+esc(text).replace(/\n/g,'<br>')+'</p>');
+    return '<div class="export-field"><h2>'+esc(label)+'</h2>'+body+'</div>';
+  };
+  const fieldsHtml=[
+    field('Date',dateLine,false),
+    field('Time',ev.time,false),
+    field('Market',ev.market,false),
+    field('Stores',ev.store,false),
+    field('No. of Guests',ev.guests,false),
+    field('Objectives',ev.objective,false),
+    field('Target Audience',ev.targetAudience,false),
+    field('Event Rundown',ev.eventRundown,true),
+    field('Communication',ev.comms,false),
+    field('Mechanics',ev.mechanics,true),
+    field('T&Cs',ev.tnc,true),
+  ].join('');
+  // Uploaded images render clean — no card background, border or shadow around them.
+  const sideImages=(ev.images||[]).map(img=>{
+    const caption=img.title?('<div class="export-img-caption">'+esc(img.title)+'</div>'):'';
+    return '<div class="export-img-wrap"><img src="'+esc(img.url)+'">'+caption+'</div>';
   }).join('');
   const footerBits=[
     ev.owner?('Owner / Creator: '+esc(ev.owner)):'',
-    ev.status?('Status: '+esc(ev.status)):'',
     (ev.links&&ev.links.length)?('Links: '+ev.links.map(esc).join(', ')):'',
   ].filter(Boolean);
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(ev.title)}</title>
 <style>
 *{box-sizing:border-box}
-body{font-family:'Everett','Helvetica Neue',Helvetica,Arial,sans-serif;margin:0;padding:36px 40px;color:#111;background:#fff}
-.export-crumb{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#888;margin-bottom:6px}
-h1{font-size:26px;font-weight:700;margin:0 0 22px;line-height:1.2}
-.export-grid{display:flex;gap:32px;align-items:flex-start}
-.export-main{flex:1.3;min-width:0}
-.export-side{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
-.meta-line{font-size:13px;margin-bottom:4px}
-.meta-line b{font-weight:700}
-h2{font-size:13px;font-weight:700;margin:16px 0 6px}
-.export-main ul{margin:0;padding-left:18px;font-size:12.5px;line-height:1.55}
-.export-main li{margin-bottom:3px}
-.export-footer{margin-top:20px;padding-top:10px;border-top:1px solid #eee;font-size:10.5px;color:#888}
-.ref-card{background:linear-gradient(160deg,#1c2b4a 0%,#0c1326 100%);border-radius:14px;overflow:hidden;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.25)}
-.ref-card-head{background:linear-gradient(120deg,#7a1f1f,#3d0e0e);padding:10px 14px;font-weight:700;font-size:13px}
-.ref-card-body{display:flex;gap:10px;padding:12px 14px;align-items:stretch}
-.ref-card-body ul{flex:1;margin:0;padding-left:14px;font-size:10px;line-height:1.45;color:#fff}
-.ref-card-img{flex:1;border-radius:8px;overflow:hidden;min-height:90px}
-.ref-card-img img{width:100%;height:100%;object-fit:cover;display:block}
+body{font-family:'Everett','Helvetica Neue',Helvetica,Arial,sans-serif;margin:0;padding:40px 44px;color:#111;background:#fff}
+.export-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.export-crumb{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#888}
+.export-status{display:inline-block;padding:4px 16px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff}
+.export-status.live{background:#3ba55d}
+.export-status.draft{background:#999}
+h1{font-size:28px;font-weight:600;margin:0 0 24px;line-height:1.2}
+.export-grid{display:flex;gap:40px;align-items:flex-start}
+.export-main{flex:1.2;min-width:0}
+.export-side{flex:1;min-width:0}
+.export-field{margin-bottom:16px}
+.export-field h2{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#555;margin:0 0 4px}
+.export-field p{margin:0;font-size:13px;line-height:1.5;color:#222}
+.export-field ul{margin:0;padding-left:16px;font-size:13px;line-height:1.5;color:#222}
+.export-field li{margin-bottom:3px}
+.export-footer{margin-top:24px;padding-top:12px;border-top:1px solid #eee;font-size:10.5px;color:#888}
+.export-img-wrap{margin-bottom:18px}
+.export-img-wrap img{width:100%;display:block}
+.export-img-caption{font-size:11px;color:#888;margin-top:6px}
 @media print{ body{padding:18px} }
 </style>
 </head><body>
-<div class="export-crumb">${esc(crumb)}</div>
+<div class="export-top">
+  <div class="export-crumb">${esc(crumb)}</div>
+  ${statusBadge}
+</div>
 <h1>${esc(ev.title)}</h1>
 <div class="export-grid">
   <div class="export-main">
-    ${metaRows.map(r=>'<div class="meta-line"><b>'+esc(r[0])+':</b> '+esc(r[1])+'</div>').join('')}
-    ${section('Objective',ev.objective)}
-    ${section('Target Audience',ev.targetAudience)}
-    ${section('Event Rundown',ev.eventRundown)}
-    ${section('Mechanics',ev.mechanics)}
-    ${section('Comms',ev.comms)}
-    ${section('Terms & Conditions',ev.tnc)}
+    ${fieldsHtml}
     ${footerBits.length?('<div class="export-footer">'+footerBits.join(' &nbsp;·&nbsp; ')+'</div>'):''}
   </div>
-  ${sideCards?('<div class="export-side">'+sideCards+'</div>'):''}
+  <div class="export-side">${sideImages}</div>
 </div>
 </body></html>`;
   _btvDownload((ev.title||'event').replace(/[^a-z0-9\-_]+/gi,'_')+'.html',html,'text/html;charset=utf-8');
@@ -1674,8 +1696,8 @@ function formatDate(iso){ if(!iso)return''; const d=new Date(iso+'T00:00:00'),Mo
 // "24 May (Fri)" — matches the BTV Management Calendar's date+day-of-week card format.
 function formatDateWithDay(iso){ if(!iso)return''; const d=new Date(iso+'T00:00:00'); return formatDate(iso)+' ('+d.toLocaleDateString('en-US',{weekday:'short'})+')'; }
 // Falls back to the Monday of a given week number when no specific date is set.
-function weekStartDateLabel(wn){ const w=WEEKS[wn-1]; if(!w)return''; return formatDateWithDay(w.startDate.toISOString().slice(0,10)); }
-function weekNumToISO(wn){ const w=WEEKS[wn-1]; return w?w.startDate.toISOString().slice(0,10):''; }
+function weekStartDateLabel(wn){ const w=WEEKS[wn-1]; if(!w)return''; return formatDateWithDay(toLocalISODate(w.startDate)); }
+function weekNumToISO(wn){ const w=WEEKS[wn-1]; return w?toLocalISODate(w.startDate):''; }
 function mktAccentClass(mkt){ return 'mkt-accent-'+(mkt?mkt.toLowerCase():'global'); }
 // Shared rich-card renderer — date + title + summary + badge, visible without opening the popup.
 // opts: {date, title, summary, badgeLabel, badgeClass, accentMkt, onclick, hoverText}
@@ -1683,7 +1705,10 @@ function mktAccentClass(mkt){ return 'mkt-accent-'+(mkt?mkt.toLowerCase():'globa
 // used to surface the full category-grouped product breakdown on hover for BTV launch entries.
 function buildRichCard(opts){
   const dateLine=opts.date?`<div class="rcard-date">${esc(opts.date)}</div>`:'';
-  const summaryLine=opts.summary?`<div class="rcard-summary">${esc(opts.summary)}</div>`:'';
+  // summaryHtml is pre-built, already-escaped labeled HTML (see commEntrySummaryHtml) — used
+  // in preference to the plain-text summary so multi-field entries render as readable lines
+  // instead of one lumped paragraph.
+  const summaryLine=opts.summaryHtml?`<div class="rcard-summary">${opts.summaryHtml}</div>`:(opts.summary?`<div class="rcard-summary">${esc(opts.summary)}</div>`:'');
   const badge=opts.badgeLabel?`<span class="rcard-badge ${opts.badgeClass||''}">${esc(opts.badgeLabel)}</span>`:'';
   return `<div class="rcard ${mktAccentClass(opts.accentMkt)}"${opts.onclick?` onclick="${opts.onclick}"`:''} title="${esc(opts.hoverText||opts.title||'')}">
     ${dateLine}
@@ -1691,6 +1716,30 @@ function buildRichCard(opts){
     ${summaryLine}
     ${badge}
   </div>`;
+}
+// Structured field list for a Communication-group entry (EDM/Media OOH/In-Mall/etc) — labels
+// each collected field individually instead of dumping the raw brief text as one paragraph.
+function commEntryFieldLines(row,e){
+  const lines=[];
+  if(EDM_ROWS.has(row)){
+    if(e.edmMarket) lines.push(['Market',e.edmMarket]);
+    if(e.edmType) lines.push(['Type',e.edmType]);
+  }
+  if(PERF_ROWS.has(row)&&e.perfObj) lines.push(['Objective',e.perfObj]);
+  if(e.brief) lines.push(['Brief',e.brief]);
+  if(e.owner) lines.push(['Owner',e.owner]);
+  if(e.links&&e.links.length) lines.push(['Links',e.links.join(', ')]);
+  return lines;
+}
+// Labeled HTML for the inline card (each field on its own line, values escaped individually).
+function commEntrySummaryHtml(row,e){
+  return commEntryFieldLines(row,e).map(function(l){ return '<b>'+esc(l[0])+':</b> '+esc(l[1]); }).join('<br>');
+}
+// Full plain-text version (incl. title) for the native hover tooltip — same labeled fields,
+// nothing truncated, so hovering shows everything the card's clamp cuts off.
+function commEntryHoverText(row,e){
+  const lines=commEntryFieldLines(row,e).map(function(l){ return l[0]+': '+l[1]; });
+  return [e.title].concat(lines).join('\n');
 }
 // "Tuesday, 2 June 2026" — full date for the Marketing entry export header.
 function formatDateFull(iso){
@@ -1715,7 +1764,7 @@ function bulletListHtml(text){
 }
 function dateToWeekNum(iso){ if(!iso)return 0; const d=new Date(iso+'T00:00:00'),wk1=new Date(2025,11,29),n=Math.floor((d-wk1)/(7*86400000))+1; return(n>=1&&n<=53)?n:0; }
 function dayOfWeek(iso){ if(!iso)return -1; return(new Date(iso+'T00:00:00').getDay()+6)%7; }
-function isoForWeekDay(wn,di){ const w=WEEKS[wn-1];if(!w)return''; const d=new Date(w.startDate);d.setDate(d.getDate()+di);return d.toISOString().slice(0,10); }
+function isoForWeekDay(wn,di){ const w=WEEKS[wn-1];if(!w)return''; const d=new Date(w.startDate);d.setDate(d.getDate()+di);return toLocalISODate(d); }
 function dayLabel(wn,di){ const w=WEEKS[wn-1];if(!w)return''; const d=new Date(w.startDate);d.setDate(d.getDate()+di);return d.getDate(); }
 
 // ── Filter logic ──────────────────────────────────────────────────────────
@@ -1869,7 +1918,7 @@ function renderSpannableRow(market, row, gc){
       if(spanEntry&&matchesFilter(spanEntry)){
         chips+=buildRichCard({
           date:(spanEntry.date?formatDateWithDay(spanEntry.date):weekStartDateLabel(w.n))+' → Wk'+spanEntry.weekEnd,
-          title:spanEntry.title,summary:spanEntry.brief,
+          title:spanEntry.title,summaryHtml:commEntrySummaryHtml(row.key,spanEntry),hoverText:commEntryHoverText(row.key,spanEntry),
           badgeLabel:spanEntry.status,badgeClass:statusClass(spanEntry.status).replace('c-','s-'),
           accentMkt:market,
           onclick:`openEditModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();`
@@ -1878,7 +1927,7 @@ function renderSpannableRow(market, row, gc){
       starts.filter(e=>(!e.weekEnd||e.weekEnd<=e.week)&&matchesFilter(e)).forEach(e=>{
         chips+=buildRichCard({
           date:e.date?formatDateWithDay(e.date):weekStartDateLabel(w.n),
-          title:e.title,summary:e.brief,
+          title:e.title,summaryHtml:commEntrySummaryHtml(row.key,e),hoverText:commEntryHoverText(row.key,e),
           badgeLabel:e.status,badgeClass:statusClass(e.status).replace('c-','s-'),
           accentMkt:market,
           onclick:`openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();`

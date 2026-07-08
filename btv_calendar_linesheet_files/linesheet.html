@@ -12048,6 +12048,33 @@ async function saveProductGroup(){
 
   const variants = collectVariantData();
 
+  // Every colour must be unique for a given product name in the master data — otherwise
+  // launch-to-linesheet matching (by product name + colour) becomes ambiguous. Block save
+  // and ask the user to change the colour rather than silently creating a duplicate.
+  {
+    const _btvNormColour = c => (c || '').trim().toLowerCase();
+    const _btvSeenColours = new Set();
+    for (const v of variants) {
+      const c = _btvNormColour(v.variant);
+      if (!c) continue;
+      if (_btvSeenColours.has(c)) {
+        alert('The colour "' + v.variant.trim() + '" is entered more than once for this product. Please give each variant a unique colour.');
+        return;
+      }
+      _btvSeenColours.add(c);
+    }
+    const _btvNameLower = name.toLowerCase();
+    const _btvDupExisting = products.find(p =>
+      p.groupId !== editingGroupId &&
+      (p.name || '').trim().toLowerCase() === _btvNameLower &&
+      _btvSeenColours.has(_btvNormColour(p.variant))
+    );
+    if (_btvDupExisting) {
+      alert('"' + name + '" already has a colour "' + _btvDupExisting.variant + '". Please change the colour of this product before saving.');
+      return;
+    }
+  }
+
 
 
 
