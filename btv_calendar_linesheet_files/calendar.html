@@ -2721,19 +2721,13 @@ select, input[type='text'], input[type='date'], input[type='number'], textarea {
   .view-panel.hidden{ display:none!important; }
   body.btv-print-current .view-panel:not(.hidden){ display:block!important; }
   body.btv-print-current .view-panel.hidden{ display:none!important; }
-  #calendarView:not(.hidden) .table-wrap,
-  #globalMarketingView:not(.hidden) .marketing-table-wrap,
-  #marketMarketingView:not(.hidden) .marketing-table-wrap{
+  #calendarView:not(.hidden) .table-wrap{
     width:100%!important; max-width:100%!important; overflow:visible!important; border:none!important;
   }
-  #calendarView:not(.hidden) table,
-  #globalMarketingView:not(.hidden) table,
-  #marketMarketingView:not(.hidden) table{
+  #calendarView:not(.hidden) table{
     width:100%!important; min-width:0!important; table-layout:fixed!important; font-size:6px!important;
   }
-  #calendarView:not(.hidden) th,#calendarView:not(.hidden) td,
-  #globalMarketingView:not(.hidden) th,#globalMarketingView:not(.hidden) td,
-  #marketMarketingView:not(.hidden) th,#marketMarketingView:not(.hidden) td{
+  #calendarView:not(.hidden) th,#calendarView:not(.hidden) td{
     padding:1px!important; line-height:1.05!important; word-break:break-word!important; white-space:normal!important;
   }
   #calendarView:not(.hidden) .corner,#calendarView:not(.hidden) .rowhead{
@@ -3084,10 +3078,6 @@ body.btv-dashboard-mode #quarterGroup{display:none!important}
     <button class="tab-btn active" id="calendarTabBtn" type="button">Calendar</button>
 
     <button class="tab-btn" id="dashboardTabBtn" type="button">KPI Dashboard</button>
-
-    <button class="tab-btn" id="globalMarketingTabBtn" type="button" style="display:none">Global Marketing Calendar</button>
-
-    <button class="tab-btn" id="marketMarketingTabBtn" type="button" style="display:none">Market Marketing Calendar</button>
 
     <button class="tab-btn" id="launchListTabBtn" type="button">Launch List</button>
 
@@ -6959,23 +6949,6 @@ body.btv-dashboard-mode #quarterGroup{display:none!important}
 
 
 
-  <div id="globalMarketingView" class="view-panel hidden"><div class="panel"><h2>Global Marketing Calendar</h2><div class="summary-sub">Published entries from the Main Calendar sync here automatically.</div></div><div class="marketing-table-wrap"><table class="marketing-table"><thead><tr><th class="marketing-lefthead">Global Marketing Calendar</th><th>Wk 1<div class="small">29-Dec to 04-Jan</div></th><th>Wk 2<div class="small">05-Jan to 11-Jan</div></th><th>Wk 3<div class="small">12-Jan to 18-Jan</div></th><th>Wk 4<div class="small">19-Jan to 25-Jan</div></th><th>Wk 5<div class="small">26-Jan to 01-Feb</div></th><th>Wk 6<div class="small">02-Feb to 08-Feb</div></th><th>Wk 7<div class="small">09-Feb to 15-Feb</div></th><th>Wk 8<div class="small">16-Feb to 22-Feb</div></th><th>Wk 9<div class="small">23-Feb to 01-Mar</div></th><th>Wk 10<div class="small">02-Mar to 08-Mar</div></th><th>Wk 11<div class="small">09-Mar to 15-Mar</div></th><th>Wk 12<div class="small">16-Mar to 22-Mar</div></th><th>Wk 13<div class="small">23-Mar to 29-Mar</div></th><th>Wk 14<div class="small">30-Mar to 05-Apr</div></th><th>Wk 15<div class="small">06-Apr to 12-Apr</div></th><th>Wk 16<div class="small">13-Apr to 19-Apr</div></th><th>Wk 17<div class="small">20-Apr to 26-Apr</div></th><th>Wk 18<div class="small">27-Apr to 03-May</div></th><th>Wk 19<div class="small">04-May to 10-May</div></th><th>Wk 20<div class="small">11-May to 17-May</div></th><th>Wk 21<div class="small">18-May to 24-May</div></th><th>Wk 22<div class="small">25-May to 31-May</div></th><th>Wk 23<div class="small">01-Jun to 07-Jun</div></th><th>Wk 24<div class="small">08-Jun to 14-Jun</div></th><th>Wk 25<div class="small">15-Jun to 21-Jun</div></th><th>Wk 26<div class="small">22-Jun to 28-Jun</div></th><th>Wk 27<div class="small">29-Jun to 05-Jul</div></th><th>Wk 28<div class="small">06-Jul to 12-Jul</div></th><th>Wk 29<div class="small">13-Jul to 19-Jul</div></th><th>Wk 30<div class="small">20-Jul to 26-Jul</div></th><th>Wk 31<div class="small">27-Jul to 02-Aug</div></th><th>Wk 32<div class="small">03-Aug to 09-Aug</div></th><th>Wk 33<div class="small">10-Aug to 16-Aug</div></th><th>Wk 34<div class="small">17-Aug to 23-Aug</div></th><th>Wk 35<div class="small">24-Aug to 30-Aug</div></th><th>Wk 36<div class="small">31-Aug to 06-Sep</div></th><th>Wk 37<div class="small">07-Sep to 13-Sep</div></th><th>Wk 38<div class="small">14-Sep to 20-Sep</div></th><th>Wk 39<div class="small">21-Sep to 27-Sep</div></th><th>Wk 40<div class="small">28-Sep to 04-Oct</div></th><th>Wk 41<div class="small">05-Oct to 11-Oct</div></th><th>Wk 42<div class="small">12-Oct to 18-Oct</div></th><th>Wk 43<div class="small">19-Oct to 25-Oct</div></th><th>Wk 44<div class="small">26-Oct to 01-Nov</div></th><th>Wk 45<div class="small">02-Nov to 08-Nov</div></th><th>Wk 46<div class="small">09-Nov to 15-Nov</div></th><th>Wk 47<div class="small">16-Nov to 22-Nov</div></th><th>Wk 48<div class="small">23-Nov to 29-Nov</div></th><th>Wk 49<div class="small">30-Nov to 06-Dec</div></th><th>Wk 50<div class="small">07-Dec to 13-Dec</div></th><th>Wk 51<div class="small">14-Dec to 20-Dec</div></th><th>Wk 52<div class="small">21-Dec to 27-Dec</div></th><th>Wk 53<div class="small">28-Dec to 03-Jan</div></th></tr></thead><tbody><tr><td class="marketing-lefthead">Calendar</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">NEA</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">SEA</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">Restock</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">Digital Activations</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">Events</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">GWP</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">Ads</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">Influencer Marketing</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div></div>
-
-  <div id="marketMarketingView" class="view-panel hidden"><div class="marketing-toolbar panel"><div><h2>Market Marketing Calendar</h2><div class="summary-sub">First row pulls from published Main Calendar NEA / SEA / Restock entries by market.</div></div><div class="toolbar-spacer"></div><div class="market-tabs"><button type="button" class="tab-btn active" onclick="window.switchMarketMarketing(&#39;SG&#39;)">SG</button><button type="button" class="tab-btn" onclick="window.switchMarketMarketing(&#39;TH&#39;)">TH</button><button type="button" class="tab-btn" onclick="window.switchMarketMarketing(&#39;ID&#39;)">ID</button><button type="button" class="tab-btn" onclick="window.switchMarketMarketing(&#39;PH&#39;)">PH</button><button type="button" class="tab-btn" onclick="window.switchMarketMarketing(&#39;JP&#39;)">JP</button><button type="button" class="tab-btn" onclick="window.switchMarketMarketing(&#39;CN&#39;)">CN</button></div></div><div class="panel"><div class="grid">
-
-      <div class="field span3"><label>Market</label><select id="mmMarket"><option value="SG" selected="">SG</option><option value="TH">TH</option><option value="ID">ID</option><option value="PH">PH</option><option value="JP">JP</option><option value="CN">CN</option></select></div>
-
-      <div class="field span3"><label>Week</label><select id="mmWeek"><option value="2025-12-28">Wk 1</option><option value="2026-01-04">Wk 2</option><option value="2026-01-11">Wk 3</option><option value="2026-01-18">Wk 4</option><option value="2026-01-25">Wk 5</option><option value="2026-02-01">Wk 6</option><option value="2026-02-08">Wk 7</option><option value="2026-02-15">Wk 8</option><option value="2026-02-22">Wk 9</option><option value="2026-03-01">Wk 10</option><option value="2026-03-08">Wk 11</option><option value="2026-03-15">Wk 12</option><option value="2026-03-22">Wk 13</option><option value="2026-03-29">Wk 14</option><option value="2026-04-05">Wk 15</option><option value="2026-04-12">Wk 16</option><option value="2026-04-19">Wk 17</option><option value="2026-04-26">Wk 18</option><option value="2026-05-03">Wk 19</option><option value="2026-05-10">Wk 20</option><option value="2026-05-17">Wk 21</option><option value="2026-05-24">Wk 22</option><option value="2026-05-31">Wk 23</option><option value="2026-06-07">Wk 24</option><option value="2026-06-14">Wk 25</option><option value="2026-06-21">Wk 26</option><option value="2026-06-28">Wk 27</option><option value="2026-07-05">Wk 28</option><option value="2026-07-12">Wk 29</option><option value="2026-07-19">Wk 30</option><option value="2026-07-26">Wk 31</option><option value="2026-08-02">Wk 32</option><option value="2026-08-09">Wk 33</option><option value="2026-08-16">Wk 34</option><option value="2026-08-23">Wk 35</option><option value="2026-08-30">Wk 36</option><option value="2026-09-06">Wk 37</option><option value="2026-09-13">Wk 38</option><option value="2026-09-20">Wk 39</option><option value="2026-09-27">Wk 40</option><option value="2026-10-04">Wk 41</option><option value="2026-10-11">Wk 42</option><option value="2026-10-18">Wk 43</option><option value="2026-10-25">Wk 44</option><option value="2026-11-01">Wk 45</option><option value="2026-11-08">Wk 46</option><option value="2026-11-15">Wk 47</option><option value="2026-11-22">Wk 48</option><option value="2026-11-29">Wk 49</option><option value="2026-12-06">Wk 50</option><option value="2026-12-13">Wk 51</option><option value="2026-12-20">Wk 52</option><option value="2026-12-27">Wk 53</option></select></div>
-
-      <div class="field span3"><label>Row</label><select id="mmRow"><option value="Brand Events">Brand Events</option><option value="Retail Events">Retail Events</option><option value="Digital Activations">Digital Activations</option><option value="Social Activations">Social Activations</option><option value="Support">Support</option><option value="Seeding">Seeding</option><option value="GWP">GWP</option><option value="Key Moments">Key Moments</option><option value="Ads">Ads</option></select></div>
-
-      <div class="field span3"><label>Status</label><select id="mmStatus"><option value="draft">Draft</option><option value="published">Published</option></select></div>
-
-      <div class="field span6"><label>Title</label><input id="mmTitle" type="text" placeholder="Entry title"></div>
-
-      <div class="field span6"><label>Related Launch</label><input id="mmLaunch" type="text" placeholder="Launch Title"></div>
-
-    </div><div class="right" style="margin-top:12px"><button type="button" onclick="window.addMarketMarketingEntry()">Add Marketing Entry</button></div></div><div class="marketing-table-wrap"><table class="marketing-table"><thead><tr><th class="marketing-lefthead">SG Marketing Calendar</th><th>Wk 1<div class="small">29-Dec to 04-Jan</div></th><th>Wk 2<div class="small">05-Jan to 11-Jan</div></th><th>Wk 3<div class="small">12-Jan to 18-Jan</div></th><th>Wk 4<div class="small">19-Jan to 25-Jan</div></th><th>Wk 5<div class="small">26-Jan to 01-Feb</div></th><th>Wk 6<div class="small">02-Feb to 08-Feb</div></th><th>Wk 7<div class="small">09-Feb to 15-Feb</div></th><th>Wk 8<div class="small">16-Feb to 22-Feb</div></th><th>Wk 9<div class="small">23-Feb to 01-Mar</div></th><th>Wk 10<div class="small">02-Mar to 08-Mar</div></th><th>Wk 11<div class="small">09-Mar to 15-Mar</div></th><th>Wk 12<div class="small">16-Mar to 22-Mar</div></th><th>Wk 13<div class="small">23-Mar to 29-Mar</div></th><th>Wk 14<div class="small">30-Mar to 05-Apr</div></th><th>Wk 15<div class="small">06-Apr to 12-Apr</div></th><th>Wk 16<div class="small">13-Apr to 19-Apr</div></th><th>Wk 17<div class="small">20-Apr to 26-Apr</div></th><th>Wk 18<div class="small">27-Apr to 03-May</div></th><th>Wk 19<div class="small">04-May to 10-May</div></th><th>Wk 20<div class="small">11-May to 17-May</div></th><th>Wk 21<div class="small">18-May to 24-May</div></th><th>Wk 22<div class="small">25-May to 31-May</div></th><th>Wk 23<div class="small">01-Jun to 07-Jun</div></th><th>Wk 24<div class="small">08-Jun to 14-Jun</div></th><th>Wk 25<div class="small">15-Jun to 21-Jun</div></th><th>Wk 26<div class="small">22-Jun to 28-Jun</div></th><th>Wk 27<div class="small">29-Jun to 05-Jul</div></th><th>Wk 28<div class="small">06-Jul to 12-Jul</div></th><th>Wk 29<div class="small">13-Jul to 19-Jul</div></th><th>Wk 30<div class="small">20-Jul to 26-Jul</div></th><th>Wk 31<div class="small">27-Jul to 02-Aug</div></th><th>Wk 32<div class="small">03-Aug to 09-Aug</div></th><th>Wk 33<div class="small">10-Aug to 16-Aug</div></th><th>Wk 34<div class="small">17-Aug to 23-Aug</div></th><th>Wk 35<div class="small">24-Aug to 30-Aug</div></th><th>Wk 36<div class="small">31-Aug to 06-Sep</div></th><th>Wk 37<div class="small">07-Sep to 13-Sep</div></th><th>Wk 38<div class="small">14-Sep to 20-Sep</div></th><th>Wk 39<div class="small">21-Sep to 27-Sep</div></th><th>Wk 40<div class="small">28-Sep to 04-Oct</div></th><th>Wk 41<div class="small">05-Oct to 11-Oct</div></th><th>Wk 42<div class="small">12-Oct to 18-Oct</div></th><th>Wk 43<div class="small">19-Oct to 25-Oct</div></th><th>Wk 44<div class="small">26-Oct to 01-Nov</div></th><th>Wk 45<div class="small">02-Nov to 08-Nov</div></th><th>Wk 46<div class="small">09-Nov to 15-Nov</div></th><th>Wk 47<div class="small">16-Nov to 22-Nov</div></th><th>Wk 48<div class="small">23-Nov to 29-Nov</div></th><th>Wk 49<div class="small">30-Nov to 06-Dec</div></th><th>Wk 50<div class="small">07-Dec to 13-Dec</div></th><th>Wk 51<div class="small">14-Dec to 20-Dec</div></th><th>Wk 52<div class="small">21-Dec to 27-Dec</div></th><th>Wk 53<div class="small">28-Dec to 03-Jan</div></th></tr></thead><tbody><tr><td class="marketing-lefthead">Week / Launch Title / Launch Date</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">Key Moments</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">Brand Events</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">Retail Events</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">Digital Activations</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">Social Activations</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">Support</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">Seeding</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="marketing-lefthead">GWP</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div></div>
 
 
 
@@ -7195,10 +7168,6 @@ const KEY_DOTS = {
 
 const STATUS_OPTIONS = [{value:"draft", label:"Draft"},{value:"published", label:"Published"}];
 
-const GM_ROWS = ["Calendar","China","Restock","Digital Activations","Events","GWP","Ads","Influencer Marketing"];
-
-const MARKET_CAL_ROWS = ["Launch","Key Moments","Brand Events","Community Activation","Retail Events","Digital Activations","Social Activations","Support","Seeding","GWP"];
-
 const MARKETS_ALL = ["SG","TH","ID","PH","JP","CN"];
 
 const MARKETING_STORAGE_KEY = "calendar-2026-marketing-workflow-v1";
@@ -7301,8 +7270,6 @@ function weekIdsInRange(startISO, endISO){
 }
 
 let currentViewMode = "calendar";
-
-let currentMarketCal = "SG";
 
 function loadMarketingState(){ try { return JSON.parse(localStorage.getItem(MARKETING_STORAGE_KEY)) || {SG:[],TH:[],ID:[],PH:[],JP:[],CN:[]}; } catch { return {SG:[],TH:[],ID:[],PH:[],JP:[],CN:[]}; } }
 
@@ -7437,26 +7404,6 @@ function mktChipsHtml(section, entry){
   return mkts.map(m => `<span class="mkt-chip ${MKT_CHIP_CLASS[m] || ""}">${esc(m)}</span>`).join("");
 }
 
-function getPublishedMainEntries(){
-
-  const out = [];
-
-  Object.entries(state || {}).forEach(([section, byWeek]) => {
-
-    if(!SECTIONS.find(s=>s.key===section)) return;
-
-    Object.entries(byWeek || {}).forEach(([weekId, entries]) => {
-
-      (entries || []).forEach(entry => { if(isPublished(entry)) out.push({section, weekId, entry}); });
-
-    });
-
-  });
-
-  return out;
-
-}
-
 function syncMarketingPublishToMain(market, weekId, row, title, relatedLaunch, detail){
 
   if(row === "Brand Events" || row === "Community Activation" || row === "Retail Events" || row === "Digital Activations"){
@@ -7529,239 +7476,6 @@ function syncMarketingPublishToMain(market, weekId, row, title, relatedLaunch, d
 
 }
 
-function renderGlobalMarketingView(){
-
-  const weeks = currentWeeks();
-
-  const published = getPublishedMainEntries();
-
-  let out = '<div class="panel"><h2>Global Marketing Calendar</h2><div class="summary-sub">Published entries from the Main Calendar sync here automatically.</div></div>';
-
-  out += '<div class="marketing-table-wrap"><table class="marketing-table"><thead><tr><th class="marketing-lefthead">Global Marketing Calendar</th>';
-
-  out += weeks.map(w => `<th>Wk ${w.weekOfYear}<div class="small">${weekRangeLabel(w.start,w.end)}</div></th>`).join('');
-
-  out += '</tr></thead><tbody>';
-
-  GM_ROWS.forEach(row => {
-
-    out += `<tr><td class="marketing-lefthead">${row}</td>`;
-
-    weeks.forEach(w => {
-
-      const items = [];
-
-      if(row === "Calendar"){
-
-        published.filter(x => x.section === "global" && x.weekId === w.id).forEach(x => {
-
-          items.push({title:x.entry.launchTitle || "", date:x.entry.launchDate || "", products:(x.entry.lines || []).map(y => y.productName).filter(Boolean), status:getEntryStatus(x.entry)});
-
-        });
-
-      } else if(row === "China"){
-
-        published.filter(x => x.section === "china" && x.weekId === w.id).forEach(x => {
-
-          items.push({title:x.entry.launchTitle || "", date:x.entry.launchDate || "", products:(x.entry.lines || []).map(y => y.productName).filter(Boolean), status:getEntryStatus(x.entry)});
-
-        });
-
-      } else if(row === "Restock"){
-
-        published.filter(x => x.section === "restocks" && x.weekId === w.id).forEach(x => {
-
-          items.push({title:x.entry.productTitle || "Restock", meta:(x.entry.allMarkets ? MARKETS_ALL.join(", ") : (x.entry.markets || []).join(", ")) || "Markets TBD", status:getEntryStatus(x.entry)});
-
-        });
-
-      } else {
-
-        MARKETS_ALL.forEach(mkt => {
-
-          (marketingState[mkt] || []).forEach(item => {
-
-            if(item.status !== "published" || item.weekId !== w.id) return;
-
-            let matched = false;
-
-            if(row === "Events" && (item.row === "Brand Events" || item.row === "Retail Events")) matched = true;
-
-            if(row === "Digital Activations" && item.row === "Digital Activations") matched = true;
-
-            if(row === "GWP" && item.row === "GWP") matched = true;
-
-            if(row === "Ads" && item.row === "Ads") matched = true;
-
-            if(row === "Influencer Marketing" && item.row === "Seeding") matched = true;
-
-            if(matched){
-
-              items.push({title: row === "Influencer Marketing" ? `${mkt} Seeding` : item.title, meta: row === "Influencer Marketing" ? "Count 1" : `${mkt} • ${item.row}`, status:item.status});
-
-            }
-
-          });
-
-        });
-
-      }
-
-      out += '<td>' + items.map(item => `<div class="marketing-card"><div><strong>${esc(item.title || "")}</strong></div>${item.date ? `<div class="small">${fmtDDMMM(item.date)}${item.date ? " (" + dayNameFromISO(item.date) + ")" : ""}</div>` : ''}${item.products && item.products.length ? `<div class="small">${esc(item.products.join(", "))}</div>` : ''}${item.meta ? `<div class="small">${esc(item.meta)}</div>` : ''}<div class="small">${statusBadge(item.status || "published")}</div></div>`).join('') + '</td>';
-
-    });
-
-    out += '</tr>';
-
-  });
-
-  out += '</tbody></table></div>';
-
-  if(e("globalMarketingView")) e("globalMarketingView").innerHTML = out;
-
-}
-
-
-
-function renderMarketMarketingView(){
-
-  const weeks = currentWeeks();
-
-  let out = '<div class="marketing-toolbar panel"><div><h2>Market Marketing Calendar</h2><div class="summary-sub">First row pulls from published Main Calendar NEA / SEA / Restock entries by market.</div></div><div class="toolbar-spacer"></div><div class="market-tabs">';
-
-  out += MARKETS_ALL.map(m => `<button type="button" class="${currentMarketCal===m?'tab-btn active':'tab-btn'}" onclick="window.switchMarketMarketing('${m}')">${m}</button>`).join('');
-
-  out += '</div></div>';
-
-  out += `<div class="panel"><div class="grid">
-
-      <div class="field span3"><label>Market</label><select id="mmMarket">${MARKETS_ALL.map(m => `<option value="${m}" ${m===currentMarketCal?'selected':''}>${m}</option>`).join('')}</select></div>
-
-      <div class="field span3"><label>Week</label><select id="mmWeek">${weeks.map(w => `<option value="${w.id}">Wk ${w.weekOfYear}</option>`).join('')}</select></div>
-
-      <div class="field span3"><label>Row</label><select id="mmRow">${["Brand Events","Community Activation","Retail Events","Digital Activations","Social Activations","Support","Seeding","GWP","Key Moments","Ads"].map(r => `<option value="${r}">${r}</option>`).join('')}</select></div>
-
-      <div class="field span3"><label>Status</label><select id="mmStatus">${STATUS_OPTIONS.map(s => `<option value="${s.value}">${s.label}</option>`).join('')}</select></div>
-
-      <div class="field span6"><label>Title</label><input id="mmTitle" type="text" placeholder="Entry title"></div>
-
-      <div class="field span6"><label>Related Launch</label><input id="mmLaunch" type="text" placeholder="Launch Title"></div>
-
-    </div><div class="right" style="margin-top:12px"><button type="button" onclick="window.addMarketMarketingEntry()">Add Marketing Entry</button></div></div>`;
-
-  out += '<div class="marketing-table-wrap"><table class="marketing-table"><thead><tr><th class="marketing-lefthead">'+esc(currentMarketCal)+' Marketing Calendar</th>';
-
-  out += weeks.map(w => `<th>Wk ${w.weekOfYear}<div class="small">${weekRangeLabel(w.start,w.end)}</div></th>`).join('');
-
-  out += '</tr></thead><tbody>';
-
-  MARKET_CAL_ROWS.forEach(row => {
-
-    out += `<tr><td class="marketing-lefthead">${row === "Launch" ? "Week / Launch Title / Launch Date" : row}</td>`;
-
-    weeks.forEach(w => {
-
-      let items = [];
-
-      if(row === "Launch"){
-
-        getPublishedMainEntries().forEach(x => {
-
-          if(x.weekId !== w.id) return;
-
-          if(x.section === "global" && entryMarkets("global", x.entry).includes(currentMarketCal)){
-
-            items.push({title:x.entry.launchTitle || x.entry.productTitle || x.entry.optionType || "Launch", date:x.entry.launchDate || x.entry.startDateISO || "", status:getEntryStatus(x.entry)});
-
-          }
-
-          if(x.section === "restocks" && entryMarkets("restocks", x.entry).includes(currentMarketCal)){
-
-            items.push({title:x.entry.productTitle || "Restock", date:x.entry.etaISO || "", status:getEntryStatus(x.entry)});
-
-          }
-
-        });
-
-      } else {
-
-        items = (marketingState[currentMarketCal] || []).filter(x => x.weekId === w.id && x.row === row);
-
-      }
-
-      out += '<td>' + items.map(item => `<div class="marketing-card ${item.status==="published"?"status-published":"status-draft"}"><div><strong>${esc(item.title || "")}</strong></div>${item.date ? `<div class="small">${fmtDDMMM(item.date)}${item.date ? " (" + dayNameFromISO(item.date) + ")" : ""}</div>` : ''}${item.relatedLaunch ? `<div class="small">Related Launch: ${esc(item.relatedLaunch)}</div>` : ''}<div class="small">${statusBadge(item.status || "draft")}</div>${row !== "Launch" ? `<div class="right" style="margin-top:6px"><button type="button" onclick="window.setMarketMarketingStatus('${currentMarketCal}','${item.id}','draft')">Save Draft</button><button type="button" onclick="window.setMarketMarketingStatus('${currentMarketCal}','${item.id}','published')">Publish</button></div>` : ''}</div>`).join('') + '</td>';
-
-    });
-
-    out += '</tr>';
-
-  });
-
-  out += '</tbody></table></div>';
-
-  if(e("marketMarketingView")) e("marketMarketingView").innerHTML = out;
-
-}
-
-
-
-window.switchMarketMarketing = function(m){ currentMarketCal = m; renderMarketMarketingView(); };
-
-window.addMarketMarketingEntry = function(){
-
-  const market = e("mmMarket").value;
-
-  const weekId = e("mmWeek").value;
-
-  const row = e("mmRow").value;
-
-  const status = e("mmStatus").value;
-
-  const title = e("mmTitle").value.trim();
-
-  const relatedLaunch = e("mmLaunch").value.trim();
-
-  if(!title){ alert("Please enter a title."); return; }
-
-  marketingState[market] ||= [];
-
-  marketingState[market].unshift({id:String(Date.now())+Math.random().toString(36).slice(2,7), market, weekId, row, status, title, relatedLaunch});
-
-  saveMarketingState(marketingState);
-
-  if(status === "published") syncMarketingPublishToMain(market, weekId, row, title, relatedLaunch);
-
-  e("mmTitle").value = "";
-
-  e("mmLaunch").value = "";
-
-  renderGlobalMarketingView();
-
-  renderMarketMarketingView();
-
-  render();
-
-};
-
-window.setMarketMarketingStatus = function(market, id, status){
-
-  const item = (marketingState[market] || []).find(x => x.id === id);
-
-  if(!item) return;
-
-  item.status = status;
-
-  saveMarketingState(marketingState);
-
-  if(status === "published") syncMarketingPublishToMain(item.market, item.weekId, item.row, item.title, item.relatedLaunch);
-
-  renderGlobalMarketingView();
-
-  renderMarketMarketingView();
-
-  render();
-
-};
 
 
 
@@ -8633,10 +8347,6 @@ function switchView(view){
 
   e("dashboardView").classList.toggle("hidden", view!=="dashboard");
 
-  if(e("globalMarketingView")) e("globalMarketingView").classList.toggle("hidden", view!=="global_marketing");
-
-  if(e("marketMarketingView")) e("marketMarketingView").classList.toggle("hidden", view!=="market_marketing");
-
   if(e("launchListView")) e("launchListView").classList.toggle("hidden", view!=="launch_list");
 
   if(e("adminView")) e("adminView").classList.toggle("hidden", view!=="admin");
@@ -8645,17 +8355,9 @@ function switchView(view){
 
   e("dashboardTabBtn").classList.toggle("active", view==="dashboard");
 
-  if(e("globalMarketingTabBtn")) e("globalMarketingTabBtn").classList.toggle("active", view==="global_marketing");
-
-  if(e("marketMarketingTabBtn")) e("marketMarketingTabBtn").classList.toggle("active", view==="market_marketing");
-
   if(e("launchListTabBtn")) e("launchListTabBtn").classList.toggle("active", view==="launch_list");
 
   if(e("adminTabBtn")) e("adminTabBtn").classList.toggle("active", view==="admin");
-
-  if(view==="global_marketing") renderGlobalMarketingView();
-
-  if(view==="market_marketing") renderMarketMarketingView();
 
   if(view==="launch_list") renderLaunchList();
 
@@ -12196,10 +11898,6 @@ e("undoBtn").addEventListener("click", () => {
 e("calendarTabBtn").addEventListener("click", ()=>switchView("calendar"));
 
 e("dashboardTabBtn").addEventListener("click", ()=>switchView("dashboard"));
-
-e("globalMarketingTabBtn").addEventListener("click", ()=>switchView("global_marketing"));
-
-e("marketMarketingTabBtn").addEventListener("click", ()=>switchView("market_marketing"));
 
 e("launchListTabBtn").addEventListener("click", ()=>switchView("launch_list"));
 

@@ -258,7 +258,7 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
 .f-inp:focus,.f-sel:focus,.f-txt:focus{border-color:var(--text);background:#fff}
 .f-txt{resize:vertical;min-height:55px}
 .f-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.f-conditional{display:none}.f-conditional.show{display:block}
+.f-conditional{display:none}.f-conditional.show{display:block}.f-conditional.f-row.show{display:grid}
 .f-actions{display:flex;gap:7px;margin-top:14px}
 .btn-primary{flex:1;padding:9px;border:none;border-radius:10px;background:var(--text);color:#fff;
   font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:background .15s}
@@ -472,7 +472,18 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
       </div>
     </div>
 
-    <div class="f-row">
+    <div id="fCtxDateWrap" class="f-conditional f-row">
+      <div>
+        <label class="f-lbl" for="fCtxStartDate">Start Date</label>
+        <input type="date" id="fCtxStartDate" class="f-inp">
+      </div>
+      <div>
+        <label class="f-lbl" for="fCtxEndDate">End Date</label>
+        <input type="date" id="fCtxEndDate" class="f-inp">
+      </div>
+    </div>
+
+    <div id="fWeekRow" class="f-row">
       <div>
         <label class="f-lbl" for="fWeek">Start Week</label>
         <select id="fWeek" class="f-sel"></select>
@@ -483,7 +494,7 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
       </div>
     </div>
 
-    <div class="f-row">
+    <div id="fDateStatusRow" class="f-row">
       <div>
         <label class="f-lbl" for="fDate">Specific Date (optional)</label>
         <input type="date" id="fDate" class="f-inp">
@@ -547,13 +558,17 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
       <input type="text" id="fPerfObj" class="f-inp" placeholder="e.g. New Launch: Studio Tote">
     </div>
 
-    <label class="f-lbl" for="fBrief">Brief / Notes</label>
-    <textarea id="fBrief" class="f-txt" placeholder="Content concept, SKUs, activation details…"></textarea>
+    <div id="fBriefWrap">
+      <label class="f-lbl" for="fBrief">Brief / Notes</label>
+      <textarea id="fBrief" class="f-txt" placeholder="Content concept, SKUs, activation details…"></textarea>
+    </div>
 
-    <label class="f-lbl" for="fLinks">Reference Links (one per line)</label>
-    <textarea id="fLinks" class="f-txt" style="min-height:40px" placeholder="https://…"></textarea>
+    <div id="fLinksWrap">
+      <label class="f-lbl" for="fLinks">Reference Links (one per line)</label>
+      <textarea id="fLinks" class="f-txt" style="min-height:40px" placeholder="https://…"></textarea>
+    </div>
 
-    <div>
+    <div id="fOwnerWrap">
       <label class="f-lbl" for="fOwner">Owner / Creator</label>
       <input type="text" id="fOwner" class="f-inp" placeholder="e.g. Becky / VC">
     </div>
@@ -1108,6 +1123,18 @@ function renderMarketingRow(market,row,gc){
   return html;
 }
 
+// Grouping key: title AND every detail field, not just title — two markets running
+// activations that merely share a title but differ in objective/mechanics/rundown/etc.
+// must NOT be shown as one merged "Global" chip, since the details are genuinely different
+// per market. Only entries that are fully identical across markets get consolidated.
+function marketingEntryFingerprint(e){
+  return [
+    (e.title||'').trim().toLowerCase(), e.startDateISO||'', e.endDateISO||'', e.time||'',
+    e.store||'', e.guests||'', e.objective||'', e.targetAudience||'', e.eventRundown||'',
+    e.mechanics||'', e.comms||'', e.tnc||'', e.owner||'', e.status||''
+  ].join('|');
+}
+
 function buildGlobalMarketingCellHtml(rowKey,weekNum){
   const tg={};
   MARKETS.forEach(mkt=>{
@@ -1115,7 +1142,7 @@ function buildGlobalMarketingCellHtml(rowKey,weekNum){
       const w0=marketingWeek(e), w1=marketingWeekEnd(e);
       const inRange = w0===weekNum || (w1>w0 && w0<=weekNum && w1>=weekNum);
       if(!inRange || !matchesMarketingFilter(e)) return;
-      const k=(e.title||'').trim().toLowerCase();
+      const k=marketingEntryFingerprint(e);
       if(!tg[k]) tg[k]={title:e.title,markets:[],entries:[]};
       if(!tg[k].markets.includes(mkt)) tg[k].markets.push(mkt);
       tg[k].entries.push(e);
@@ -1127,12 +1154,15 @@ function buildGlobalMarketingCellHtml(rowKey,weekNum){
     const mktList=g.markets.slice().sort().join(', ');
     const cssClass=isGlobal?'mkt-global':(MKT_CSS[g.markets[0]]||'c-ns');
     const rep=g.entries[0];
-    chips+=`<div class="chip ${cssClass}" onclick="openMarketingViewModal('${esc(rep.id)}','${esc(rep.market)}');event.stopPropagation();" title="${esc(g.title)}">
+    const cid=_cacheEntry(rep);
+    chips+=`<div class="chip ${cssClass}" onclick="_viewMarketingEntry('${esc(cid)}','${esc(isGlobal?mktList:g.markets[0])}');event.stopPropagation();" title="${esc(g.title)}">
       <span class="country-tag">${esc(isGlobal?mktList:g.markets[0])}</span>${esc(g.title)}
     </div>`;
   });
   return chips;
 }
+
+function _viewMarketingEntry(cid,marketsLabel){ const e=_viewCache[cid]; if(e) openMarketingReadOnlyModal(e,marketsLabel); }
 
 function buildMarketingNotes(d){
   const lines=[];
@@ -1601,6 +1631,7 @@ function formatDate(iso){ if(!iso)return''; const d=new Date(iso+'T00:00:00'),Mo
 function formatDateWithDay(iso){ if(!iso)return''; const d=new Date(iso+'T00:00:00'); return formatDate(iso)+' ('+d.toLocaleDateString('en-US',{weekday:'short'})+')'; }
 // Falls back to the Monday of a given week number when no specific date is set.
 function weekStartDateLabel(wn){ const w=WEEKS[wn-1]; if(!w)return''; return formatDateWithDay(w.startDate.toISOString().slice(0,10)); }
+function weekNumToISO(wn){ const w=WEEKS[wn-1]; return w?w.startDate.toISOString().slice(0,10):''; }
 function mktAccentClass(mkt){ return 'mkt-accent-'+(mkt?mkt.toLowerCase():'global'); }
 // Shared rich-card renderer — date + title + summary + badge, visible without opening the popup.
 // opts: {date, title, summary, badgeLabel, badgeClass, accentMkt, onclick, hoverText}
@@ -1927,6 +1958,58 @@ function buildGlobalCellHtml(mkts, rowKeys, weekNum, opts){
   return chips;
 }
 
+// Same title-grouping-across-markets as buildGlobalCellHtml, but renders as a true
+// multi-week colspan bar (mirroring renderSpannableRow's per-market behaviour) instead of
+// repeating the chip in every covered week with just a small "→WkX" text tag. Used for the
+// Context rows (Theme/Season, Key Moments, Public Holidays) so the Global consolidated tab
+// shows the same continuous stretched bar the per-market tabs already show. Read-only —
+// clicking opens the view-only popup via _viewEntry, same as buildGlobalCellHtml.
+function buildGlobalSpannableRowHtml(rowKeys, gc){
+  const tg={};
+  rowKeys.forEach(rk=>{
+    MARKETS.forEach(mkt=>{
+      getMarketEntries(mkt).filter(e=>e.row===rk&&matchesFilter(e)).forEach(e=>{
+        const k=(e.title||'').trim().toLowerCase();
+        if(!tg[k]) tg[k]={title:e.title,markets:[],entries:[]};
+        if(!tg[k].markets.includes(mkt)) tg[k].markets.push(mkt);
+        tg[k].entries.push(e);
+      });
+    });
+  });
+  const groups=Object.values(tg).map(g=>{
+    const rep=g.entries[0];
+    const isGlobal=g.markets.length>1;
+    const mktList=g.markets.slice().sort().join(', ');
+    const cid=_cacheEntry({...rep,_displayMarkets:isGlobal?mktList:g.markets[0]});
+    return {title:g.title,markets:g.markets,mktList,isGlobal,week:rep.week,weekEnd:rep.weekEnd,date:rep.date,cid};
+  });
+
+  const coveredCells=new Set();
+  groups.forEach(g=>{ if(g.weekEnd&&g.weekEnd>g.week) for(let w=g.week+1;w<=g.weekEnd&&w<=53;w++) coveredCells.add(w); });
+
+  let html='';
+  WEEKS.forEach(w=>{
+    if(coveredCells.has(w.n)) return;
+    const starts=groups.filter(g=>g.week===w.n);
+    const spanGroup=starts.filter(g=>g.weekEnd&&g.weekEnd>w.n).sort((a,b)=>b.weekEnd-a.weekEnd)[0];
+    const colspan=spanGroup?(spanGroup.weekEnd-w.n+1):1;
+    const colspanAttr=colspan>1?` colspan="${colspan}"`:'';
+    let chips='';
+    starts.forEach(g=>{
+      const cssClass=g.isGlobal?'mkt-global':(MKT_CSS[g.markets[0]]||'c-ns');
+      const spanTag=g.weekEnd&&g.weekEnd>w.n?`<span class="span-tag">→Wk${g.weekEnd}</span>`:'';
+      const dateLabel=g.date?formatDateWithDay(g.date):weekStartDateLabel(w.n);
+      chips+=`<div class="chip ${cssClass}" onclick="_viewEntry('${esc(g.cid)}');event.stopPropagation();" title="${esc(g.title)}">
+        <span class="date-tag">${esc(dateLabel)}</span>
+        <span class="country-tag">${esc(g.isGlobal?g.mktList:g.markets[0])}</span>
+        ${spanTag}${esc(g.title)}
+      </div>`;
+    });
+    html+=`<td${colspanAttr} class="${gc} readonly">${chips}</td>`;
+  });
+  return html;
+}
+
 function renderGlobal(){
   const tbl=document.getElementById('globalTable');
   const body=document.getElementById('globalTbody');
@@ -1939,26 +2022,13 @@ function renderGlobal(){
   // ── CONTEXT section ────────────────────────────────────────────────────
   html+=`<tr class="group-row g-context"><td class="row-head" colspan="${W+1}">Context</td></tr>`;
 
-  // Theme/Season — from entries (continuous bar, same across markets)
-  html+=`<tr class="g-context"><td class="row-head g-context">Theme / Season</td>`;
-  WEEKS.forEach(w=>{
-    html+=`<td class="g-context readonly">${buildGlobalCellHtml(null,['theme'],w.n,{})}</td>`;
-  });
-  html+=`</tr>`;
+  // Theme/Season, Key Moments, Public Holidays — rendered as true multi-week colspan bars
+  // (matching the per-market tabs' stretched-bar look), not repeated per-week chips.
+  html+=`<tr class="g-context"><td class="row-head g-context">Theme / Season</td>${buildGlobalSpannableRowHtml(['theme'],'g-context')}</tr>`;
 
-  // Key Moments — from entries
-  html+=`<tr class="g-context"><td class="row-head g-context">Key Moments</td>`;
-  WEEKS.forEach(w=>{
-    html+=`<td class="g-context readonly">${buildGlobalCellHtml(null,['key_moments'],w.n,{})}</td>`;
-  });
-  html+=`</tr>`;
+  html+=`<tr class="g-context"><td class="row-head g-context">Key Moments</td>${buildGlobalSpannableRowHtml(['key_moments'],'g-context')}</tr>`;
 
-  // Public Holidays — from entries (per-market editable)
-  html+=`<tr class="g-context"><td class="row-head g-context">Public Holidays</td>`;
-  WEEKS.forEach(w=>{
-    html+=`<td class="g-context readonly">${buildGlobalCellHtml(null,['public_holidays'],w.n,{})}</td>`;
-  });
-  html+=`</tr>`;
+  html+=`<tr class="g-context"><td class="row-head g-context">Public Holidays</td>${buildGlobalSpannableRowHtml(['public_holidays'],'g-context')}</tr>`;
 
   // Consumer Mindset — from entries
   html+=`<tr class="g-context"><td class="row-head g-context">Consumer Mindset</td>`;
@@ -2074,6 +2144,36 @@ function openViewModal(e){
   document.getElementById('viewModal').classList.add('show');
 }
 
+// Read-only marketing/activation viewer for the Global consolidated tab — reuses the same
+// view-only modal as openViewModal, but with marketing-specific fields (time/store/guests/
+// objective/audience/rundown/mechanics/comms/T&Cs/images), since marketing entries have a
+// different shape than regular creative entries. Global tab activations must never open the
+// full edit form (openMarketingEditModal) — this is the deliberate replacement for that.
+function openMarketingReadOnlyModal(entry,marketsLabel){
+  const rowLabel=(ROW_DEFS.find(r=>r.key===entry.row)||{}).label||entry.row;
+  document.getElementById('vm-title').textContent=entry.title||'—';
+  document.getElementById('vm-sub').innerHTML=
+    (marketsLabel?`<span class="chip mkt-global" style="display:inline-block;margin-right:6px;font-size:10px">${esc(marketsLabel)}</span>`:'')+
+    esc(rowLabel)+
+    (entry.startDateISO?` · ${esc(formatDate(entry.startDateISO))}${(entry.endDateISO&&entry.endDateISO!==entry.startDateISO)?'–'+esc(formatDate(entry.endDateISO)):''}`:'');
+  let body='';
+  if(entry.status) body+=vfG('Status',`<span class="rcard-badge ${entry.status==='published'?'s-published':'s-draft'}">${esc(entry.status==='published'?'Published':'Draft')}</span>`);
+  if(entry.time) body+=vfG('Time',esc(entry.time));
+  if(entry.store) body+=vfG('Store',esc(entry.store));
+  if(entry.guests) body+=vfG('No. of Guests',esc(String(entry.guests)));
+  if(entry.objective) body+=vfG('Objective',`<div class="vf-val">${esc(entry.objective)}</div>`);
+  if(entry.targetAudience) body+=vfG('Target Audience',`<div class="vf-val">${esc(entry.targetAudience)}</div>`);
+  if(entry.eventRundown) body+=vfG('Rundown',`<div class="vf-val">${esc(entry.eventRundown)}</div>`);
+  if(entry.mechanics) body+=vfG('Mechanics',`<div class="vf-val">${esc(entry.mechanics)}</div>`);
+  if(entry.comms) body+=vfG('Comms',`<div class="vf-val">${esc(entry.comms)}</div>`);
+  if(entry.tnc) body+=vfG('Terms & Conditions',`<div class="vf-val">${esc(entry.tnc)}</div>`);
+  if(entry.owner) body+=vfG('Owner',esc(entry.owner));
+  if(entry.links&&entry.links.length) body+=vfG('Reference Links',`<div class="vf-val">${entry.links.map(l=>`<a href="${esc(l)}" target="_blank">${esc(l)}</a>`).join('<br>')}</div>`);
+  if(entry.images&&entry.images.length) body+=vfG('Images',entry.images.map(img=>`<div style="margin-bottom:6px"><a href="${esc(img.url)}" target="_blank">${esc(img.title||img.url)}</a>${img.notes?`<div style="font-size:11px;color:#888">${esc(img.notes)}</div>`:''}</div>`).join(''));
+  document.getElementById('vm-body').innerHTML=body||'<p style="font-size:12px;color:#aaa">No additional details.</p>';
+  document.getElementById('viewModal').classList.add('show');
+}
+
 function vfG(lbl,html){ return `<div class="vf-group"><div class="vf-lbl">${esc(lbl)}</div><div class="vf-val">${html}</div></div>`; }
 function closeViewModal(){ document.getElementById('viewModal').classList.remove('show'); }
 
@@ -2103,14 +2203,24 @@ function renderCurrent(){ if(currentTab==='global')renderGlobal();else renderMar
 // ── Modal ──────────────────────────────────────────────────────────────────
 
 const EDM_ROWS=new Set(['edm']),KOL_ROWS=new Set(['seeding']),PROMO_ROWS=new Set(['commercial']),PERF_ROWS=new Set(['perf_tier1','perf_tier2','perf_tier3']);
+// Key Moments / Public Holidays only need Title, Market, Category and a date range —
+// none of the content-production fields (pillar, EDM, brief, links, owner, status, week
+// numbers) apply to them.
+const SIMPLE_CONTEXT_ROWS=new Set(['key_moments','public_holidays']);
 
 function onRowChange(){
   const row=document.getElementById('fRow').value;
-  document.getElementById('fPillarWrap').classList.toggle('show',SOCIAL_ROWS.has(row));
-  document.getElementById('fEdmWrap').classList.toggle('show',EDM_ROWS.has(row));
-  document.getElementById('fKolWrap').classList.toggle('show',KOL_ROWS.has(row));
-  document.getElementById('fPromoWrap').classList.toggle('show',PROMO_ROWS.has(row));
-  document.getElementById('fPerfWrap').classList.toggle('show',PERF_ROWS.has(row));
+  const isSimple=SIMPLE_CONTEXT_ROWS.has(row);
+  document.getElementById('fPillarWrap').classList.toggle('show',!isSimple&&SOCIAL_ROWS.has(row));
+  document.getElementById('fEdmWrap').classList.toggle('show',!isSimple&&EDM_ROWS.has(row));
+  document.getElementById('fKolWrap').classList.toggle('show',!isSimple&&KOL_ROWS.has(row));
+  document.getElementById('fPromoWrap').classList.toggle('show',!isSimple&&PROMO_ROWS.has(row));
+  document.getElementById('fPerfWrap').classList.toggle('show',!isSimple&&PERF_ROWS.has(row));
+  document.getElementById('fCtxDateWrap').classList.toggle('show',isSimple);
+  ['fWeekRow','fDateStatusRow','fBriefWrap','fLinksWrap','fOwnerWrap'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.style.display=isSimple?'none':'';
+  });
 }
 
 function buildWeekOpts(sel,blank){
@@ -2128,6 +2238,8 @@ function openAddModal(market,rowKey,week,dateIso){
   document.getElementById('fWeek').innerHTML=buildWeekOpts(week||1);
   document.getElementById('fWeekEnd').innerHTML=buildWeekOpts(null,true);
   document.getElementById('fDate').value=dateIso||'';
+  document.getElementById('fCtxStartDate').value=dateIso||'';
+  document.getElementById('fCtxEndDate').value='';
   document.getElementById('fRow').value=rowKey||'ig_grid';
   document.getElementById('fPillar').value='';
   document.getElementById('fEdmMarket').value='All';
@@ -2153,6 +2265,10 @@ function openEditModal(id,market){
   document.getElementById('fWeek').innerHTML=buildWeekOpts(e.week);
   document.getElementById('fWeekEnd').innerHTML=buildWeekOpts(e.weekEnd||null,true);
   document.getElementById('fDate').value=e.date||'';
+  // Older key-moment/holiday entries predate the startDate/endDate fields — fall back to
+  // the Monday of their week number so the date pickers still show something sensible.
+  document.getElementById('fCtxStartDate').value=e.startDate||weekNumToISO(e.week)||'';
+  document.getElementById('fCtxEndDate').value=e.endDate||(e.weekEnd?weekNumToISO(e.weekEnd):'')||'';
   document.getElementById('fRow').value=e.row;
   document.getElementById('fPillar').value=e.pillar||'';
   document.getElementById('fEdmMarket').value=e.edmMarket||'All';
@@ -2174,35 +2290,48 @@ function saveEntry(){
   if (window._btvCanEdit === false) { ccToast('You have view-only access to the Global Calendar'); return; }
   const title=document.getElementById('fTitle').value.trim();
   const market=document.getElementById('fMarket').value;
-  const week=parseInt(document.getElementById('fWeek').value);
-  const weekEndRaw=document.getElementById('fWeekEnd').value;
-  const weekEnd=weekEndRaw?parseInt(weekEndRaw):null;
   const row=document.getElementById('fRow').value;
-  const date=document.getElementById('fDate').value;
-  const pillar=document.getElementById('fPillar').value;
-  const edmM=document.getElementById('fEdmMarket').value,edmT=document.getElementById('fEdmType').value;
-  const kol=document.getElementById('fKol').value.trim(),promo=document.getElementById('fPromo').value.trim();
-  const perfObj=document.getElementById('fPerfObj').value.trim();
-  const brief=document.getElementById('fBrief').value.trim();
-  const links=document.getElementById('fLinks').value.split('\n').map(l=>l.trim()).filter(Boolean);
-  const owner=document.getElementById('fOwner').value.trim();
-  const status=document.getElementById('fStatus').value;
   const errEl=document.getElementById('modalErr');
   if(!title){errEl.textContent='Please enter a title.';return;}
-  let finalWeek=week; if(date){const wn=dateToWeekNum(date);if(wn>=1&&wn<=53)finalWeek=wn;}
-  const finalWeekEnd=(weekEnd&&weekEnd>finalWeek)?weekEnd:null;
+
+  let fields;
+  if(SIMPLE_CONTEXT_ROWS.has(row)){
+    // Key Moments / Public Holidays: Title, Market, Category(row) and a date range only.
+    const startDate=document.getElementById('fCtxStartDate').value;
+    const endDate=document.getElementById('fCtxEndDate').value;
+    if(!startDate){errEl.textContent='Please choose a start date.';return;}
+    const startWn=dateToWeekNum(startDate);
+    const endWn=endDate?dateToWeekNum(endDate):0;
+    const finalWeek=(startWn>=1&&startWn<=53)?startWn:1;
+    const finalWeekEnd=(endWn>finalWeek&&endWn<=53)?endWn:null;
+    fields={week:finalWeek,weekEnd:finalWeekEnd,date:startDate,startDate,endDate:endDate||startDate,
+      pillar:'',edmMarket:'',edmType:'',kol:'',promo:'',perfObj:'',brief:'',links:[],owner:'',status:''};
+  } else {
+    const week=parseInt(document.getElementById('fWeek').value);
+    const weekEndRaw=document.getElementById('fWeekEnd').value;
+    const weekEnd=weekEndRaw?parseInt(weekEndRaw):null;
+    const date=document.getElementById('fDate').value;
+    const pillar=document.getElementById('fPillar').value;
+    const edmM=document.getElementById('fEdmMarket').value,edmT=document.getElementById('fEdmType').value;
+    const kol=document.getElementById('fKol').value.trim(),promo=document.getElementById('fPromo').value.trim();
+    const perfObj=document.getElementById('fPerfObj').value.trim();
+    const brief=document.getElementById('fBrief').value.trim();
+    const links=document.getElementById('fLinks').value.split('\n').map(l=>l.trim()).filter(Boolean);
+    const owner=document.getElementById('fOwner').value.trim();
+    const status=document.getElementById('fStatus').value;
+    let finalWeek=week; if(date){const wn=dateToWeekNum(date);if(wn>=1&&wn<=53)finalWeek=wn;}
+    const finalWeekEnd=(weekEnd&&weekEnd>finalWeek)?weekEnd:null;
+    fields={week:finalWeek,weekEnd:finalWeekEnd,date,pillar,edmMarket:edmM,edmType:edmT,kol,promo,perfObj,brief,links,owner,status};
+  }
+
   if(modalEntry){
-    Object.assign(modalEntry,{title,market,week:finalWeek,weekEnd:finalWeekEnd,row,date,pillar,
-      edmMarket:edmM,edmType:edmT,kol,promo,perfObj,brief,links,owner,status,
-      _seeded:false,updated:new Date().toISOString()});
+    Object.assign(modalEntry,{title,market,row},fields,{_seeded:false,updated:new Date().toISOString()});
   } else {
     state[market]=state[market]||[];
-    state[market].unshift({
+    state[market].unshift(Object.assign({
       id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
-      title,market,week:finalWeek,weekEnd:finalWeekEnd,row,date,pillar,
-      edmMarket:edmM,edmType:edmT,kol,promo,perfObj,brief,links,owner,status,
-      _seeded:false,created:new Date().toISOString(),updated:new Date().toISOString()
-    });
+      title,market,row
+    },fields,{_seeded:false,created:new Date().toISOString(),updated:new Date().toISOString()}));
   }
   saveState();closeModal();renderCurrent();
 }
