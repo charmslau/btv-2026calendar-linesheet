@@ -7370,6 +7370,25 @@ function migrateLegacyGlobalEntries(){
 
 }
 
+// One-time backfill: every product line used to have no identity beyond its position in
+// the form, so lines created before genLineId() existed have no lineId yet. Assigns one to
+// every line that's missing it, so the Linesheet can pick up the stable-ID match on its very
+// next sync instead of only self-healing gradually as each product happens to get re-matched.
+// Idempotent — re-running this after the first pass is a no-op (every line already has one).
+function migrateBackfillLineIds(){
+  let changed = false;
+  ["global","china"].forEach(sec => {
+    Object.values(state[sec] || {}).forEach(entries => {
+      (entries || []).forEach(entry => {
+        (entry.lines || []).forEach(line => {
+          if(!line.lineId){ line.lineId = genLineId(); changed = true; }
+        });
+      });
+    });
+  });
+  if(changed) saveState(state);
+}
+
 function getEntryStatus(entry){ return entry && entry.workflowStatus ? entry.workflowStatus : "draft"; }
 
 function isPublished(entry){ return getEntryStatus(entry) === "published"; }
@@ -12190,6 +12209,7 @@ function btvImportJSON(input) {
 
 migrateLegacyGlobalEntries();
 migrateSeaNeaIntoGlobal();
+migrateBackfillLineIds();
 
 render();
 

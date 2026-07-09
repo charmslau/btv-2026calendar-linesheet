@@ -353,6 +353,7 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
       <button class="fp" id="fp-del" onclick="toggleStatusFilter('Delivered')">Delivered</button>
     </div>
     <span class="filter-count" id="filterCount"></span>
+    <button class="fp" onclick="btvExportGlobalGridXLS()" title="Exports the Global tab's grid — only the markets currently selected above, or all markets if none are selected">⬇ Export Grid (Excel)</button>
     <span class="clear-filter" onclick="clearFilters()">✕ Clear</span>
   </div>
 
@@ -1544,6 +1545,118 @@ function _btvDownload(fileName,data,mime){
   const a=document.createElement('a');
   a.href=url;a.download=fileName;document.body.appendChild(a);a.click();document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+
+// ── Export the Global tab's grid to Excel, respecting the current market filter ────────
+// Reuses the exact same data-fetching + filter functions the on-screen Global tab renders
+// with (matchesFilter / matchesMarketingFilter / getBtvEntriesForSectionsWeek's marketFilter
+// param / buildMarkdownSpanGroups' own F.markets check) so the export always matches
+// whatever markets are currently selected via the filter pills — no separate filtering
+// logic to keep in sync.
+function btvExportGlobalGridXLS(){
+  const mktFilterArr = F.markets.size ? Array.from(F.markets) : null;
+  const scopeLabel = F.markets.size ? Array.from(F.markets).sort().join(', ') : 'All Markets';
+
+  function xs(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'&#10;'); }
+  function cell(val,sid,mergeAcross){
+    const ma = mergeAcross>0 ? ' ss:MergeAcross="'+mergeAcross+'"' : '';
+    const s = sid ? ' ss:StyleID="'+sid+'"' : '';
+    return '<Cell'+ma+s+'><Data ss:Type="String">'+xs(val)+'</Data></Cell>';
+  }
+
+  // Context/creative rows (per-market entries, grouped across markets by title like the
+  // on-screen Global tab — matchesFilter() already applies the current F.markets/search).
+  function contextCellText(rowKeys,wn){
+    const tg={};
+    rowKeys.forEach(rk=>{
+      MARKETS.forEach(mkt=>{
+        getCellEntries(mkt,rk,wn).forEach(e=>{
+          if(!matchesFilter(e)) return;
+          const k=(e.title||'').trim().toLowerCase();
+          if(!tg[k]) tg[k]={title:e.title,markets:[]};
+          if(!tg[k].markets.includes(mkt)) tg[k].markets.push(mkt);
+        });
+      });
+    });
+    return Object.values(tg).map(g=>'['+g.markets.sort().join(',')+'] '+g.title).join('\n');
+  }
+
+  // BTV bridge rows (Calendar/China/Restock/Store Opening) — getBtvEntriesForSectionsWeek's
+  // own marketFilter param does the filtering, same as the on-screen Global tab.
+  function bridgeCellText(sections,wn){
+    return getBtvEntriesForSectionsWeek(sections,wn,mktFilterArr).map(({section,entry,_mkts})=>{
+      const title=btvEntryTitle(entry);
+      const mktStr=(_mkts&&_mkts.length)?_mkts.join(','):'—';
+      let extra='';
+      if(section==='global'||section==='china'){
+        const skus=btvCountEntrySkus(entry);
+        extra=skus?(' ('+skus+' SKUs)'):'';
+      }
+      return '['+mktStr+'] '+title+extra;
+    }).join('\n');
+  }
+
+  function markdownCellText(wn){
+    return buildMarkdownSpanGroups(null).filter(g=>wn>=g.week&&wn<=g.weekEnd)
+      .map(g=>'['+(g.isGlobal?g.mktList:g.markets[0])+'] '+g.title).join('\n');
+  }
+
+  function marketingCellText(rowKey,wn){
+    const tg={};
+    MARKETS.forEach(mkt=>{
+      getMarketingEntries(mkt).filter(e=>e.row===rowKey).forEach(e=>{
+        const w0=marketingWeek(e), w1=marketingWeekEnd(e);
+        const inRange = w0===wn || (w1>w0 && w0<=wn && w1>=wn);
+        if(!inRange || !matchesMarketingFilter(e)) return;
+        const k=marketingEntryFingerprint(e);
+        if(!tg[k]) tg[k]={title:e.title,markets:[]};
+        if(!tg[k].markets.includes(mkt)) tg[k].markets.push(mkt);
+      });
+    });
+    return Object.values(tg).map(g=>'['+g.markets.sort().join(',')+'] '+g.title).join('\n');
+  }
+
+  const ROWS = [
+    {label:'Theme / Season',    fn:wn=>contextCellText(['theme'],wn)},
+    {label:'Key Moments',       fn:wn=>contextCellText(['key_moments'],wn)},
+    {label:'Public Holidays',   fn:wn=>contextCellText(['public_holidays'],wn)},
+    {label:'Markdown',          fn:wn=>markdownCellText(wn)},
+    {label:'Calendar (Launch)', fn:wn=>bridgeCellText(['global','china'],wn)},
+    {label:'China',             fn:wn=>bridgeCellText(['china'],wn)},
+    {label:'Restock',           fn:wn=>bridgeCellText(['restocks'],wn)},
+    {label:'Store Opening',     fn:wn=>bridgeCellText(['store_openings'],wn)},
+    {label:'Social / Content',  fn:wn=>contextCellText(['ig_grid','ig_stories','ig_mkt','tiktok','line','red_xhs','wechat'],wn)},
+    {label:'Channel (EDM/Media)',fn:wn=>contextCellText(['edm','media_ooh'],wn)},
+  ].concat(MARKETING_ROW_DEFS.map(mRow=>({label:mRow.label,fn:wn=>marketingCellText(mRow.key,wn)})));
+
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<?mso-application progid="Excel.Sheet"?>\n';
+  xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"';
+  xml += ' xmlns:o="urn:schemas-microsoft-com:office:office"';
+  xml += ' xmlns:x="urn:schemas-microsoft-com:office:excel"';
+  xml += ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
+  xml += '<Styles>\n';
+  xml += '<Style ss:ID="hdr"><Alignment ss:Vertical="Top" ss:WrapText="1"/><Font ss:FontName="Helvetica Neue" ss:Size="10" ss:Bold="1"/><Interior ss:Color="#e8e2d8" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#d0ccc6"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#d0ccc6"/></Borders></Style>\n';
+  xml += '<Style ss:ID="rowhead"><Alignment ss:Vertical="Top" ss:WrapText="1"/><Font ss:FontName="Helvetica Neue" ss:Size="10" ss:Bold="1"/><Interior ss:Color="#f2ece2" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#d0ccc6"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#d0ccc6"/></Borders></Style>\n';
+  xml += '<Style ss:ID="dat"><Alignment ss:Vertical="Top" ss:WrapText="1"/><Font ss:FontName="Helvetica Neue" ss:Size="10"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#d0ccc6"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#d0ccc6"/></Borders></Style>\n';
+  xml += '<Style ss:ID="title"><Font ss:FontName="Helvetica Neue" ss:Size="13" ss:Bold="1"/></Style>\n';
+  xml += '</Styles>\n';
+
+  xml += '<Worksheet ss:Name="Global Calendar"><Table>\n';
+  xml += '<Column ss:Width="130"/>';
+  WEEKS.forEach(()=>{ xml += '<Column ss:Width="170"/>'; });
+  xml += '\n';
+
+  xml += '<Row><Cell ss:StyleID="title" ss:MergeAcross="'+WEEKS.length+'"><Data ss:Type="String">Global Calendar — Markets: '+xs(scopeLabel)+'</Data></Cell></Row>\n';
+  xml += '<Row ss:Height="4"></Row>\n';
+  xml += '<Row ss:Height="30" ss:AutoFitHeight="0">' + cell('Week','hdr') + WEEKS.map(w=>cell('Wk '+w.n+' — '+w.range,'hdr')).join('') + '</Row>\n';
+
+  ROWS.forEach(row=>{
+    xml += '<Row ss:AutoFitHeight="1">' + cell(row.label,'rowhead') + WEEKS.map(w=>cell(row.fn(w.n),'dat')).join('') + '</Row>\n';
+  });
+
+  xml += '</Table></Worksheet></Workbook>';
+
+  _btvDownload('Global_Calendar_'+(F.markets.size?scopeLabel.replace(/[^a-zA-Z0-9]+/g,'_'):'All')+'.xls', xml, 'application/vnd.ms-excel');
 }
 
 // Reads the live form fields (not the saved record), so Export works on
