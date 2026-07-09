@@ -48,7 +48,10 @@
     'launchListMaster',
     'btvLinesheetChangeLog',
     'btv_product_data',
-    'btv_linesheet_products',
+    // btv_linesheet_products is deliberately NOT here — it's synced as individual
+    // rows in its own linesheet_products table (see the per-row sync module in
+    // linesheet.html), not as a whole-blob app_state key. Re-adding it here would
+    // reintroduce the whole-list-overwrite race condition that module exists to fix.
     'btv-admin-config-v1',
     'btv-edit-locks-v1',
   ];
@@ -66,7 +69,7 @@
     'launchListMaster',
     'btvLinesheetChangeLog',
     'btv_product_data',
-    'btv_linesheet_products',
+    // btv_linesheet_products intentionally excluded — see comment in SYNCED_KEYS above.
     'btv-edit-locks-v1',
   ];
 
@@ -248,21 +251,6 @@
   function applyRow(key, val, fromUserId, updatedAt) {
     if (updatedAt) _lastPullTimes[key] = updatedAt;
     if (localStorage.getItem(key) === val) return; // nothing changed
-
-    // SAFETY: never overwrite btv_linesheet_products with an empty array when local has data.
-    // This prevents a blank-calendar session (or failed sync) from silently wiping all enriched
-    // product data (SKU / barcode / HS codes / pricing) that was entered by another session.
-    if (key === 'btv_linesheet_products') {
-      try {
-        var _incoming = JSON.parse(val);
-        var _current  = JSON.parse(localStorage.getItem(key) || '[]');
-        if (Array.isArray(_incoming) && _incoming.length === 0 &&
-            Array.isArray(_current)  && _current.length  > 0) {
-          console.warn('[BTV Sync] Blocked empty btv_linesheet_products from Supabase overwriting', _current.length, 'local products.');
-          return;
-        }
-      } catch (e) {}
-    }
 
     _origSetItem(key, val);
     if (!RENDER_KEYS.includes(key)) return;
@@ -642,6 +630,11 @@
     if (typeof window.btvLsPresenceInit === 'function') {
       await window.btvLsPresenceInit(_session);
     }
+    // Linesheet products are synced as individual rows (not through the generic
+    // whole-blob app_state path above) — see the per-row sync module in linesheet.html.
+    if (typeof window.btvLsProductsInit === 'function') {
+      await window.btvLsProductsInit(_session);
+    }
     console.log('[BTV Sync] Live sync active.');
   }
 
@@ -660,6 +653,7 @@
     // Linesheet runs its own separate presence channel (see comment in setupPresence) —
     // tear it down too, otherwise a backgrounded Linesheet tab would keep it alive.
     if (typeof window.btvLsPresenceTeardown === 'function') window.btvLsPresenceTeardown();
+    if (typeof window.btvLsProductsTeardown === 'function') window.btvLsProductsTeardown();
     console.log('[BTV Sync] Live sync paused (background tab).');
   }
 

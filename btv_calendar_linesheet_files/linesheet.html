@@ -5489,6 +5489,25 @@ function switchView(view){
 
 
 
+// Compares a before/after snapshot of the products array and syncs only the rows that
+// actually changed (added, edited, or removed) instead of rewriting everything — used by
+// bulk reconciliation passes like loadFromCalendar, which can touch many products at once
+// but should still only ever persist the ones it genuinely changed.
+function _btvDiffAndSyncProducts(beforeArr, afterArr){
+  if (typeof window.btvLsUpsertProducts !== 'function') return;
+  var beforeMap = {};
+  beforeArr.forEach(function(p){ beforeMap[p.id] = p; });
+  var afterIds = {};
+  afterArr.forEach(function(p){ afterIds[p.id] = true; });
+  var toUpsert = afterArr.filter(function(p){
+    var prev = beforeMap[p.id];
+    return !prev || JSON.stringify(prev) !== JSON.stringify(p);
+  });
+  var toDelete = beforeArr.filter(function(p){ return !afterIds[p.id]; }).map(function(p){ return p.id; });
+  if (toDelete.length) window.btvLsDeleteProducts(toDelete);
+  if (toUpsert.length) window.btvLsUpsertProducts(toUpsert);
+}
+
 function loadFromCalendar(notifyNew){
 
 
@@ -6720,6 +6739,7 @@ return __btvEnrichRowWithPrices(__btvRow);
   const __ltEl=document.getElementById('collectionName');if(__ltEl)__ltEl.value=getCalendarLaunchTitleForLinesheet(selectedProducts()) || '';
   // Persist updated calEntryId assignments so popups in other views always read fresh data
   try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch(e) {}
+  _btvDiffAndSyncProducts(__btvPreSyncProducts, products);
 
 
 
@@ -10649,8 +10669,17 @@ async function saveProductGroup(){
 
 
 
-  // Persist enriched product list so it survives page refresh and syncs to teammates
-  localStorage.setItem('btv_linesheet_products', JSON.stringify(products));
+  // Persist only THIS group's rows — upsert the saved/updated variants and delete any
+  // that were removed from the form, instead of rewriting every other product's row.
+  // This is what actually prevents two people editing different products from
+  // clobbering each other: neither save ever touches a row it didn't change.
+  try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch(e) {}
+  var _btvSavedGroupRows = groupProductsById(__btvResolvedGroupId);
+  var _btvOldGroupIds = __btvOldGroup.map(function(p){ return p.id; });
+  var _btvNewGroupIds = _btvSavedGroupRows.map(function(p){ return p.id; });
+  var _btvIdsToDelete = _btvOldGroupIds.filter(function(id){ return _btvNewGroupIds.indexOf(id) === -1; });
+  if (_btvIdsToDelete.length && typeof window.btvLsDeleteProducts === 'function') window.btvLsDeleteProducts(_btvIdsToDelete);
+  if (typeof window.btvLsUpsertProducts === 'function') window.btvLsUpsertProducts(_btvSavedGroupRows);
   _btvSetDirty(false);
   if (typeof window.btvClearEditing === 'function') window.btvClearEditing();
   var _w = document.getElementById('btv-ls-presence-warn'); if (_w) _w.style.display = 'none';
@@ -11580,6 +11609,7 @@ function deleteGroup(groupId){
 
 
   products = products.filter(p => p.groupId !== groupId);
+  if (typeof window.btvLsDeleteProductsByGroup === 'function') window.btvLsDeleteProductsByGroup(groupId);
 
 
 
@@ -11688,6 +11718,7 @@ function toggleLinesheetSelection(id, checked){
 
   item.selectedForLinesheet = checked;
   try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch(e) {}
+  if (typeof window.btvLsUpsertProducts === 'function') window.btvLsUpsertProducts([item]);
 
 
 
@@ -11740,6 +11771,7 @@ function btvToggleApproval(id, role, checked){
   p.linesheetComplete = btvAllApproved(p);
   if(!p.linesheetComplete) p.selectedForLinesheet = false;
   try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch(e) {}
+  if (typeof window.btvLsUpsertProducts === 'function') window.btvLsUpsertProducts([p]);
   renderMaster();
 }
 function toggleComplete(id, checked){
@@ -11805,6 +11837,8 @@ function toggleComplete(id, checked){
 
     p.linesheetComplete = checked;
     if(!checked) p.selectedForLinesheet = false;
+    try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch(e) {}
+    if (typeof window.btvLsUpsertProducts === 'function') window.btvLsUpsertProducts([p]);
 
 
 
@@ -12045,6 +12079,7 @@ function toggleSelectAllVisible(checked){
 
 
   products.forEach(p => { if(visibleIds.has(p.id)){ if(!checked) p.selectedForLinesheet=false; else if(p.linesheetComplete) p.selectedForLinesheet=true; } });
+  if (typeof window.btvLsUpsertProducts === 'function') window.btvLsUpsertProducts(visible);
 
 
 
@@ -14070,13 +14105,17 @@ function importLinesheetJSON(input){
       return;
     }
 
-    products = incomingProducts.map(function(p){
+    const nextProducts = incomingProducts.map(function(p){
       p = p || {};
       if(!p.id) p.id = uid('product');
       if(!p.groupId) p.groupId = uid('group');
       if(!p.variantLocalId) p.variantLocalId = uid('variant');
       return p;
     });
+    // Explicit, user-confirmed bulk replace — diffed against the table so it only
+    // deletes rows that truly aren't in the imported file, not a blind overwrite.
+    if (typeof window.btvLsReplaceAllProducts === 'function') window.btvLsReplaceAllProducts(nextProducts);
+    products = nextProducts;
     localStorage.setItem('btv_linesheet_products', JSON.stringify(products));
 
     if(Array.isArray(parsed.changeLog)){
@@ -16272,13 +16311,11 @@ window.btvReloadAndRender = function() {
 
   var formOpen = !!(window._btvCurrentGroupId || editingGroupId);
 
+  // Note: btv_linesheet_products is no longer read here — it's kept fresh by the
+  // dedicated per-row realtime module (btvLsProductsInit), which already applies its
+  // own "don't disrupt an open edit" guard for that data specifically.
   if (_btvFormDirty || formOpen) {
     window._btvLsSkippedRemoteWhileDirty = true;
-    // Update background data so it's fresh when the user saves or navigates away
-    try {
-      var _rr = localStorage.getItem('btv_linesheet_products');
-      if (_rr) products = JSON.parse(_rr);
-    } catch(e) {}
     // Save-sync layer: if form is open but not dirty, refresh visible fields from the
     // saved product data so the user sees the other person's saved changes
     if (formOpen && !_btvFormDirty) {
@@ -16287,10 +16324,6 @@ window.btvReloadAndRender = function() {
     return;
   }
   // No product open — safe to fully re-render
-  try {
-    var _rr2 = localStorage.getItem('btv_linesheet_products');
-    if (_rr2) products = JSON.parse(_rr2);
-  } catch(e) {}
   if (typeof loadFromCalendar === 'function') loadFromCalendar(false);
   if (document.getElementById('changeLogList') && typeof renderDashboard === 'function') renderDashboard();
   if (typeof _btvLsRenderPresenceBar === 'function') _btvLsRenderPresenceBar();
@@ -16498,6 +16531,156 @@ window.btvReloadAndRender = function() {
 
 
 
+})();
+
+/* ── Linesheet Products: per-row sync ────────────────────────────────────────
+   btv_linesheet_products used to be one giant JSON blob under a single
+   app_state row — every save (even ticking one checkbox) rewrote the WHOLE
+   list from whatever this browser tab had in memory, so two people editing
+   different products around the same time could silently wipe each other's
+   work. This module stores products as individual rows in their own table
+   (public.linesheet_products, id = product.id) so a save/delete only ever
+   touches the row(s) it actually changed.
+   Initialized via window.btvLsProductsInit(session) called by btvSyncStart,
+   the same way btvLsPresenceInit already is — idempotent (safe to call again
+   on tab resume) and paired with btvLsProductsTeardown for tab pause.
+   ─────────────────────────────────────────────────────────────────────────── */
+(function () {
+  'use strict';
+
+  var _sb        = null; // reuses window._btvSb — no separate connection needed
+  var _uid       = null;
+  var _channel   = null;
+  var _retryMs   = [1000, 3000]; // mirrors supabase-sync.js's write-retry pattern
+
+  function _rowToProduct(row) {
+    var p = Object.assign({}, row.data || {});
+    p.id = row.id;
+    p.groupId = row.group_id;
+    return p;
+  }
+
+  async function _fetchAll() {
+    if (!_sb) return;
+    var res = await _sb.from('linesheet_products').select('id,group_id,data,updated_at,updated_by');
+    if (res.error) { console.warn('[BTV LS Products] fetch error:', res.error.message); return; }
+    products = (res.data || []).map(_rowToProduct);
+    try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch (e) {}
+    _rerenderAll();
+  }
+
+  function _rerenderAll() {
+    if (typeof updateCount === 'function') updateCount();
+    if (typeof populateCategoryFilter === 'function') populateCategoryFilter();
+    if (typeof renderMaster === 'function') renderMaster();
+    if (typeof renderLinesheet === 'function') renderLinesheet();
+    if (document.getElementById('changeLogList') && typeof renderDashboard === 'function') renderDashboard();
+  }
+
+  function _applyRealtimeChange(payload) {
+    if (payload.eventType === 'DELETE') {
+      var oldId = payload.old && payload.old.id;
+      if (!oldId) return;
+      products = products.filter(function (p) { return p.id !== oldId; });
+    } else {
+      var row = payload.new;
+      if (!row) return;
+      var p = _rowToProduct(row);
+      var idx = products.findIndex(function (pr) { return pr.id === p.id; });
+      if (idx >= 0) products[idx] = p; else products.push(p);
+    }
+    try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch (e) {}
+
+    // Same "don't disrupt an open edit" guard the rest of the app already uses.
+    var changedGroupId = payload.eventType === 'DELETE'
+      ? (payload.old && payload.old.group_id)
+      : (payload.new && payload.new.group_id);
+    var openGroupId = window._btvCurrentGroupId || (typeof editingGroupId !== 'undefined' ? editingGroupId : null);
+    var formOpenOnThisGroup = !!(openGroupId && changedGroupId && openGroupId === changedGroupId);
+    var formOpen = !!openGroupId;
+
+    if ((typeof _btvFormDirty !== 'undefined' && _btvFormDirty) || formOpen) {
+      window._btvLsSkippedRemoteWhileDirty = true;
+      if (formOpenOnThisGroup && !(typeof _btvFormDirty !== 'undefined' && _btvFormDirty) && typeof _btvRefreshFormFromSaved === 'function') {
+        _btvRefreshFormFromSaved(openGroupId);
+      }
+      // Still refresh the background tables even while a form is open, as long as it's
+      // not the group currently being edited — no reason to hide unrelated updates.
+      if (!formOpenOnThisGroup) _rerenderAll();
+      return;
+    }
+    _rerenderAll();
+  }
+
+  window.btvLsProductsInit = async function (session) {
+    _sb = window._btvSb;
+    if (!_sb) return;
+    _uid = session && session.user && session.user.id;
+
+    await _fetchAll(); // also serves as the resume-catch-up when re-activated
+
+    if (_channel) return; // realtime already subscribed
+    _channel = _sb.channel('btv-linesheet-products-v1')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'linesheet_products' }, _applyRealtimeChange)
+      .subscribe(function (status) {
+        console.log('[BTV LS Products] Realtime:', status);
+      });
+  };
+
+  window.btvLsProductsTeardown = function () {
+    if (_channel) { try { _channel.unsubscribe(); } catch (e) {} _channel = null; }
+  };
+
+  async function _withRetry(fn, label, attempt) {
+    attempt = attempt || 0;
+    try {
+      var res = await fn();
+      if (res && res.error) throw res.error;
+      return true;
+    } catch (err) {
+      if (attempt < _retryMs.length) {
+        console.warn('[BTV LS Products] ' + label + ' failed (attempt ' + (attempt + 1) + '), retrying:', err && err.message || err);
+        await new Promise(function (resolve) { setTimeout(resolve, _retryMs[attempt]); });
+        return _withRetry(fn, label, attempt + 1);
+      }
+      console.error('[BTV LS Products] ' + label + ' failed after retries:', err && err.message || err);
+      alert('Could not save to the shared linesheet (' + label + ' failed after retrying). Your change is only on this device — please check your connection and try again.');
+      return false;
+    }
+  }
+
+  // Upserts one or more products — used by every place that changes a specific
+  // product (form save, checkboxes, approvals) instead of rewriting the whole list.
+  window.btvLsUpsertProducts = function (list) {
+    if (!_sb || !list || !list.length) return Promise.resolve(false);
+    var now = new Date().toISOString();
+    var rows = list.map(function (p) {
+      return { id: p.id, group_id: p.groupId || p.id, data: p, updated_at: now, updated_by: _uid };
+    });
+    return _withRetry(function () { return _sb.from('linesheet_products').upsert(rows, { onConflict: 'id' }); }, 'save');
+  };
+
+  window.btvLsDeleteProducts = function (ids) {
+    if (!_sb || !ids || !ids.length) return Promise.resolve(false);
+    return _withRetry(function () { return _sb.from('linesheet_products').delete().in('id', ids); }, 'delete');
+  };
+
+  window.btvLsDeleteProductsByGroup = function (groupId) {
+    if (!_sb || !groupId) return Promise.resolve(false);
+    return _withRetry(function () { return _sb.from('linesheet_products').delete().eq('group_id', groupId); }, 'delete');
+  };
+
+  // Full-list replace for JSON import: an intentional, explicit bulk operation
+  // (the user is warned and confirms before this runs) — diffed against the
+  // current table so it only deletes rows that truly aren't in the new set.
+  window.btvLsReplaceAllProducts = async function (newList) {
+    if (!_sb) return false;
+    var keepIds = new Set(newList.map(function (p) { return p.id; }));
+    var existingIds = products.map(function (p) { return p.id; });
+    var toDelete = existingIds.filter(function (id) { return !keepIds.has(id); });
+    if (toDelete.length) await window.btvLsDeleteProducts(toDelete);
+    return window.btvLsUpsertProducts(newList);
+  };
 })();
 
 // ── Apply viewer mode ────────────────────────────────────────────────────────
