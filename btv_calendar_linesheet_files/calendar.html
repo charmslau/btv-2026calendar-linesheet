@@ -8,7 +8,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Global Product Cal</title>
+<title>Product Calendar Input</title>
 
 <style>
 
@@ -3071,7 +3071,7 @@ body.btv-dashboard-mode #quarterGroup{display:none!important}
 
 <div class="app">
 
-  <h1 class="page-title">Global Product Cal</h1>
+  <h1 class="page-title">Product Calendar Input</h1>
 
   <div class="tabs">
 
@@ -12079,6 +12079,12 @@ function btvSearchClose(){
 
 function btvSearchSelect(id){
   btvSearchClose();
+  // Clear + re-render BEFORE looking up the element — now that the grid actually filters
+  // as you type, the entry has to be located fresh after the grid returns to unfiltered,
+  // otherwise render() would replace it out from under the highlight right after.
+  var si = document.getElementById('searchInput');
+  if(si){ si.value = ''; }
+  render();
   var el = document.querySelector('[data-entry-id="'+id+'"]');
   if(el){
     el.scrollIntoView({behavior:'smooth', block:'center'});
@@ -12087,15 +12093,16 @@ function btvSearchSelect(id){
     el.style.outline = '2px solid #DB6256';
     setTimeout(function(){ el.style.outline = old; el.classList.remove('expanded'); }, 2500);
   }
-  var si = document.getElementById('searchInput');
-  if(si){ si.value = ''; }
 }
 
 (function btvInitSearch(){
   function tryInit(){
     var inp = document.getElementById('searchInput');
     if(!inp){ setTimeout(tryInit, 200); return; }
-    inp.addEventListener('input', btvSearchRender);
+    // entryMatchesSearch() (used inside render()'s cell-building) already reads this same
+    // input's value, but nothing was calling render() when it changed — so the autocomplete
+    // dropdown worked, but the calendar grid itself never actually filtered as you typed.
+    inp.addEventListener('input', function(){ btvSearchRender(); render(); });
     inp.addEventListener('focus', btvSearchRender);
     inp.addEventListener('blur', function(){ setTimeout(btvSearchClose, 200); });
     document.addEventListener('keydown', function(e){ if(e.key==='Escape') btvSearchClose(); });
