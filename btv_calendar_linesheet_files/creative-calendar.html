@@ -616,9 +616,18 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
           <option value="JP">JP</option><option value="CN">CN</option>
         </select>
       </div>
-      <div>
+      <div id="mTimeWrap">
         <label class="f-lbl" for="mTime">Time</label>
         <input type="text" id="mTime" class="f-inp" placeholder="e.g. 2:00 PM – 5:00 PM">
+      </div>
+      <div id="mChannelWrap" style="display:none">
+        <label class="f-lbl" for="mChannel">Online / Offline</label>
+        <select id="mChannel" class="f-sel">
+          <option value="">— Select —</option>
+          <option value="Online Only">Online Only</option>
+          <option value="Offline Only">Offline Only</option>
+          <option value="Online + Offline">Online + Offline</option>
+        </select>
       </div>
     </div>
 
@@ -633,7 +642,7 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
       </div>
     </div>
 
-    <div class="f-row">
+    <div class="f-row" id="mStoreGuestsWrap">
       <div>
         <label class="f-lbl" for="mStore">Store</label>
         <input type="text" id="mStore" class="f-inp" placeholder="e.g. ION Orchard">
@@ -648,18 +657,22 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
     <textarea id="mObjective" class="f-txt" style="min-height:55px" placeholder="To position Beyond The Vines at the centre of the conversation…
 To drive in-store traffic and brand discovery…"></textarea>
 
-    <label class="f-lbl" for="mAudience">Target Audience <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(one bullet per line)</span></label>
-    <textarea id="mAudience" class="f-txt" style="min-height:55px" placeholder="Existing VIP members…
+    <div id="mAudienceWrap">
+      <label class="f-lbl" for="mAudience">Target Audience <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(one bullet per line)</span></label>
+      <textarea id="mAudience" class="f-txt" style="min-height:55px" placeholder="Existing VIP members…
 Senior retail operators and decision-makers…"></textarea>
-
-    <label class="f-lbl" for="mRundown">Event Rundown</label>
-    <textarea id="mRundown" class="f-txt" placeholder="Run-of-show, timing breakdown…"></textarea>
+    </div>
 
     <label class="f-lbl" for="mMechanics">Mechanics</label>
     <textarea id="mMechanics" class="f-txt" style="min-height:45px" placeholder="How it works — e.g. GWP with min. spend…"></textarea>
 
-    <label class="f-lbl" for="mComms">Comms</label>
-    <textarea id="mComms" class="f-txt" style="min-height:45px" placeholder="Key messaging / comms plan…"></textarea>
+    <label class="f-lbl" for="mRundown"><span id="mRundownLabelText">Event Rundown</span></label>
+    <textarea id="mRundown" class="f-txt" placeholder="Run-of-show, timing breakdown…"></textarea>
+
+    <div id="mCommsWrap">
+      <label class="f-lbl" for="mComms">Comms</label>
+      <textarea id="mComms" class="f-txt" style="min-height:45px" placeholder="Key messaging / comms plan…"></textarea>
+    </div>
 
     <label class="f-lbl" for="mTnc">T&amp;Cs</label>
     <textarea id="mTnc" class="f-txt" style="min-height:45px" placeholder="Terms & conditions…"></textarea>
@@ -1182,7 +1195,7 @@ function renderMarketingRow(market,row,gc){
 // per market. Only entries that are fully identical across markets get consolidated.
 function marketingEntryFingerprint(e){
   return [
-    (e.title||'').trim().toLowerCase(), e.startDateISO||'', e.endDateISO||'', e.time||'',
+    (e.title||'').trim().toLowerCase(), e.startDateISO||'', e.endDateISO||'', e.time||'', e.channel||'',
     e.store||'', e.guests||'', e.objective||'', e.targetAudience||'', e.eventRundown||'',
     e.mechanics||'', e.comms||'', e.tnc||'', e.owner||'', e.status||''
   ].join('|');
@@ -1220,6 +1233,7 @@ function _viewMarketingEntry(cid,marketsLabel){ const e=_viewCache[cid]; if(e) o
 function buildMarketingNotes(d){
   const lines=[];
   if(d.time) lines.push('Time: '+d.time);
+  if(d.channel) lines.push('Channel: '+d.channel);
   if(d.store) lines.push('Store: '+d.store);
   if(d.guests) lines.push('No. of Guests: '+d.guests);
   if(d.objective) lines.push('Objective: '+d.objective);
@@ -1281,11 +1295,26 @@ let marketingModalEntry=null;
 let _marketingPendingImages=[];
 
 function _resetMarketingFormFields(){
-  ['mTime','mStore','mGuests','mObjective','mAudience','mRundown','mMechanics','mComms','mTnc','mLinks','mOwner'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['mTime','mStore','mGuests','mObjective','mAudience','mRundown','mMechanics','mComms','mTnc','mLinks','mOwner','mChannel'].forEach(function(id){ document.getElementById(id).value=''; });
   document.getElementById('mEndDate').value='';
   document.getElementById('mStatus').value='draft';
   document.getElementById('mImagesStatus').textContent='';
   document.getElementById('mModalErr').textContent='';
+}
+
+// Digital Activation only needs a leaner field set (title/market/dates/objective/
+// online-offline/mechanics/breakdown/T&Cs) — Time, Store/Guests, Target Audience and
+// Comms don't apply to it, and it gets the Online/Offline picker instead of Time.
+// The row is fixed for the life of one modal open (set only when Add/Edit opens it),
+// so this only needs to run once per open, not on every field change.
+function _applyMarketingRowFieldVisibility(rowKey){
+  const isDigital = rowKey === 'Digital Activations';
+  document.getElementById('mTimeWrap').style.display = isDigital ? 'none' : '';
+  document.getElementById('mChannelWrap').style.display = isDigital ? '' : 'none';
+  document.getElementById('mStoreGuestsWrap').style.display = isDigital ? 'none' : '';
+  document.getElementById('mAudienceWrap').style.display = isDigital ? 'none' : '';
+  document.getElementById('mCommsWrap').style.display = isDigital ? 'none' : '';
+  document.getElementById('mRundownLabelText').textContent = isDigital ? 'Breakdown of Details (if needed)' : 'Event Rundown';
 }
 
 function openMarketingAddModal(market,rowKey,week){
@@ -1300,6 +1329,7 @@ function openMarketingAddModal(market,rowKey,week){
   document.getElementById('mRowKey').value=rowKey;
   document.getElementById('mStartDate').value=isoForWeekDay(week||1,0);
   _resetMarketingFormFields();
+  _applyMarketingRowFieldVisibility(rowKey);
   renderMarketingImagesList();
   document.getElementById('mDeleteBtn').style.display='none';
   document.getElementById('mExportBtn').style.display='';
@@ -1324,6 +1354,7 @@ function openMarketingEditModal(item){
   document.getElementById('mStartDate').value=item.startDateISO||'';
   document.getElementById('mEndDate').value=item.endDateISO||'';
   document.getElementById('mTime').value=item.time||'';
+  document.getElementById('mChannel').value=item.channel||'';
   document.getElementById('mStore').value=item.store||'';
   document.getElementById('mGuests').value=item.guests||'';
   document.getElementById('mObjective').value=item.objective||'';
@@ -1337,6 +1368,7 @@ function openMarketingEditModal(item){
   document.getElementById('mStatus').value=item.status||'draft';
   document.getElementById('mImagesStatus').textContent='';
   document.getElementById('mModalErr').textContent='';
+  _applyMarketingRowFieldVisibility(item.row);
   renderMarketingImagesList();
   document.getElementById('mDeleteBtn').style.display='';
   document.getElementById('mExportBtn').style.display='';
@@ -1362,6 +1394,7 @@ function saveMarketingEntry(){
 
   const d={
     time:document.getElementById('mTime').value.trim(),
+    channel:document.getElementById('mChannel').value.trim(),
     store:document.getElementById('mStore').value.trim(),
     guests:document.getElementById('mGuests').value.trim(),
     objective:document.getElementById('mObjective').value.trim(),
@@ -1483,6 +1516,7 @@ function _gatherMarketingFormData(){
     startDateISO:document.getElementById('mStartDate').value,
     endDateISO:document.getElementById('mEndDate').value,
     time:document.getElementById('mTime').value.trim(),
+    channel:document.getElementById('mChannel').value.trim(),
     store:document.getElementById('mStore').value.trim(),
     guests:document.getElementById('mGuests').value.trim(),
     objective:document.getElementById('mObjective').value.trim(),
@@ -1512,17 +1546,19 @@ function exportMarketingEntry(){
     const body=bulleted?bulletListHtml(text):('<p>'+esc(text).replace(/\n/g,'<br>')+'</p>');
     return '<div class="export-field"><h2>'+esc(label)+'</h2>'+body+'</div>';
   };
+  const isDigital=ev.row==='Digital Activations';
   const fieldsHtml=[
     field('Date',dateLine,false),
     field('Time',ev.time,false),
     field('Market',ev.market,false),
+    field('Online / Offline',ev.channel,false),
     field('Stores',ev.store,false),
     field('No. of Guests',ev.guests,false),
     field('Objectives',ev.objective,false),
     field('Target Audience',ev.targetAudience,false),
-    field('Event Rundown',ev.eventRundown,true),
-    field('Communication',ev.comms,false),
     field('Mechanics',ev.mechanics,true),
+    field(isDigital?'Breakdown of Details':'Event Rundown',ev.eventRundown,true),
+    field('Communication',ev.comms,false),
     field('T&Cs',ev.tnc,true),
   ].join('');
   // Uploaded images render clean — no card background, border or shadow around them.
@@ -2225,12 +2261,13 @@ function openMarketingReadOnlyModal(entry,marketsLabel){
   let body='';
   if(entry.status) body+=vfG('Status',`<span class="rcard-badge ${entry.status==='published'?'s-published':'s-draft'}">${esc(entry.status==='published'?'Published':'Draft')}</span>`);
   if(entry.time) body+=vfG('Time',esc(entry.time));
+  if(entry.channel) body+=vfG('Online / Offline',esc(entry.channel));
   if(entry.store) body+=vfG('Store',esc(entry.store));
   if(entry.guests) body+=vfG('No. of Guests',esc(String(entry.guests)));
   if(entry.objective) body+=vfG('Objective',`<div class="vf-val">${esc(entry.objective)}</div>`);
   if(entry.targetAudience) body+=vfG('Target Audience',`<div class="vf-val">${esc(entry.targetAudience)}</div>`);
-  if(entry.eventRundown) body+=vfG('Rundown',`<div class="vf-val">${esc(entry.eventRundown)}</div>`);
   if(entry.mechanics) body+=vfG('Mechanics',`<div class="vf-val">${esc(entry.mechanics)}</div>`);
+  if(entry.eventRundown) body+=vfG((entry.row==='Digital Activations'?'Breakdown of Details':'Rundown'),`<div class="vf-val">${esc(entry.eventRundown)}</div>`);
   if(entry.comms) body+=vfG('Comms',`<div class="vf-val">${esc(entry.comms)}</div>`);
   if(entry.tnc) body+=vfG('Terms & Conditions',`<div class="vf-val">${esc(entry.tnc)}</div>`);
   if(entry.owner) body+=vfG('Owner',esc(entry.owner));
