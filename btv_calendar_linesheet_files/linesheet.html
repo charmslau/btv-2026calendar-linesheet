@@ -14089,15 +14089,10 @@ function importLinesheetJSON(input){
     renderMaster();
     renderLinesheet();
     if(document.getElementById('changeLogList')) renderDashboard();
-  }
-  // Re-render when product data updates arrive from another iframe or tab
-  if(e.key === 'btv_linesheet_products' && e.newValue){
-    try { products = JSON.parse(e.newValue); } catch(ex) {}
-    renderMaster(); renderLinesheet(); updateCount(); populateCategoryFilter();
     _btvSetDirty(false);
-    alert('Import complete - ' + products.length + ' variant row(s) loaded.');
+    alert('Import complete — ' + products.length + ' variant row(s) loaded.');
     input.value = '';
-  };
+  }
   reader.readAsText(file);
 }
 
