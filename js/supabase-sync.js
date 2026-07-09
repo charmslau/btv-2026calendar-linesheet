@@ -85,6 +85,8 @@
   let _presenceReconnTimer  = null;  // debounces presence reconnect attempts
   let _rtSb                 = null;  // realtime Supabase client — stored so it can be cleaned up on reconnect
   let _presenceSb           = null;  // presence Supabase client — stored so it can be cleaned up on reconnect
+  let _pollingIntervalId    = null;  // the 15s fallback-poll timer, so it can be stopped while paused
+  let _liveActive           = false; // true while Realtime/Presence/polling are actually running
 
   // Tracks the last-known updated_at from Supabase for each key.
   // Used for version-conflict detection.
@@ -536,7 +538,8 @@
   // acting purely as a safety net until the reconnect logic above restores it.
 
   function setupPolling() {
-    setInterval(async function () {
+    if (_pollingIntervalId) return;
+    _pollingIntervalId = setInterval(async function () {
       if (!_sb || _realtimeConnected) return;
       try {
         const { data } = await _sb
@@ -555,40 +558,9 @@
 
   // ── btvSyncStart ──────────────────────────────────────────────────────────
 
-  window.btvSyncStart = async function (session, parentSb, canEdit) {
-    // Store edit permission before anything else; default true for back-compat
-    window._btvCanEdit = (canEdit !== false);
-    if (_started) {
-      console.log('[BTV Sync] Already started, skipping.');
-      return;
-    }
-    _started   = true;
-    _userId    = session.user.id;
-    _userEmail = session.user.email || null;
-    _session   = session;
-
-    console.log('[BTV Sync] Starting for', _userEmail);
-
-    if (parentSb) {
-      _sb = parentSb;
-      console.log('[BTV Sync] Using parent Supabase client.');
-    } else {
-      _sb = window.supabase.createClient(url, anonKey, {
-        auth: { persistSession: true, autoRefreshToken: true },
-      });
-      const { data: { session: activeSession } } = await _sb.auth.getSession();
-      if (!activeSession) {
-        console.error('[BTV Sync] No active session found.');
-        showError('Live sync could not authenticate. Sign out and sign back in.');
-        setupWriteInterceptor();
-        return;
-      }
-    }
-    // Expose Supabase client and user email for other modules (e.g. public calendar)
-    window._btvSb = _sb;
-    window._btvSyncEmail = _userEmail;
-
-    // Pull latest state — include updated_at for version tracking
+  // One-time (or catch-up-on-resume) fetch of every synced key from Supabase into
+  // localStorage. Returns false on a hard error (caller should bail out).
+  async function _pullLatest() {
     console.log('[BTV Sync] Pulling latest state from cloud…');
     const { data, error } = await _sb
       .from('app_state')
@@ -596,15 +568,14 @@
       .in('key', SYNCED_KEYS);
 
     if (error) {
-      console.error('[BTV Sync] Initial pull error:', error.message);
+      console.error('[BTV Sync] Pull error:', error.message);
       if (error.message.includes('does not exist') || error.code === '42P01') {
         showError(
           'Supabase <strong>app_state</strong> table not found. ' +
           'Run <strong>supabase-setup.sql</strong> in your Supabase SQL Editor.'
         );
       }
-      setupWriteInterceptor();
-      return;
+      return false;
     }
 
     if (data && data.length > 0) {
@@ -650,18 +621,94 @@
         }
       }
     }
+    return true;
+  }
 
-    // Wire up live sync and safety features
-    setupWriteInterceptor();
+  // Only one of the app's four pages (Calendar 2026/2027, Global Calendar, Linesheet) is
+  // ever visible at a time — the other three sit hidden (display:none) in their iframes for
+  // the whole session. Previously all four kept a live Realtime channel, a Presence channel
+  // and a 15s poll running regardless, which was a major contributor to Supabase Disk IO
+  // usage. _goLive/_goPaused let the parent frame (index.html) start live sync ONLY for the
+  // currently-visible page and pause it for the other three, resuming on tab switch.
+  async function _goLive() {
+    if (_liveActive || !_sb) return;
+    _liveActive = true;
+    const pulled = await _pullLatest(); // catch up on anything missed while paused
+    if (!pulled) { _liveActive = false; return; }
     await setupRealtime();
     setupPolling();
     await setupPresence();
-
     // Let the linesheet initialize its own presence system if defined
     if (typeof window.btvLsPresenceInit === 'function') {
       await window.btvLsPresenceInit(_session);
     }
+    console.log('[BTV Sync] Live sync active.');
+  }
 
+  function _goPaused() {
+    if (!_liveActive) return;
+    _liveActive = false;
+    if (_realtimeChannel) { try { _realtimeChannel.unsubscribe(); } catch (e) {} _realtimeChannel = null; }
+    if (_rtSb) { try { _rtSb.removeAllChannels(); } catch (e) {} _rtSb = null; }
+    _realtimeConnected = false;
+    if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
+    if (_presenceChannel) { try { _presenceChannel.untrack(); _presenceChannel.unsubscribe(); } catch (e) {} _presenceChannel = null; }
+    if (_presenceSb) { try { _presenceSb.removeAllChannels(); } catch (e) {} _presenceSb = null; }
+    if (_presenceIntervalId) { clearInterval(_presenceIntervalId); _presenceIntervalId = null; }
+    if (_presenceReconnTimer) { clearTimeout(_presenceReconnTimer); _presenceReconnTimer = null; }
+    if (_pollingIntervalId) { clearInterval(_pollingIntervalId); _pollingIntervalId = null; }
+    // Linesheet runs its own separate presence channel (see comment in setupPresence) —
+    // tear it down too, otherwise a backgrounded Linesheet tab would keep it alive.
+    if (typeof window.btvLsPresenceTeardown === 'function') window.btvLsPresenceTeardown();
+    console.log('[BTV Sync] Live sync paused (background tab).');
+  }
+
+  // Called by index.html when this page's iframe is hidden/shown.
+  window.btvSyncPause  = function () { _goPaused(); };
+  window.btvSyncResume = async function () { if (_started) await _goLive(); };
+
+  window.btvSyncStart = async function (session, parentSb, canEdit, startLive) {
+    // Store edit permission before anything else; default true for back-compat
+    window._btvCanEdit = (canEdit !== false);
+    if (_started) {
+      console.log('[BTV Sync] Already started, skipping.');
+      return;
+    }
+    _started   = true;
+    _userId    = session.user.id;
+    _userEmail = session.user.email || null;
+    _session   = session;
+
+    console.log('[BTV Sync] Starting for', _userEmail);
+
+    if (parentSb) {
+      _sb = parentSb;
+      console.log('[BTV Sync] Using parent Supabase client.');
+    } else {
+      _sb = window.supabase.createClient(url, anonKey, {
+        auth: { persistSession: true, autoRefreshToken: true },
+      });
+      const { data: { session: activeSession } } = await _sb.auth.getSession();
+      if (!activeSession) {
+        console.error('[BTV Sync] No active session found.');
+        showError('Live sync could not authenticate. Sign out and sign back in.');
+        setupWriteInterceptor();
+        return;
+      }
+    }
+    // Expose Supabase client and user email for other modules (e.g. public calendar)
+    window._btvSb = _sb;
+    window._btvSyncEmail = _userEmail;
+
+    setupWriteInterceptor();
+
+    // startLive defaults to true for back-compat with any caller that doesn't pass it.
+    // index.html passes false for the three pages that aren't the initially-shown one.
+    if (startLive === false) {
+      console.log('[BTV Sync] Started in background (paused) — will go live when this tab is shown.');
+      return;
+    }
+    await _goLive();
     console.log('[BTV Sync] Live sync ready.');
   };
 

@@ -440,6 +440,7 @@ html, body {
 
   function setCalYear(year) {
     if (year === _calYear) return;
+    var prevFrame = document.getElementById(_getCalFrameId());
     _calYear = year;
     try { localStorage.setItem('btv-cal-year', year); } catch(e) {}
     document.querySelectorAll('.year-btn').forEach(function(b) {
@@ -453,10 +454,23 @@ html, body {
         frame.classList.add('active');
         if (_isUnlocked('cal')) {
           _bypassFramePasscode(frame, _calPasscode(year));
-          if (_session) _startSyncInFrame(_getCalFrameId(), _session);
+          if (_session) _startSyncInFrame(_getCalFrameId(), _session, undefined, true);
         }
+        _pauseFrameSync(prevFrame);
+        _resumeFrameSync(frame);
       }
     }
+  }
+
+  // Toggle a frame's Realtime/Presence/polling connections on/off — called whenever the
+  // visible tab changes, so only the page the user is actually looking at stays live.
+  function _pauseFrameSync(frame) {
+    if (!frame) return;
+    try { frame.contentWindow && frame.contentWindow.btvSyncPause && frame.contentWindow.btvSyncPause(); } catch (e) {}
+  }
+  function _resumeFrameSync(frame) {
+    if (!frame) return;
+    try { frame.contentWindow && frame.contentWindow.btvSyncResume && frame.contentWindow.btvSyncResume(); } catch (e) {}
   }
 
   // Sync year picker button + active frame to _calYear on page load
@@ -555,13 +569,19 @@ html, body {
 
   // ── Session bootstrap ──────────────────────────────────────────────────────
 
-  function _startSyncInFrame(frameId, session, canEdit) {
+  // startLive: only the page the user is actually looking at needs a live Realtime/
+  // Presence connection. The other three sit hidden in their iframes for the whole
+  // session, so starting them "paused" avoids running 4x the necessary background
+  // connections — a major contributor to Supabase Disk IO usage. Passing session/data
+  // still loads normally; btvSyncPause/btvSyncResume (called from showFrame/setCalYear)
+  // toggle the live connections on tab switch.
+  function _startSyncInFrame(frameId, session, canEdit, startLive) {
     var frame = document.getElementById(frameId);
     if (!frame) return;
     function tryStart() {
       try {
         if (frame.contentWindow && typeof frame.contentWindow.btvSyncStart === 'function') {
-          frame.contentWindow.btvSyncStart(session, _sb, canEdit !== false);
+          frame.contentWindow.btvSyncStart(session, _sb, canEdit !== false, startLive !== false);
           return true;
         }
       } catch (e) { console.error('[BTV] _startSyncInFrame error (' + frameId + '):', e); }
@@ -575,14 +595,15 @@ html, body {
     }
   }
 
-  function _startSyncInCalFrame(session) {
+  function _startSyncInCalFrame(session, activeModule) {
     var _ec = _profile && _profile.can_edit_cal      !== false;
     var _ee = _profile && _profile.can_edit_creative !== false;
     var _el = _profile && _profile.can_edit_ls       !== false;
-    _startSyncInFrame('frame-cal-2026', session, _ec);
-    _startSyncInFrame('frame-cal-2027', session, _ec);
-    _startSyncInFrame('frame-creative', session, _ee);
-    _startSyncInFrame('frame-ls',       session, _el);
+    var activeFrameId = activeModule === 'cal' ? _getCalFrameId() : 'frame-' + activeModule;
+    _startSyncInFrame('frame-cal-2026', session, _ec, activeFrameId === 'frame-cal-2026');
+    _startSyncInFrame('frame-cal-2027', session, _ec, activeFrameId === 'frame-cal-2027');
+    _startSyncInFrame('frame-creative', session, _ee, activeFrameId === 'frame-creative');
+    _startSyncInFrame('frame-ls',       session, _el, activeFrameId === 'frame-ls');
   }
 
   async function boot() {
@@ -593,12 +614,13 @@ html, body {
       await _loadProfile(session.user.id);
       _updateNavButtons(true);
       _setupPresence(session);
-      _startSyncInCalFrame(session);
-      // Auto-unlock all accessible modules and navigate to the first one
+      // Auto-unlock all accessible modules and figure out which one shows first —
+      // needed before starting sync so only that one page's frame goes live.
       var _BOOT_MODS = ['cal', 'creative', 'ls'];
       _BOOT_MODS.forEach(function(m) { if (_canAccess(m)) _setUnlocked(m); });
       var _firstMod = _BOOT_MODS.find(function(m) { return _canAccess(m); }) || 'cal';
       _currentModule = _firstMod;
+      _startSyncInCalFrame(session, _firstMod);
       showFrame(_firstMod);
     }
 
@@ -828,6 +850,7 @@ html, body {
   // ── Frame switching ────────────────────────────────────────────────────────
 
   function showFrame(name) {
+    var prevFrame  = document.querySelector('.frame.active');
     _moduleChosen  = true;
     _currentModule = name;
     document.querySelectorAll('.frame').forEach(function (el) { el.classList.remove('active'); });
@@ -853,6 +876,10 @@ html, body {
     if (!_isUnlocked(name)) {
       _refreshOverlay();
     }
+    // Only the page actually being shown needs a live sync connection — pause the one
+    // being left, resume (or start, on first visit) the one being shown.
+    if (prevFrame !== frame) _pauseFrameSync(prevFrame);
+    _resumeFrameSync(frame);
   }
 
   // ── Password visibility toggle ────────────────────────────────────────────
