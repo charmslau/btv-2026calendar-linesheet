@@ -607,72 +607,10 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
     <label class="f-lbl" for="mTitle">Title *</label>
     <input type="text" id="mTitle" class="f-inp" placeholder="e.g. BTV Friends & Family Night">
 
-    <div class="f-row">
-      <div>
-        <label class="f-lbl" for="mMarket">Market</label>
-        <select id="mMarket" class="f-sel">
-          <option value="SG">SG</option><option value="TH">TH</option>
-          <option value="ID">ID</option><option value="PH">PH</option>
-          <option value="JP">JP</option><option value="CN">CN</option>
-        </select>
-      </div>
-      <div id="mTimeWrap">
-        <label class="f-lbl" for="mTime">Time</label>
-        <input type="text" id="mTime" class="f-inp" placeholder="e.g. 2:00 PM – 5:00 PM">
-      </div>
-      <div id="mChannelWrap" style="display:none">
-        <label class="f-lbl" for="mChannel">Online / Offline</label>
-        <select id="mChannel" class="f-sel">
-          <option value="">— Select —</option>
-          <option value="Online Only">Online Only</option>
-          <option value="Offline Only">Offline Only</option>
-          <option value="Online + Offline">Online + Offline</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="f-row">
-      <div>
-        <label class="f-lbl" for="mStartDate">Date Range — Start *</label>
-        <input type="date" id="mStartDate" class="f-inp">
-      </div>
-      <div>
-        <label class="f-lbl" for="mEndDate">Date Range — End <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(optional)</span></label>
-        <input type="date" id="mEndDate" class="f-inp">
-      </div>
-    </div>
-
-    <div class="f-row" id="mStoreGuestsWrap">
-      <div>
-        <label class="f-lbl" for="mStore">Store</label>
-        <input type="text" id="mStore" class="f-inp" placeholder="e.g. ION Orchard">
-      </div>
-      <div>
-        <label class="f-lbl" for="mGuests">No. of Guests</label>
-        <input type="number" id="mGuests" class="f-inp" min="0" placeholder="e.g. 50">
-      </div>
-    </div>
-
-    <label class="f-lbl" for="mObjective">Objective <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(one bullet per line)</span></label>
-    <textarea id="mObjective" class="f-txt" style="min-height:55px" placeholder="To position Beyond The Vines at the centre of the conversation…
-To drive in-store traffic and brand discovery…"></textarea>
-
-    <div id="mAudienceWrap">
-      <label class="f-lbl" for="mAudience">Target Audience <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(one bullet per line)</span></label>
-      <textarea id="mAudience" class="f-txt" style="min-height:55px" placeholder="Existing VIP members…
-Senior retail operators and decision-makers…"></textarea>
-    </div>
-
-    <label class="f-lbl" for="mMechanics">Mechanics</label>
-    <textarea id="mMechanics" class="f-txt" style="min-height:45px" placeholder="How it works — e.g. GWP with min. spend…"></textarea>
-
-    <label class="f-lbl" for="mRundown"><span id="mRundownLabelText">Event Rundown</span></label>
-    <textarea id="mRundown" class="f-txt" placeholder="Run-of-show, timing breakdown…"></textarea>
-
-    <div id="mCommsWrap">
-      <label class="f-lbl" for="mComms">Comms</label>
-      <textarea id="mComms" class="f-txt" style="min-height:45px" placeholder="Key messaging / comms plan…"></textarea>
-    </div>
+    <!-- Rendered per row type by _renderMarketingModalFields() — Digital Activation gets
+         its own leaner set of fields that aren't merely hidden, they're not in the DOM
+         at all for that row (see the function for the two templates). -->
+    <div id="mDynamicFields"></div>
 
     <label class="f-lbl" for="mTnc">T&amp;Cs</label>
     <textarea id="mTnc" class="f-txt" style="min-height:45px" placeholder="Terms & conditions…"></textarea>
@@ -1295,7 +1233,7 @@ let marketingModalEntry=null;
 let _marketingPendingImages=[];
 
 function _resetMarketingFormFields(){
-  ['mTime','mStore','mGuests','mObjective','mAudience','mRundown','mMechanics','mComms','mTnc','mLinks','mOwner','mChannel'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['mTime','mStore','mGuests','mObjective','mAudience','mRundown','mMechanics','mComms','mTnc','mLinks','mOwner','mChannel'].forEach(function(id){ _setMField(id,''); });
   document.getElementById('mEndDate').value='';
   document.getElementById('mStatus').value='draft';
   document.getElementById('mImagesStatus').textContent='';
@@ -1307,15 +1245,117 @@ function _resetMarketingFormFields(){
 // Comms don't apply to it, and it gets the Online/Offline picker instead of Time.
 // The row is fixed for the life of one modal open (set only when Add/Edit opens it),
 // so this only needs to run once per open, not on every field change.
-function _applyMarketingRowFieldVisibility(rowKey){
-  const isDigital = rowKey === 'Digital Activations';
-  document.getElementById('mTimeWrap').style.display = isDigital ? 'none' : '';
-  document.getElementById('mChannelWrap').style.display = isDigital ? '' : 'none';
-  document.getElementById('mStoreGuestsWrap').style.display = isDigital ? 'none' : '';
-  document.getElementById('mAudienceWrap').style.display = isDigital ? 'none' : '';
-  document.getElementById('mCommsWrap').style.display = isDigital ? 'none' : '';
-  document.getElementById('mRundownLabelText').textContent = isDigital ? 'Breakdown of Details (if needed)' : 'Event Rundown';
+const MARKET_OPTIONS_HTML='<option value="SG">SG</option><option value="TH">TH</option><option value="ID">ID</option><option value="PH">PH</option><option value="JP">JP</option><option value="CN">CN</option>';
+
+// Digital Activation's field markup — Market/Online-Offline, dates, Objective, Mechanics,
+// Breakdown of Details. No Time, Store/Guests, Target Audience or Comms fields exist in
+// the DOM at all for this row (not hidden — they're simply not written into the page).
+function _digitalActivationFieldsHtml(){
+  return `
+    <div class="f-row">
+      <div>
+        <label class="f-lbl" for="mMarket">Market</label>
+        <select id="mMarket" class="f-sel">${MARKET_OPTIONS_HTML}</select>
+      </div>
+      <div>
+        <label class="f-lbl" for="mChannel">Online / Offline</label>
+        <select id="mChannel" class="f-sel">
+          <option value="">— Select —</option>
+          <option value="Online Only">Online Only</option>
+          <option value="Offline Only">Offline Only</option>
+          <option value="Online + Offline">Online + Offline</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="f-row">
+      <div>
+        <label class="f-lbl" for="mStartDate">Date Range — Start *</label>
+        <input type="date" id="mStartDate" class="f-inp">
+      </div>
+      <div>
+        <label class="f-lbl" for="mEndDate">Date Range — End <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(optional)</span></label>
+        <input type="date" id="mEndDate" class="f-inp">
+      </div>
+    </div>
+
+    <label class="f-lbl" for="mObjective">Objective <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(one bullet per line)</span></label>
+    <textarea id="mObjective" class="f-txt" style="min-height:55px" placeholder="To position Beyond The Vines at the centre of the conversation…
+To drive in-store traffic and brand discovery…"></textarea>
+
+    <label class="f-lbl" for="mMechanics">Mechanics</label>
+    <textarea id="mMechanics" class="f-txt" style="min-height:45px" placeholder="How it works — e.g. GWP with min. spend…"></textarea>
+
+    <label class="f-lbl" for="mRundown">Breakdown of Details <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(if needed)</span></label>
+    <textarea id="mRundown" class="f-txt" placeholder="Any further breakdown of how this activation runs…"></textarea>
+  `;
 }
+
+// The other three marketing rows (Brand Events / Community Activation / Retail
+// Activation) keep their original full field set.
+function _standardMarketingFieldsHtml(){
+  return `
+    <div class="f-row">
+      <div>
+        <label class="f-lbl" for="mMarket">Market</label>
+        <select id="mMarket" class="f-sel">${MARKET_OPTIONS_HTML}</select>
+      </div>
+      <div>
+        <label class="f-lbl" for="mTime">Time</label>
+        <input type="text" id="mTime" class="f-inp" placeholder="e.g. 2:00 PM – 5:00 PM">
+      </div>
+    </div>
+
+    <div class="f-row">
+      <div>
+        <label class="f-lbl" for="mStartDate">Date Range — Start *</label>
+        <input type="date" id="mStartDate" class="f-inp">
+      </div>
+      <div>
+        <label class="f-lbl" for="mEndDate">Date Range — End <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(optional)</span></label>
+        <input type="date" id="mEndDate" class="f-inp">
+      </div>
+    </div>
+
+    <div class="f-row">
+      <div>
+        <label class="f-lbl" for="mStore">Store</label>
+        <input type="text" id="mStore" class="f-inp" placeholder="e.g. ION Orchard">
+      </div>
+      <div>
+        <label class="f-lbl" for="mGuests">No. of Guests</label>
+        <input type="number" id="mGuests" class="f-inp" min="0" placeholder="e.g. 50">
+      </div>
+    </div>
+
+    <label class="f-lbl" for="mObjective">Objective <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(one bullet per line)</span></label>
+    <textarea id="mObjective" class="f-txt" style="min-height:55px" placeholder="To position Beyond The Vines at the centre of the conversation…
+To drive in-store traffic and brand discovery…"></textarea>
+
+    <label class="f-lbl" for="mAudience">Target Audience <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px">(one bullet per line)</span></label>
+    <textarea id="mAudience" class="f-txt" style="min-height:55px" placeholder="Existing VIP members…
+Senior retail operators and decision-makers…"></textarea>
+
+    <label class="f-lbl" for="mRundown">Event Rundown</label>
+    <textarea id="mRundown" class="f-txt" placeholder="Run-of-show, timing breakdown…"></textarea>
+
+    <label class="f-lbl" for="mMechanics">Mechanics</label>
+    <textarea id="mMechanics" class="f-txt" style="min-height:45px" placeholder="How it works — e.g. GWP with min. spend…"></textarea>
+
+    <label class="f-lbl" for="mComms">Comms</label>
+    <textarea id="mComms" class="f-txt" style="min-height:45px" placeholder="Key messaging / comms plan…"></textarea>
+  `;
+}
+
+function _renderMarketingModalFields(rowKey){
+  document.getElementById('mDynamicFields').innerHTML =
+    rowKey==='Digital Activations' ? _digitalActivationFieldsHtml() : _standardMarketingFieldsHtml();
+}
+
+// Null-safe field get/set — Digital Activation's DOM genuinely doesn't contain mTime/
+// mStore/mGuests/mAudience/mComms, and the standard rows' DOM doesn't contain mChannel.
+function _setMField(id,val){ const el=document.getElementById(id); if(el) el.value=val; }
+function _getMField(id){ const el=document.getElementById(id); return el?el.value.trim():''; }
 
 function openMarketingAddModal(market,rowKey,week){
   if (window._btvCanEdit === false) { ccToast('You have view-only access to the Global Calendar'); return; }
@@ -1325,11 +1365,11 @@ function openMarketingAddModal(market,rowKey,week){
   document.getElementById('mModalTitle').textContent='Add '+rowLabel;
   document.getElementById('mModalSub').textContent=`${market||''} · Wk ${week||1}`;
   document.getElementById('mTitle').value='';
-  document.getElementById('mMarket').value=market||'SG';
   document.getElementById('mRowKey').value=rowKey;
-  document.getElementById('mStartDate').value=isoForWeekDay(week||1,0);
+  _renderMarketingModalFields(rowKey);
+  _setMField('mMarket',market||'SG');
+  _setMField('mStartDate',isoForWeekDay(week||1,0));
   _resetMarketingFormFields();
-  _applyMarketingRowFieldVisibility(rowKey);
   renderMarketingImagesList();
   document.getElementById('mDeleteBtn').style.display='none';
   document.getElementById('mExportBtn').style.display='';
@@ -1349,26 +1389,26 @@ function openMarketingEditModal(item){
   document.getElementById('mModalTitle').textContent='Edit '+rowLabel;
   document.getElementById('mModalSub').textContent=`${item.market} · Wk ${marketingWeek(item)}`;
   document.getElementById('mTitle').value=item.title||'';
-  document.getElementById('mMarket').value=item.market;
   document.getElementById('mRowKey').value=item.row;
-  document.getElementById('mStartDate').value=item.startDateISO||'';
-  document.getElementById('mEndDate').value=item.endDateISO||'';
-  document.getElementById('mTime').value=item.time||'';
-  document.getElementById('mChannel').value=item.channel||'';
-  document.getElementById('mStore').value=item.store||'';
-  document.getElementById('mGuests').value=item.guests||'';
-  document.getElementById('mObjective').value=item.objective||'';
-  document.getElementById('mAudience').value=item.targetAudience||'';
-  document.getElementById('mRundown').value=item.eventRundown||'';
-  document.getElementById('mMechanics').value=item.mechanics||'';
-  document.getElementById('mComms').value=item.comms||'';
+  _renderMarketingModalFields(item.row);
+  _setMField('mMarket',item.market);
+  _setMField('mStartDate',item.startDateISO||'');
+  _setMField('mEndDate',item.endDateISO||'');
+  _setMField('mTime',item.time||'');
+  _setMField('mChannel',item.channel||'');
+  _setMField('mStore',item.store||'');
+  _setMField('mGuests',item.guests||'');
+  _setMField('mObjective',item.objective||'');
+  _setMField('mAudience',item.targetAudience||'');
+  _setMField('mRundown',item.eventRundown||'');
+  _setMField('mMechanics',item.mechanics||'');
+  _setMField('mComms',item.comms||'');
   document.getElementById('mTnc').value=item.tnc||'';
   document.getElementById('mLinks').value=(item.links||[]).join('\n');
   document.getElementById('mOwner').value=item.owner||'';
   document.getElementById('mStatus').value=item.status||'draft';
   document.getElementById('mImagesStatus').textContent='';
   document.getElementById('mModalErr').textContent='';
-  _applyMarketingRowFieldVisibility(item.row);
   renderMarketingImagesList();
   document.getElementById('mDeleteBtn').style.display='';
   document.getElementById('mExportBtn').style.display='';
@@ -1393,15 +1433,15 @@ function saveMarketingEntry(){
   if(!startDateISO){ errEl.textContent='Please choose a start date.'; return; }
 
   const d={
-    time:document.getElementById('mTime').value.trim(),
-    channel:document.getElementById('mChannel').value.trim(),
-    store:document.getElementById('mStore').value.trim(),
-    guests:document.getElementById('mGuests').value.trim(),
-    objective:document.getElementById('mObjective').value.trim(),
-    targetAudience:document.getElementById('mAudience').value.trim(),
-    eventRundown:document.getElementById('mRundown').value.trim(),
-    mechanics:document.getElementById('mMechanics').value.trim(),
-    comms:document.getElementById('mComms').value.trim(),
+    time:_getMField('mTime'),
+    channel:_getMField('mChannel'),
+    store:_getMField('mStore'),
+    guests:_getMField('mGuests'),
+    objective:_getMField('mObjective'),
+    targetAudience:_getMField('mAudience'),
+    eventRundown:_getMField('mRundown'),
+    mechanics:_getMField('mMechanics'),
+    comms:_getMField('mComms'),
     tnc:document.getElementById('mTnc').value.trim(),
     owner:document.getElementById('mOwner').value.trim(),
     links:document.getElementById('mLinks').value.split('\n').map(l=>l.trim()).filter(Boolean),
@@ -1515,15 +1555,15 @@ function _gatherMarketingFormData(){
     row:document.getElementById('mRowKey').value,
     startDateISO:document.getElementById('mStartDate').value,
     endDateISO:document.getElementById('mEndDate').value,
-    time:document.getElementById('mTime').value.trim(),
-    channel:document.getElementById('mChannel').value.trim(),
-    store:document.getElementById('mStore').value.trim(),
-    guests:document.getElementById('mGuests').value.trim(),
-    objective:document.getElementById('mObjective').value.trim(),
-    targetAudience:document.getElementById('mAudience').value.trim(),
-    eventRundown:document.getElementById('mRundown').value.trim(),
-    mechanics:document.getElementById('mMechanics').value.trim(),
-    comms:document.getElementById('mComms').value.trim(),
+    time:_getMField('mTime'),
+    channel:_getMField('mChannel'),
+    store:_getMField('mStore'),
+    guests:_getMField('mGuests'),
+    objective:_getMField('mObjective'),
+    targetAudience:_getMField('mAudience'),
+    eventRundown:_getMField('mRundown'),
+    mechanics:_getMField('mMechanics'),
+    comms:_getMField('mComms'),
     tnc:document.getElementById('mTnc').value.trim(),
     status:document.getElementById('mStatus').value,
     owner:document.getElementById('mOwner').value.trim(),
