@@ -7453,7 +7453,7 @@ function syncMarketingPublishToMain(market, weekId, row, title, relatedLaunch){
         section: "global", weekId,
 
         launchTitle: "GWP — " + (relatedLaunch || title),
-        lines: [{category: "", productName: "GWP — " + (relatedLaunch || title), colour: "", size: "", price: ""}],
+        lines: [{lineId: genLineId(), category: "", productName: "GWP — " + (relatedLaunch || title), colour: "", size: "", price: ""}],
         noLaunchMarkets: MARKETS_ALL.filter(m => m !== market),
         keyLevel: "brand",
 
@@ -7580,6 +7580,7 @@ function saveState(state){
             linesheetRows.push({
 
               calEntryId: entry.id,
+              calLineId: line.lineId || "",
               calSection: "global",
               calWeekId: entry.weekId || findWeekIdForDate(entry.launchDate || "") || "",
 
@@ -7717,6 +7718,7 @@ function saveState(state){
             linesheetRows.push({
 
               calEntryId: entry.id,
+              calLineId: line.lineId || "",
               calSection: "china",
               calWeekId: entry.weekId || findWeekIdForDate(entry.launchDate || "") || "",
 
@@ -7833,10 +7835,11 @@ function renderGlobalProductRow(line, i){
   const summaryBits = [summaryName, line.category, line.price ? "SGD " + line.price : ""].filter(Boolean);
   const summaryText = summaryBits.join(" | ");
   const lineSkuCount = countLineSkus(line);
+  const lineId = line.lineId || genLineId();
 
   return `
 
-          <details class="product-editor line-wrap" open data-line-wrap data-i="${i}">
+          <details class="product-editor line-wrap" open data-line-wrap data-i="${i}" data-line-id="${lineId}">
 
             <summary class="product-line-summary">
               <span class="product-line-summary-main">
@@ -10953,9 +10956,17 @@ function bindGlobalDynamicRows(){
 
 }
 
+// Stable per-product-line identifier — see calendar.html for the full rationale. Lines
+// had no identity beyond their position in the form, so the Linesheet could only match
+// them back by name/colour/date text, which broke the moment any of those fields changed.
+function genLineId(){ return "line_" + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
 function getLineFromWrap(wrap){
   const i = wrap ? wrap.dataset.i : "";
+  let lineId = wrap && wrap.dataset.lineId;
+  if(wrap && !lineId){ lineId = genLineId(); wrap.dataset.lineId = lineId; }
   return {
+    lineId: lineId || "",
     category: (wrap && wrap.querySelector(`.line-category[data-i="${i}"]`)?.value || "").trim(),
     productName: (wrap && wrap.querySelector(`.line-product[data-i="${i}"]`)?.value || "").trim(),
     colour: (wrap && wrap.querySelector(`.line-colour[data-i="${i}"]`)?.value || "").trim(),
@@ -12379,7 +12390,7 @@ function btvImportCSV(input) {
             if (entry.lines[j].productName === prod && entry.lines[j].category === cat) { line = entry.lines[j]; break; }
           }
           if (!line) {
-            line = { category: cat, productName: prod, colour: '', size: sizes, price: price };
+            line = { lineId: genLineId(), category: cat, productName: prod, colour: '', size: sizes, price: price };
             entry.lines.push(line);
           }
           if (colours) {

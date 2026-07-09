@@ -3816,7 +3816,14 @@ details.master-tools-collapsed[open] summary::before{content:'－'}
 
           <select id="masterFilterCategory" onchange="renderMaster()"><option value="">All Categories</option></select>
 
+        </div>
 
+        <div class="field" style="margin:0">
+          <label>&nbsp;</label>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;letter-spacing:0;font-size:13px;padding:9px 0;cursor:pointer">
+            <input type="checkbox" id="masterFilterRemoved" onchange="renderMaster()">
+            Removed from Calendar only
+          </label>
 
 
 
@@ -5663,6 +5670,14 @@ function loadFromCalendar(notifyNew){
 
 
         if(fk && !__btvFuzzyMap[fk]) __btvFuzzyMap[fk] = p;
+      });
+
+      // Stable per-line identifier lookup — takes priority over every fuzzy match below,
+      // since a calLineId survives renames/recolours/reprices/date shifts that break
+      // the name+colour-based matching those fallbacks rely on.
+      const __btvLineIdMap = {};
+      products.forEach(p => {
+        if(p.calLineId) __btvLineIdMap[p.calLineId] = p;
 
 
 
@@ -5857,7 +5872,8 @@ function loadFromCalendar(notifyNew){
 
 
 
-        let existing = existingMap[key];
+        let existing = row.calLineId ? __btvLineIdMap[row.calLineId] : null;
+        if(!existing) existing = existingMap[key];
 
 
 
@@ -5978,6 +5994,8 @@ function loadFromCalendar(notifyNew){
 
 
           calEntryId: row.calEntryId || "",
+          calLineId: row.calLineId || "",
+          calRemoved: false,
           calSection: row.calSection || "global",
           calWeekId: row.calWeekId || "",
           calMarkets: row.calMarkets || [],
@@ -6310,17 +6328,25 @@ return __btvEnrichRowWithPrices(__btvRow);
       //   wipes everything.
       //   Fix: if the rebuilt list is empty but we had products before, restore the snapshot.
       (function(){
-        // Orphan rescue (Gap A)
+        // Orphan rescue (Gap A) — a product whose calLineId is still present in this sync's
+        // calendar rows was already matched above and is already in `products`, so it can't
+        // reach this filter. What's left are lines that genuinely no longer exist in the
+        // calendar (deleted, or legacy products from before calLineId existed that no
+        // matching fell back to). Per team decision: never auto-delete — flag as
+        // "Removed from Calendar" so it's easy to find and review, keeping every field
+        // (SKU, barcode, images, HS code) intact until someone deliberately removes it.
+        var _calLineIds   = new Set(products.map(function(p){ return p.calLineId; }).filter(Boolean));
         var _calFuzzyKeys = new Set(products.map(function(p){ return _btvNorm(p.name)+'|'+_btvNorm(p.variant); }).filter(Boolean));
         var _calEntryIds  = new Set(products.map(function(p){ return p.calEntryId; }).filter(Boolean));
         var _orphans = __btvPreSyncProducts.filter(function(p){
+          if(p.calLineId) return !_calLineIds.has(p.calLineId);
           if(p.calEntryId && _calEntryIds.has(p.calEntryId)) return false;
           var fk = _btvNorm(p.name)+'|'+_btvNorm(p.variant);
           return !(fk && _calFuzzyKeys.has(fk));
         });
         if(_orphans.length){
-          console.warn('[BTV LS] Orphan rescue: re-adding', _orphans.length, 'products not found in calendarRows:', _orphans.map(function(p){return p.name+'/'+p.variant;}));
-          products = products.concat(_orphans);
+          console.warn('[BTV LS] Orphan rescue: keeping', _orphans.length, 'products no longer found in the calendar (flagged Removed from Calendar):', _orphans.map(function(p){return p.name+'/'+p.variant;}));
+          products = products.concat(_orphans.map(function(p){ return Object.assign({}, p, {calRemoved:true}); }));
         }
         // Total-wipe guard (Gap B)
         if(products.length === 0 && __btvPreSyncProducts.length > 0){
@@ -10511,6 +10537,8 @@ async function saveProductGroup(){
 
       // Calendar-sourced fields — read-only, must survive form save
       calEntryId:  existingItem ? (existingItem.calEntryId  || '') : '',
+      calLineId:   existingItem ? (existingItem.calLineId   || '') : '',
+      calRemoved:  existingItem ? !!existingItem.calRemoved : false,
       calSection:  existingItem ? (existingItem.calSection  || 'global') : 'global',
       calWeekId:   existingItem ? (existingItem.calWeekId   || '') : '',
       calMarkets:  existingItem ? (existingItem.calMarkets  || []) : [],
@@ -12343,6 +12371,8 @@ function filteredSortedProducts(){
 
     const matchesLaunchDate = !filterLaunchDate || (p.launchDate || '') === filterLaunchDate;
 
+    const removedOnlyEl = document.getElementById('masterFilterRemoved');
+    const matchesRemoved = !(removedOnlyEl && removedOnlyEl.checked) || !!p.calRemoved;
 
 
 
@@ -12351,7 +12381,8 @@ function filteredSortedProducts(){
 
 
 
-    return matchesSearch && matchesCategory && matchesLaunchDate;
+
+    return matchesSearch && matchesCategory && matchesLaunchDate && matchesRemoved;
 
 
 
@@ -12793,6 +12824,7 @@ function renderMaster(){
 
 
 
+      const removedBadge = p.calRemoved ? `<span class="badge" style="background:#f5d0d0;color:#8a1f1f;margin-left:4px" title="Its line no longer appears in the Product Calendar Input — data is kept, review and delete if it's no longer needed.">Removed from Calendar</span>` : '';
       const statusBadge = p.workflowStatus === 'published'
 
 
@@ -13104,7 +13136,7 @@ function renderMaster(){
 
 
 
-        <td class="col-calendar">${statusBadge}</td>
+        <td class="col-calendar">${statusBadge}${removedBadge}</td>
 
         <td class="col-calendar" style="color:#555;font-size:11px">${escapeHtml((p.calMarkets||[]).join(', ') || '—')}</td>
 
