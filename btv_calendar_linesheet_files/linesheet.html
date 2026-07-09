@@ -804,7 +804,16 @@ body{font-family:'DM Sans','Helvetica Neue',Helvetica,Arial,sans-serif;backgroun
 
 
 
-table.master{width:100%;border-collapse:collapse;font-size:12px;min-width:2500px}
+table.master{width:100%;border-collapse:collapse;font-size:12px;min-width:1200px}
+table.master .col-images,
+table.master .col-details,
+table.master .col-calendar{display:none}
+table.master.show-images .col-images,
+table.master.show-details .col-details,
+table.master.show-calendar .col-calendar{display:table-cell}
+thead tr .master-sortable{cursor:pointer;user-select:none}
+thead tr .master-sortable:hover{text-decoration:underline}
+.sort-ind{margin-left:3px;font-size:9px;display:inline-block;min-width:8px}
 
 
 
@@ -4045,7 +4054,12 @@ details.master-tools-collapsed[open] summary::before{content:'－'}
 
     </details>
 
-
+    <div id="masterColumnToggles" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:8px 0;padding:8px 12px;background:#f7f3ea;border:1px solid #e7ddc9;border-radius:8px;font-size:12px">
+      <span style="font-weight:700;color:#7a6a55;text-transform:uppercase;font-size:10px;letter-spacing:.04em">Columns</span>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="colToggle-images" onchange="btvApplyMasterColumnPrefs()"> Images</label>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="colToggle-details" onchange="btvApplyMasterColumnPrefs()"> Description / Fabric / Sizing / Weight / Measurements / Washcare</label>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="colToggle-calendar" onchange="btvApplyMasterColumnPrefs()"> Cal Status / Markets / Channels</label>
+    </div>
 
 
 
@@ -4094,317 +4108,32 @@ details.master-tools-collapsed[open] summary::before{content:'－'}
 
 
           <tr>
-
-
-
-
-
-
-
-
-
             <th class="checkbox-cell" title="Select all visible rows">
-
-
-
-
-
-
-
-
-
               <input type="checkbox" id="masterSelectAll" onchange="toggleSelectAllVisible(this.checked)" style="cursor:pointer">
-
-
-
-
-
-
-
-
-
               <div style="font-size:9px;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;color:#7a6a55">Pick All</div>
-
-
-
-
-
-
-
-
-
             </th>
-
-
-
-
-
-
-
-
-
             <th title="All 3 must be ticked to enable Pick" style="min-width:110px">Approval<br><span style="font-size:9px;font-weight:400;letter-spacing:0">D / SC / M</span></th>
-
-
-
-
-
-
-
-
-
             <th>#</th>
-
-
-
-
-
-
-
-
-
-            <th>Product Image</th>
-
-
-
-
-
-
-
-
-
-            <th>Lookbook Image</th>
-
-
-
-
-
-
-
-
-
-            <th>SKU</th>
-
-
-
-
-
-
-
-
-
+            <th class="col-images">Product Image</th>
+            <th class="col-images">Lookbook Image</th>
+            <th class="master-sortable" onclick="btvSortMasterBy('sku')" title="Click to sort">SKU<span class="sort-ind" id="sortInd-sku"></span></th>
             <th>Barcode</th>
-
-
-
-
-
-
-
-
-
             <th>HS Code (8)</th>
-
-
-
-
-
-
-
-
-
             <th>HS Code (10)</th>
-
-
-
-
-
-
-
-
-
-            <th>Launch Date</th>
-
-
-
-
-
-
-
-
-
-            <th>Product Name</th>
-
-
-
-
-
-
-
-
-
-            <th>Colour / Variant</th>
-
-
-
-
-
-
-
-
-
-            <th>Product Category</th>
-
-
-
-
-
-
-
-
-
-            <th>Description</th>
-
-
-
-
-
-
-
-
-
-            <th>Fabric Composition</th>
-
-
-
-
-
-
-
-
-
-            <th>Sizing</th>
-
-
-
-
-
-
-
-            <th>Product Weight (g)</th>
-
-
-
-
-
-
-
-
-
-            <th>Measurement Row</th>
-
-
-
-
-
-
-
-
-
-            <th>Washcase</th>
-
-
-
-
-
-
-
-
-
-            <th>SGD RRP</th>
-
-
-
-
-
-
-
-
-
-            <th>SGD (w/o GST)</th>
-
-
-
-
-
-
-
-
-
-            <th>JP RRP</th>
-
-
-
-
-
-
-
-
-
-            <th>ID RRP</th>
-
-
-
-
-
-
-
-
-
-            <th>TH RRP</th>
-
-
-
-
-
-
-
-
-
-            <th>PH RRP</th>
-
-
-
-
-
-
-
-
-
-            <th>CN RRP</th>
-
-
-
-
-
-
-
-
-
-            <th>Cal Status</th>
-
-            <th>Markets (from Cal)</th>
-
-            <th>Launch Channels</th>
-
-
-
-
-
-
-
-
-
+            <th class="master-sortable" onclick="btvSortMasterBy('launchDate')" title="Click to sort">Launch Date<span class="sort-ind" id="sortInd-launchDate"></span></th>
+            <th class="master-sortable" onclick="btvSortMasterBy('name')" title="Click to sort">Product Name<span class="sort-ind" id="sortInd-name"></span></th>
+            <th class="master-sortable" onclick="btvSortMasterBy('variant')" title="Click to sort">Colour / Variant<span class="sort-ind" id="sortInd-variant"></span></th>
+            <th class="master-sortable" onclick="btvSortMasterBy('category')" title="Click to sort">Product Category<span class="sort-ind" id="sortInd-category"></span></th>
+            <th class="col-details">Description</th>
+            <th class="col-details">Fabric Composition</th>
+            <th class="col-details">Sizing</th>
+            <th class="col-details">Product Weight (g)</th>
+            <th class="col-details">Measurement Row</th>
+            <th class="col-details">Washcare</th>
+            <th class="col-pricing" title="Shows SGD RRP — hover a row's Pricing cell to see all other markets">Pricing</th>
+            <th class="col-calendar">Cal Status</th>
+            <th class="col-calendar">Markets (from Cal)</th>
+            <th class="col-calendar">Launch Channels</th>
           </tr>
 
 
@@ -5710,7 +5439,7 @@ function switchView(view){
 
 
 
-  if(view === 'master') renderMaster();
+  if(view === 'master'){ btvLoadMasterColumnPrefs(); renderMaster(); }
 
 
 
@@ -12717,7 +12446,59 @@ function filteredSortedProducts(){
 
 
 
+// Master Data column visibility is a local display preference only — it never touches
+// `products` or anything synced to Supabase, purely which columns the table shows.
+var BTV_MASTER_COL_PREF_KEY = 'btv-ls-master-columns-v1';
+
+function btvLoadMasterColumnPrefs(){
+  var prefs = {};
+  try { prefs = JSON.parse(localStorage.getItem(BTV_MASTER_COL_PREF_KEY)) || {}; } catch(e) {}
+  ['images','details','calendar'].forEach(function(group){
+    var cb = document.getElementById('colToggle-' + group);
+    if(cb) cb.checked = !!prefs[group];
+  });
+  btvApplyMasterColumnPrefs(true);
+}
+
+function btvApplyMasterColumnPrefs(skipSave){
+  var table = document.getElementById('masterTable');
+  if(!table) return;
+  var prefs = {};
+  ['images','details','calendar'].forEach(function(group){
+    var cb = document.getElementById('colToggle-' + group);
+    var on = !!(cb && cb.checked);
+    prefs[group] = on;
+    table.classList.toggle('show-' + group, on);
+  });
+  if(!skipSave){ try { localStorage.setItem(BTV_MASTER_COL_PREF_KEY, JSON.stringify(prefs)); } catch(e) {} }
+}
+
+// Click-to-sort table headers — just sets the same masterSortBy/masterSortDir controls
+// the existing Sort dropdown uses, so it stays a single source of truth.
+function btvSortMasterBy(field){
+  var byEl = document.getElementById('masterSortBy');
+  var dirEl = document.getElementById('masterSortDir');
+  if(!byEl || !dirEl) return;
+  if(byEl.value === field){
+    dirEl.value = dirEl.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    byEl.value = field;
+    dirEl.value = 'asc';
+  }
+  renderMaster();
+}
+
+function btvUpdateSortIndicators(){
+  var byEl = document.getElementById('masterSortBy');
+  var dirEl = document.getElementById('masterSortDir');
+  if(!byEl || !dirEl) return;
+  document.querySelectorAll('#masterTable .sort-ind').forEach(function(el){ el.textContent = ''; });
+  var active = document.getElementById('sortInd-' + byEl.value);
+  if(active) active.textContent = dirEl.value === 'asc' ? '▲' : '▼';
+}
+
 function renderMaster(){
+  btvUpdateSortIndicators();
 
 
 
@@ -12747,7 +12528,7 @@ function renderMaster(){
 
 
 
-  if(!list.length){ tbody.innerHTML = `<tr><td colspan="29"><div class="empty-state">No matching rows yet. Add products or loosen the filters.</div></td></tr>`; return; }
+  if(!list.length){ tbody.innerHTML = `<tr><td colspan="23"><div class="empty-state">No matching rows yet. Add products or loosen the filters.</div></td></tr>`; return; }
 
 
 
@@ -12927,7 +12708,7 @@ function renderMaster(){
 
 
 
-    let html = `<tr style="background:#f0ebe0"><td colspan="29" style="padding:8px 10px;font-weight:700;font-size:12px;color:#5a4e40;letter-spacing:.03em;border-bottom:2px solid #d7c9b2">📅 Launch Date: ${escapeHtml(groupLabel)}</td></tr>`;
+    let html = `<tr style="background:#f0ebe0"><td colspan="23" style="padding:8px 10px;font-weight:700;font-size:12px;color:#5a4e40;letter-spacing:.03em;border-bottom:2px solid #d7c9b2">📅 Launch Date: ${escapeHtml(groupLabel)}</td></tr>`;
 
 
 
@@ -13017,10 +12798,10 @@ function renderMaster(){
       const _hasSzBc  = p.sizeBarcodes && Object.keys(p.sizeBarcodes).length > 0;
       const skuCellHtml = _hasSzSku
         ? `<td class="td-sku">${_szSort(Object.keys(p.sizeSKUs)).filter(sz=>p.sizeSKUs[sz]).map(sz=>`<span style="color:#999;font-size:9px;display:inline-block;min-width:22px">${escapeHtml(sz)}</span> ${escapeHtml(p.sizeSKUs[sz])}`).join('<br>')}</td>`
-        : `<td style=”font-family:monospace;font-size:11px”>${escapeHtml(p.sku||'—')}</td>`;
+        : `<td style="font-family:monospace;font-size:11px">${escapeHtml(p.sku||'—')}</td>`;
       const bcCellHtml  = _hasSzBc
-        ? `<td class=”td-sku”>${_szSort(Object.keys(p.sizeBarcodes)).filter(sz=>p.sizeBarcodes[sz]).map(sz=>`<span style=”color:#999;font-size:9px;display:inline-block;min-width:22px”>${escapeHtml(sz)}</span> ${escapeHtml(p.sizeBarcodes[sz])}`).join('<br>')}</td>`
-        : `<td style=”font-family:monospace;font-size:11px”>${escapeHtml(p.barcode||'—')}</td>`;
+        ? `<td class="td-sku">${_szSort(Object.keys(p.sizeBarcodes)).filter(sz=>p.sizeBarcodes[sz]).map(sz=>`<span style="color:#999;font-size:9px;display:inline-block;min-width:22px">${escapeHtml(sz)}</span> ${escapeHtml(p.sizeBarcodes[sz])}`).join('<br>')}</td>`
+        : `<td style="font-family:monospace;font-size:11px">${escapeHtml(p.barcode||'—')}</td>`;
       html += `<tr data-gid="${escapeHtml(p.groupId||'')}" style="${_trLockStyle}">
 
 
@@ -13061,17 +12842,13 @@ function renderMaster(){
 
 
 
-        <td>${img1}</td>
+        <td class="col-images">${img1}</td>
 
 
 
 
 
-
-
-
-
-        <td>${img2}</td>
+        <td class="col-images">${img2}</td>
 
 
 
@@ -13161,7 +12938,7 @@ function renderMaster(){
 
 
 
-        <td class="td-wrap">${escapeHtml(p.description || '—')}</td>
+        <td class="td-wrap col-details">${escapeHtml(p.description || '—')}</td>
 
 
 
@@ -13171,7 +12948,7 @@ function renderMaster(){
 
 
 
-        <td class="td-wrap">${escapeHtml(p.fabric || '—')}</td>
+        <td class="td-wrap col-details">${escapeHtml(p.fabric || '—')}</td>
 
 
 
@@ -13181,11 +12958,11 @@ function renderMaster(){
 
 
 
-        <td>${escapeHtml(p.sizing || '—')}</td>
+        <td class="col-details">${escapeHtml(p.sizing || '—')}</td>
 
 
 
-        <td>${escapeHtml(p.weightGrams || '—')}</td>
+        <td class="col-details">${escapeHtml(p.weightGrams || '—')}</td>
 
 
 
@@ -13195,7 +12972,7 @@ function renderMaster(){
 
 
 
-        <td class="td-wrap">${escapeHtml(p.measurementSummary || '—')}</td>
+        <td class="td-wrap col-details">${escapeHtml(p.measurementSummary || '—')}</td>
 
 
 
@@ -13205,7 +12982,7 @@ function renderMaster(){
 
 
 
-        <td class="td-wrap">${escapeHtml(p.washcare || '—')}</td>
+        <td class="td-wrap col-details">${escapeHtml(p.washcare || '—')}</td>
 
 
 
@@ -13215,7 +12992,20 @@ function renderMaster(){
 
 
 
-        <td>${p.sgd ? 'S$' + Number(p.sgd).toFixed(2) : '—'}</td>
+        ${(function(){
+          var _pxFmt = [
+            ['SGD', p.sgd ? 'S$' + Number(p.sgd).toFixed(2) : ''],
+            ['SGD ex-GST', p.sgdNoGST ? 'S$' + Number(p.sgdNoGST).toFixed(2) : ''],
+            ['JPY', p.jp ? '¥' + p.jp : ''],
+            ['IDR', p.idRrp ? 'Rp ' + Number(p.idRrp).toLocaleString() : ''],
+            ['THB', p.th ? '฿' + p.th : ''],
+            ['PHP', p.ph ? '₱' + p.ph : ''],
+            ['CNY', p.cn ? '¥' + p.cn : ''],
+          ].filter(function(x){ return x[1]; });
+          var _pxPrimary = p.sgd ? 'S$' + Number(p.sgd).toFixed(2) : (_pxFmt.length ? _pxFmt[0][1] : '—');
+          var _pxTitle = _pxFmt.length ? _pxFmt.map(function(x){ return x[0] + ': ' + x[1]; }).join('\n') : 'No pricing entered';
+          return '<td class="col-pricing" title="' + escapeHtml(_pxTitle) + '">' + escapeHtml(_pxPrimary) + '</td>';
+        })()}
 
 
 
@@ -13225,7 +13015,6 @@ function renderMaster(){
 
 
 
-        <td>${p.sgdNoGST ? 'S$' + Number(p.sgdNoGST).toFixed(2) : '—'}</td>
 
 
 
@@ -13235,7 +13024,6 @@ function renderMaster(){
 
 
 
-        <td>${p.jp ? '¥' + escapeHtml(p.jp) : '—'}</td>
 
 
 
@@ -13245,7 +13033,6 @@ function renderMaster(){
 
 
 
-        <td>${p.idRrp ? 'Rp ' + Number(p.idRrp).toLocaleString() : '—'}</td>
 
 
 
@@ -13255,7 +13042,6 @@ function renderMaster(){
 
 
 
-        <td>${p.th ? '฿' + escapeHtml(p.th) : '—'}</td>
 
 
 
@@ -13265,7 +13051,6 @@ function renderMaster(){
 
 
 
-        <td>${p.ph ? '₱' + escapeHtml(p.ph) : '—'}</td>
 
 
 
@@ -13275,7 +13060,6 @@ function renderMaster(){
 
 
 
-        <td>${p.cn ? '¥' + escapeHtml(p.cn) : '—'}</td>
 
 
 
@@ -13285,11 +13069,11 @@ function renderMaster(){
 
 
 
-        <td>${statusBadge}</td>
+        <td class="col-calendar">${statusBadge}</td>
 
-        <td style="color:#555;font-size:11px">${escapeHtml((p.calMarkets||[]).join(', ') || '—')}</td>
+        <td class="col-calendar" style="color:#555;font-size:11px">${escapeHtml((p.calMarkets||[]).join(', ') || '—')}</td>
 
-        <td style="color:#555;font-size:11px;white-space:pre-line">${(p.calStores||[]).length ? (p.calStores).map(s => escapeHtml(s)).join('\n') : '—'}</td>
+        <td class="col-calendar" style="color:#555;font-size:11px;white-space:pre-line">${(p.calStores||[]).length ? (p.calStores).map(s => escapeHtml(s)).join('\n') : '—'}</td>
 
 
 
@@ -14162,7 +13946,7 @@ function exportCSV(){
 
 
 
-  const headers = ['SKU','Barcode','HS Code (8)','HS Code (10)','Launch Date','Product Name','Colour/Variant','Product Category','Description','Fabric Composition','Sizing','Product Weight (g)','Measurements','Washcase','SGD RRP','SGD w/o GST','JP RRP','ID RRP','TH RRP','PH RRP','CN RRP','Selected for Linesheet','Cal Status','Markets','Stores'];
+  const headers = ['SKU','Barcode','HS Code (8)','HS Code (10)','Launch Date','Product Name','Colour/Variant','Product Category','Description','Fabric Composition','Sizing','Product Weight (g)','Measurements','Washcare','SGD RRP','SGD w/o GST','JP RRP','ID RRP','TH RRP','PH RRP','CN RRP','Selected for Linesheet','Cal Status','Markets','Stores'];
 
 
 
