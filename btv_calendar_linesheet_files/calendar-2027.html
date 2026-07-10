@@ -390,6 +390,8 @@
   }
 
   .wk.alt{background:var(--wkB)}
+  .wk.current-week{background:#cfe0ff!important;box-shadow:inset 0 0 0 2px #4a7fe0}
+  th.wk.current-week{background:#a9c6ff!important}
 
 
 
@@ -8055,21 +8057,31 @@ function sectionTitle(section){ return section === "events" ? "Events/Activation
 
 
 
+// Group keys in the order the Teams message should list them. Kept as one list so
+// groupsToBulletList/buildTeamsSummary stay in sync with whatever computeSmartDiff produces —
+// any section not in this list still gets its own group (see the `extra` fallback below)
+// rather than silently disappearing from the message, the way China/Store Openings used to.
+const SMART_DIFF_GROUP_ORDER = ["Global","China","Restock","Store Openings","Events/Activations"];
+
 function computeSmartDiff(previousState, currentState){
 
   const prev = flattenEntries(previousState || {});
 
   const curr = flattenEntries(currentState || {});
 
-  const grouped = {Global:[], Restock:[], "Events/Activations":[]};
+  const grouped = {};
 
 
 
-  function add(group, msg){
+  function add(group, msg, who){
 
     if(!msg) return;
 
-    if(!grouped[group].includes(msg)) grouped[group].push(msg);
+    if(!grouped[group]) grouped[group] = [];
+
+    const line = who ? `${msg} — _changed by ${who}_` : msg;
+
+    if(!grouped[group].includes(line)) grouped[group].push(line);
 
   }
 
@@ -8087,13 +8099,15 @@ function computeSmartDiff(previousState, currentState){
 
     const group = section === "restocks" ? "Restock" : sectionTitle(section);
 
+    const who = (after && after.updatedBy) || (before && before.updatedBy) || "";
+
 
 
     if(before && !after){
 
-      const title = before.launchTitle || before.productTitle || before.title || before.optionType || "Entry";
+      const title = before.launchTitle || before.productTitle || before.title || before.optionType || before.storeName || "Entry";
 
-      add(group, `Removed "${title}"`);
+      add(group, `Removed "${title}"`, who);
 
       return;
 
@@ -8101,9 +8115,9 @@ function computeSmartDiff(previousState, currentState){
 
     if(!before && after){
 
-      const title = after.launchTitle || after.productTitle || after.title || after.optionType || "Entry";
+      const title = after.launchTitle || after.productTitle || after.title || after.optionType || after.storeName || "Entry";
 
-      add(group, `Added "${title}"`);
+      add(group, `Added "${title}"`, who);
 
       return;
 
@@ -8115,9 +8129,9 @@ function computeSmartDiff(previousState, currentState){
 
     if(before.weekId !== after.weekId && section !== "global"){
 
-      const title = after.launchTitle || before.launchTitle || after.productTitle || before.productTitle || after.title || before.title || "Entry";
+      const title = after.launchTitle || before.launchTitle || after.productTitle || before.productTitle || after.title || before.title || after.storeName || before.storeName || "Entry";
 
-      add(group, `Moved "${title}" from ${before.weekId} to ${after.weekId}`);
+      add(group, `Moved "${title}" from ${before.weekId} to ${after.weekId}`, who);
 
     }
 
@@ -8135,9 +8149,9 @@ function computeSmartDiff(previousState, currentState){
 
       const remDelay = [...beforeDelay].filter(x => !afterDelay.has(x));
 
-      if(addDelay.length) add(group, `Delay Flagged for "${title}" - ${addDelay.join(", ")}`);
+      if(addDelay.length) add(group, `Delay Flagged for "${title}" - ${addDelay.join(", ")}`, who);
 
-      if(remDelay.length) add(group, `Delay Flagged Removed for "${title}" - ${remDelay.join(", ")}`);
+      if(remDelay.length) add(group, `Delay Flagged Removed for "${title}" - ${remDelay.join(", ")}`, who);
 
 
 
@@ -8145,9 +8159,9 @@ function computeSmartDiff(previousState, currentState){
 
       const afterCats = new Set(normalizeLines(after.lines).map(x => x.category).filter(Boolean));
 
-      [...afterCats].filter(x => !beforeCats.has(x)).forEach(cat => add(group, `Added "${cat}" for "${title}"`));
+      [...afterCats].filter(x => !beforeCats.has(x)).forEach(cat => add(group, `Added "${cat}" for "${title}"`, who));
 
-      [...beforeCats].filter(x => !afterCats.has(x)).forEach(cat => add(group, `Removed "${cat}" for "${title}"`));
+      [...beforeCats].filter(x => !afterCats.has(x)).forEach(cat => add(group, `Removed "${cat}" for "${title}"`, who));
 
 
 
@@ -8155,9 +8169,9 @@ function computeSmartDiff(previousState, currentState){
 
       const afterProducts = new Map(normalizeLines(after.lines).filter(x => x.productName).map(x => [x.productName, x]));
 
-      [...afterProducts.keys()].filter(x => !beforeProducts.has(x)).forEach(p => add(group, `Added "${p}" for "${title}"`));
+      [...afterProducts.keys()].filter(x => !beforeProducts.has(x)).forEach(p => add(group, `Added "${p}" for "${title}"`, who));
 
-      [...beforeProducts.keys()].filter(x => !afterProducts.has(x)).forEach(p => add(group, `Removed "${p}" for "${title}"`));
+      [...beforeProducts.keys()].filter(x => !afterProducts.has(x)).forEach(p => add(group, `Removed "${p}" for "${title}"`, who));
 
 
 
@@ -8167,19 +8181,19 @@ function computeSmartDiff(previousState, currentState){
 
         if(!prevLine) return;
 
-        if(String(prevLine.price || "") !== String(line.price || "")) add(group, `Changed Price for "${name}"`);
+        if(String(prevLine.price || "") !== String(line.price || "")) add(group, `Changed Price for "${name}" from "${prevLine.price || "—"}" to "${line.price || "—"}"`, who);
 
         const prevColour = String(prevLine.colour || "").trim();
 
         const nextColour = String(line.colour || "").trim();
 
-        if(prevColour !== nextColour) add(group, `Changed Colour for "${name}"`);
+        if(prevColour !== nextColour) add(group, `Changed Colour for "${name}" from "${prevColour || "—"}" to "${nextColour || "—"}"`, who);
 
         const prevSize = String(prevLine.size || "").trim();
 
         const nextSize = String(line.size || "").trim();
 
-        if(prevSize !== nextSize) add(group, `Changed Size for "${name}"`);
+        if(prevSize !== nextSize) add(group, `Changed Size for "${name}" from "${prevSize || "—"}" to "${nextSize || "—"}"`, who);
 
       });
 
@@ -8187,9 +8201,71 @@ function computeSmartDiff(previousState, currentState){
 
       if(String(before.launchDate || "") !== String(after.launchDate || "")){
 
-        add(group, `Moved "${title}" from ${before.launchDate || "—"} to ${after.launchDate || "—"}`);
+        add(group, `Moved "${title}" from ${before.launchDate || "—"} to ${after.launchDate || "—"}`, who);
 
       }
+
+    } else if(section === "restocks"){
+
+      const title = after.productTitle || before.productTitle || (after.lines && after.lines[0] && after.lines[0].productTitle) || "Restock";
+
+      if(String(before.keyLevel || "") !== String(after.keyLevel || "")) add(group, `Changed Priority for "${title}" from "${before.keyLevel || "—"}" to "${after.keyLevel || "—"}"`, who);
+
+      if(String(before.etaISO || "") !== String(after.etaISO || "")) add(group, `Changed ETA for "${title}" from "${before.eta || before.etaISO || "—"}" to "${after.eta || after.etaISO || "—"}"`, who);
+
+      const beforeMkts = before.allMarkets ? ["All"] : (before.markets || []);
+
+      const afterMkts = after.allMarkets ? ["All"] : (after.markets || []);
+
+      if(beforeMkts.slice().sort().join(",") !== afterMkts.slice().sort().join(",")) add(group, `Changed Markets for "${title}" from "${beforeMkts.join(", ") || "—"}" to "${afterMkts.join(", ") || "—"}"`, who);
+
+      const lineLabel = l => [l.productTitle, [l.colour, l.size].filter(Boolean).join("/")].filter(Boolean).join(" ").trim();
+
+      const beforeLines = (before.lines || []).filter(l => l.productTitle || l.colour || l.size).map(lineLabel);
+
+      const afterLines = (after.lines || []).filter(l => l.productTitle || l.colour || l.size).map(lineLabel);
+
+      const beforeLineSet = new Set(beforeLines), afterLineSet = new Set(afterLines);
+
+      afterLines.filter(l => !beforeLineSet.has(l)).forEach(l => add(group, `Added product line "${l}" to "${title}"`, who));
+
+      beforeLines.filter(l => !afterLineSet.has(l)).forEach(l => add(group, `Removed product line "${l}" from "${title}"`, who));
+
+    } else if(section === "store_openings"){
+
+      const title = after.storeName || before.storeName || "Store Opening";
+
+      if(String(before.market || "") !== String(after.market || "")) add(group, `Changed Market for "${title}" from "${before.market || "—"}" to "${after.market || "—"}"`, who);
+
+      if(String(before.storeName || "") !== String(after.storeName || "")) add(group, `Renamed "${before.storeName || "—"}" to "${after.storeName || "—"}"`, who);
+
+      if(String(before.targetOpenDate || "") !== String(after.targetOpenDate || "")) add(group, `Changed Target Open Date for "${title}" from "${before.targetOpenDate || "—"}" to "${after.targetOpenDate || "—"}"`, who);
+
+      if(String(before.storeSize || "") !== String(after.storeSize || "")) add(group, `Changed Store Size for "${title}" from "${before.storeSize || "—"}" to "${after.storeSize || "—"}"`, who);
+
+      if(String(before.storeAddress || "") !== String(after.storeAddress || "")) add(group, `Changed Store Address for "${title}"`, who);
+
+    } else if(section === "events"){
+
+      const title = after.title || before.title || "Activation";
+
+      if(String(before.title || "") !== String(after.title || "")) add(group, `Renamed "${before.title || "—"}" to "${after.title || "—"}"`, who);
+
+      if(String(before.startDateISO || "") !== String(after.startDateISO || "")) add(group, `Changed Start Date for "${title}" from "${before.startDateISO || "—"}" to "${after.startDateISO || "—"}"`, who);
+
+      if(String(before.endDateISO || "") !== String(after.endDateISO || "")) add(group, `Changed End Date for "${title}" from "${before.endDateISO || "—"}" to "${after.endDateISO || "—"}"`, who);
+
+      if(!!before.tillSoldOut !== !!after.tillSoldOut) add(group, `${after.tillSoldOut ? "Marked" : "Unmarked"} "${title}" as Till Sold Out`, who);
+
+      const beforeMkts = before.allMarkets ? ["All"] : (before.markets || []);
+
+      const afterMkts = after.allMarkets ? ["All"] : (after.markets || []);
+
+      if(beforeMkts.slice().sort().join(",") !== afterMkts.slice().sort().join(",")) add(group, `Changed Markets for "${title}" from "${beforeMkts.join(", ") || "—"}" to "${afterMkts.join(", ") || "—"}"`, who);
+
+      if(!!before.anthemIncluded !== !!after.anthemIncluded) add(group, `${after.anthemIncluded ? "Added" : "Removed"} Anthem for "${title}"`, who);
+
+      if(String(before.notes || "") !== String(after.notes || "")) add(group, `Updated Notes for "${title}"`, who);
 
     } else {
 
@@ -8201,7 +8277,7 @@ function computeSmartDiff(previousState, currentState){
 
       if(beforeStr !== afterStr && before.weekId === after.weekId){
 
-        add(group, `Updated "${title}"`);
+        add(group, `Updated "${title}"`, who);
 
       }
 
@@ -8217,7 +8293,7 @@ function computeSmartDiff(previousState, currentState){
 
 function groupsToBulletList(groups){
 
-  const order = ["Global","Restock","Events/Activations"];
+  const order = SMART_DIFF_GROUP_ORDER.concat(Object.keys(groups).filter(k => !SMART_DIFF_GROUP_ORDER.includes(k)));
 
   const flat = [];
 
@@ -8229,29 +8305,29 @@ function groupsToBulletList(groups){
 
 function buildTeamsSummary(versionLabel, grouped){
 
-  const order = ["Global","Restock","Events/Activations"];
+  const order = SMART_DIFF_GROUP_ORDER.concat(Object.keys(grouped || {}).filter(k => !SMART_DIFF_GROUP_ORDER.includes(k)));
 
   const lines = [`Update Summary – ${versionLabel}`, ""];
+
+  let any = false;
 
   order.forEach(k => {
 
     const items = grouped[k] || [];
 
+    if(!items.length) return; // skip sections with no changes — with 5+ possible groups, printing "No net changes" for every one just buries the real updates
+
+    any = true;
+
     lines.push(`**${k}**`);
 
-    if(items.length){
-
-      items.forEach(msg => lines.push(`• ${msg}`));
-
-    } else {
-
-      lines.push("• No net changes");
-
-    }
+    items.forEach(msg => lines.push(`• ${msg}`));
 
     lines.push("");
 
   });
+
+  if(!any) lines.push("No net changes");
 
   return lines.join("\n").trim();
 
@@ -8984,6 +9060,9 @@ function render(){
 
   const weeks = currentWeeks();
 
+  const todayWeekId = findWeekIdForDate(localISODate(new Date()));
+  function wkCls(i,w){ return "wk " + (i%2?"alt":"") + (w.id===todayWeekId?" current-week":""); }
+
   const quarterRuns = [];
 
   const monthRuns = [];
@@ -9013,9 +9092,9 @@ function render(){
   const _calYear = weeks.length > 4 ? new Date(weeks[Math.floor(weeks.length/2)].id+"T00:00:00").getFullYear() : 2027;
   html += `<tr><th class="corner">Month</th>${monthRuns.map(r => `<th colspan="${r.count}">${r.label} ${_calYear}</th>`).join("")}</tr>`;
 
-  html += `<tr><th class="corner">Week</th>${weeks.map((w,i) => `<th class="wk ${i%2?"alt":""}">Wk ${w.weekOfYear}</th>`).join("")}</tr>`;
+  html += `<tr><th class="corner">Week</th>${weeks.map((w,i) => `<th class="${wkCls(i,w)}">Wk ${w.weekOfYear}</th>`).join("")}</tr>`;
 
-  html += `<tr><th class="corner">Date</th>${weeks.map((w,i) => `<th class="wk ${i%2?"alt":""}">${weekRangeLabel(w.start,w.end)}</th>`).join("")}</tr>`;
+  html += `<tr><th class="corner">Date</th>${weeks.map((w,i) => `<th class="${wkCls(i,w)}">${weekRangeLabel(w.start,w.end)}</th>`).join("")}</tr>`;
 
   html += "</thead><tbody>";
 
@@ -9047,10 +9126,10 @@ function render(){
 
     weeks.forEach(function(w, i){
       if(!_visibleMds.length){
-        html += `<td class="wk ${i%2?"alt":""}"><div class="cell" onclick="window.openMarkdownEditor()" title="Add markdown" style="cursor:pointer;min-height:inherit"></div></td>`;
+        html += `<td class="${wkCls(i,w)}"><div class="cell" onclick="window.openMarkdownEditor()" title="Add markdown" style="cursor:pointer;min-height:inherit"></div></td>`;
       } else {
         // Always render one slot per visible markdown so tracks stay aligned across cells
-        html += `<td class="wk ${i%2?"alt":""} markdown-span-cell">`;
+        html += `<td class="${wkCls(i,w)} markdown-span-cell">`;
         _visibleMds.forEach(function(md, idx){
           if(_mdWeekIdx[w.id].has(idx)){
             const cov = weekIdsInRange(md.startDate, md.endDate).filter(id => visibleWeekIds.includes(id));
@@ -9077,7 +9156,7 @@ function render(){
 
     weeks.forEach((w,i) => {
 
-      html += `<td class="wk ${i%2?"alt":""}">${renderCell(sec.key, w.id)}</td>`;
+      html += `<td class="${wkCls(i,w)}">${renderCell(sec.key, w.id)}</td>`;
 
     });
 
@@ -9996,9 +10075,16 @@ function btvNotifyChange(url, source, product, field, fromVal, toVal){
 
 }
 
-function btvSendTeamsSummary(url, message){
+// A webhook "URL" field may hold more than one URL (comma or newline separated) so the
+// same message can fan out to several Teams channels/chats — split it out here rather than
+// at every call site.
+function btvParseWebhookUrls(raw){
+  return String(raw || '').split(/[\n,]+/).map(function(s){ return s.trim(); }).filter(Boolean);
+}
 
-  if(!url || !message) return;
+function btvSendTeamsSummary(urlOrUrls, message){
+
+  if(!urlOrUrls || !message) return;
 
   try{
 
@@ -10032,7 +10118,9 @@ function btvSendTeamsSummary(url, message){
 
     };
 
-    fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).catch(function(err){ console.warn('BTV Calendar Teams summary webhook failed', err); });
+    btvParseWebhookUrls(urlOrUrls).forEach(function(url){
+      fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).catch(function(err){ console.warn('BTV Calendar Teams summary webhook failed', err); });
+    });
 
   }catch(e){ console.warn('BTV Calendar Teams summary webhook error', e); }
 
@@ -10094,12 +10182,13 @@ var __btvWhkKey = '';
 function btvConfigCalWebhook(){
   var cur = '';
   try{ cur = localStorage.getItem('btvMgmtWebhook') || ''; }catch(e){}
-  var v = window.prompt('Enter Teams webhook URL for Calendar changes:\n(Leave blank to disable)', cur);
+  var v = window.prompt('Enter Teams webhook URL(s) for Calendar changes.\nSeparate multiple URLs with a comma to notify more than one chat.\n(Leave blank to disable)', cur);
   if(v === null) return;
   v = (v || '').trim();
   try{ localStorage.setItem('btvMgmtWebhook', v); }catch(e){}
   BTV_MGMT_WEBHOOK_URL = v;
-  alert(v ? 'Calendar webhook saved.' : 'Calendar webhook disabled.');
+  var n = btvParseWebhookUrls(v).length;
+  alert(v ? ('Calendar webhook saved (' + n + ' URL' + (n===1?'':'s') + ').') : 'Calendar webhook disabled.');
 }
 function btvConfigWebhook(key,label){
   btvConfigCalWebhook();
@@ -10523,7 +10612,7 @@ window.openEditor = function(section, weekId, entryId){
 
     let targetWeekId = weekId;
 
-    const payload = { id: existing?.id || String(Date.now()), section, weekId, workflowStatus: (e("workflowStatus")?.value || existing?.workflowStatus || "draft") };
+    const payload = { id: existing?.id || String(Date.now()), section, weekId, workflowStatus: (e("workflowStatus")?.value || existing?.workflowStatus || "draft"), updatedBy: (typeof window.btvGetCurrentEmail === 'function' ? (window.btvGetCurrentEmail() || existing?.updatedBy || '') : (existing?.updatedBy || '')) };
 
 
 

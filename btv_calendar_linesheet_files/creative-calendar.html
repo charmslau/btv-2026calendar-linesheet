@@ -120,8 +120,15 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
 .add-btn:hover{background:#333}
 
 /* ── Table ── */
-.table-scroll{flex:1;overflow:auto}
+.table-scroll{flex:1;overflow:auto;position:relative}
 .cal-table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;table-layout:fixed}
+/* Highlights the current week's whole column — a plain overlay div rather than a per-cell
+   class, since most rows use colspan for multi-week entries and skip "covered" week cells
+   entirely, so a column index can't be matched reliably cell-by-cell. See
+   ccPositionWeekOverlay(). Semi-transparent so entries underneath stay legible. */
+.current-week-overlay{position:absolute;top:0;pointer-events:none;z-index:6;
+  background:rgba(74,127,224,.14);border-left:2px solid #4a7fe0;border-right:2px solid #4a7fe0}
+.cal-table thead th.current-week-th{background:#a9c6ff!important}
 
 .cal-table thead th{position:sticky;top:0;z-index:10;background:#e8e2d8;
   font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
@@ -333,6 +340,7 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
     <span class="page-sub">2026 — Beyond The Vines · DO DESIGN, DO LIFE.</span>
     <div class="topbar-right">
       <button class="today-btn" onclick="ccGoToToday()" title="Jump to the week that contains today's date">&#128197; Today</button>
+      <button class="seed-btn" onclick="ccConfigWebhooks()" title="Set up Teams chat notifications for Published/Draft Marketing entry changes">&#9881; Webhooks</button>
       <button class="seed-btn" onclick="confirmSeed()" title="Load all 2026 launch data from CREATIVE CAL 2026.xlsx">&#x21BA; Load Excel Data</button>
     </div>
   </div>
@@ -1441,6 +1449,86 @@ function closeMarketingModal(){
   _marketingPendingImages=[];
 }
 
+// ── Marketing entry Teams webhooks ──────────────────────────────────────────
+// Two separate webhooks: one fires when a PUBLISHED marketing entry changes, the other
+// when a DRAFT one does. Each accepts one or more URLs (comma-separated) so the same
+// message can fan out to more than one Teams chat.
+function ccParseWebhookUrls(raw){
+  return String(raw || '').split(/[\n,]+/).map(function(s){ return s.trim(); }).filter(Boolean);
+}
+
+const CC_MARKETING_FIELD_LABELS = [
+  ['title','Title'],['market','Market'],
+  ['startDate','Start Date'],['endDate','End Date'],
+  ['time','Time'],['channel','Online / Offline'],['store','Store'],
+  ['guests','No. of Guests'],['objective','Objective'],['targetAudience','Target Audience'],
+  ['eventRundown','Rundown'],['mechanics','Mechanics'],['comms','Comms'],['tnc','T&Cs'],['owner','Owner'],
+];
+
+function ccDiffMarketingEntry(before, after){
+  if(!before) return ['Created "' + (after.title || 'Entry') + '"'];
+  const msgs = [];
+  CC_MARKETING_FIELD_LABELS.forEach(function(pair){
+    const key = pair[0], label = pair[1];
+    const bv = String(before[key] || '').trim();
+    const av = String(after[key] || '').trim();
+    if(bv !== av) msgs.push('Changed ' + label + ' from "' + (bv || '—') + '" to "' + (av || '—') + '"');
+  });
+  if((before.status || '') !== (after.status || '')) msgs.push('Changed Status from "' + (before.status || '—') + '" to "' + (after.status || '—') + '"');
+  const beforeLinks = (before.links || []).join(', ');
+  const afterLinks = (after.links || []).join(', ');
+  if(beforeLinks !== afterLinks) msgs.push('Changed Reference Links');
+  const beforeImgCount = (before.images || []).length;
+  const afterImgCount = (after.images || []).length;
+  if(beforeImgCount !== afterImgCount) msgs.push('Changed Photos (' + beforeImgCount + ' → ' + afterImgCount + ')');
+  return msgs;
+}
+
+function ccSendMarketingWebhook(item, msgs, who){
+  if(!msgs.length) return;
+  const isPublished = item.status === 'published';
+  const urlKey = isPublished ? 'ccWebhookPublished' : 'ccWebhookDraft';
+  let raw = '';
+  try{ raw = localStorage.getItem(urlKey) || ''; }catch(e){}
+  const urls = ccParseWebhookUrls(raw);
+  if(!urls.length) return;
+  const label = isPublished ? 'Published' : 'Draft';
+  const lines = [
+    '**Global Calendar — ' + label + ' Activation Update**',
+    new Date().toLocaleString('en-SG'),
+    '',
+    '**' + (item.title || 'Entry') + '** (' + (item.market || '—') + ' · ' + String(item.row || '').replace(/_/g,' ') + ')',
+  ].concat(msgs.map(function(m){ return '• ' + m; }));
+  if(who) lines.push('', '_changed by ' + who + '_');
+  const summaryText = lines.join('\n');
+  const htmlText = summaryText
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/_(.*?)_/g,'<i>$1</i>')
+    .replace(/\n/g,'<br>');
+  const payload = {
+    "@type":"MessageCard","@context":"http://schema.org/extensions",
+    "themeColor": isPublished ? "3ba55d" : "999999",
+    "summary": "Global Calendar Update",
+    "message": summaryText,
+    "sections":[{"text": htmlText}]
+  };
+  urls.forEach(function(url){
+    fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).catch(function(err){ console.warn('Global Calendar webhook failed', err); });
+  });
+}
+
+function ccConfigWebhooks(){
+  let curPub = ''; try{ curPub = localStorage.getItem('ccWebhookPublished') || ''; }catch(e){}
+  const vPub = window.prompt('Teams webhook URL(s) to notify when a PUBLISHED Marketing entry (Brand Events / Community Activation / Retail Activation / Digital Activation) is changed.\nSeparate multiple URLs with a comma.\n(Leave blank to disable)', curPub);
+  if(vPub !== null){ try{ localStorage.setItem('ccWebhookPublished', vPub.trim()); }catch(e){} }
+
+  let curDraft = ''; try{ curDraft = localStorage.getItem('ccWebhookDraft') || ''; }catch(e){}
+  const vDraft = window.prompt('Teams webhook URL(s) to notify when a DRAFT Marketing entry is changed.\nSeparate multiple URLs with a comma.\n(Leave blank to disable)', curDraft);
+  if(vDraft !== null){ try{ localStorage.setItem('ccWebhookDraft', vDraft.trim()); }catch(e){} }
+
+  alert('Webhook settings saved.');
+}
+
 function saveMarketingEntry(){
   if (window._btvCanEdit === false) { ccToast('You have view-only access to the Global Calendar'); return; }
   const title=document.getElementById('mTitle').value.trim();
@@ -1474,13 +1562,16 @@ function saveMarketingEntry(){
   const startDate=formatDate(startDateISO), endDate=endDateISO?formatDate(endDateISO):'';
   const notes=buildMarketingNotes(d);
 
+  const who = (typeof window.btvGetCurrentEmail === 'function' ? window.btvGetCurrentEmail() : '') || '';
+  const beforeSnapshot = marketingModalEntry ? JSON.parse(JSON.stringify(marketingModalEntry)) : null;
+
   marketingState[market]=marketingState[market]||[];
   let item;
   if(marketingModalEntry){
     item=marketingModalEntry;
     const prevMarket=item.market;
     Object.assign(item,d,{title,market,row,status,weekId,startDate,endDate,startDateISO,endDateISO,
-      images:_marketingPendingImages.slice(),notes,updated:new Date().toISOString()});
+      images:_marketingPendingImages.slice(),notes,updatedBy:who,updated:new Date().toISOString()});
     if(prevMarket!==market){
       marketingState[prevMarket]=(marketingState[prevMarket]||[]).filter(x=>x.id!==item.id);
       marketingState[market].unshift(item);
@@ -1488,8 +1579,8 @@ function saveMarketingEntry(){
   } else {
     item=Object.assign({
       id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
-      market,weekId,row,status,title,relatedLaunch:'',
-      images:_marketingPendingImages.slice(),notes,
+      market,weekId,row,status,title,startDate,endDate,startDateISO,endDateISO,relatedLaunch:'',
+      images:_marketingPendingImages.slice(),notes,updatedBy:who,
       created:new Date().toISOString(),updated:new Date().toISOString()
     },d);
     item.linkedMarketingId=item.id;
@@ -1498,6 +1589,9 @@ function saveMarketingEntry(){
   saveMarketingState(marketingState);
   pushMarketingToBtvCalendar(item,status);
   closeMarketingModal();
+  // Two separate Teams webhooks — one for Published entries, one for Draft — only fire
+  // when something about the entry actually changed (or it's brand new).
+  ccSendMarketingWebhook(item, ccDiffMarketingEntry(beforeSnapshot, item), who);
   // The entry may have just moved to a different week or market than where the modal
   // was opened from — switch to the right tab and scroll there so it never looks lost.
   if(currentTab!=='global' && currentTab!==market) switchTab(market); else renderCurrent();
@@ -2022,6 +2116,39 @@ function ccJumpToWeek(weekNum, entryId){
     }
   });
 }
+// Tints the current week's whole column blue in the currently-visible table. Uses an
+// absolutely-positioned overlay div rather than a per-cell class, because most rows use
+// colspan for multi-week entries (skipping "covered" week cells entirely), so a plain
+// column index can't be matched cell-by-cell. Also tints the header <th> itself, since the
+// sticky header's opaque background would otherwise hide the overlay where they overlap.
+function ccPositionWeekOverlay(){
+  requestAnimationFrame(function(){
+    const panel = document.querySelector('.view-panel.active');
+    if(!panel) return;
+    const scrollEl = panel.querySelector('.table-scroll');
+    if(!scrollEl) return;
+    scrollEl.querySelectorAll('th.current-week-th').forEach(function(th){ th.classList.remove('current-week-th'); });
+    const wn = dateToWeekNum(toLocalISODate(new Date()));
+    let overlay = scrollEl.querySelector('.current-week-overlay');
+    const th = wn ? scrollEl.querySelector('th[data-wk="' + wn + '"]') : null;
+    if(!th){ if(overlay) overlay.remove(); return; }
+    th.classList.add('current-week-th');
+    if(!overlay){
+      overlay = document.createElement('div');
+      overlay.className = 'current-week-overlay';
+      scrollEl.appendChild(overlay);
+    }
+    const thRect = th.getBoundingClientRect();
+    const scrollRect = scrollEl.getBoundingClientRect();
+    overlay.style.left = (thRect.left - scrollRect.left + scrollEl.scrollLeft) + 'px';
+    overlay.style.width = thRect.width + 'px';
+    overlay.style.height = scrollEl.scrollHeight + 'px';
+  });
+}
+window.addEventListener('resize', function(){
+  clearTimeout(window._ccOverlayResizeTimer);
+  window._ccOverlayResizeTimer = setTimeout(ccPositionWeekOverlay, 150);
+});
 function dayOfWeek(iso){ if(!iso)return -1; return(new Date(iso+'T00:00:00').getDay()+6)%7; }
 function isoForWeekDay(wn,di){ const w=WEEKS[wn-1];if(!w)return''; const d=new Date(w.startDate);d.setDate(d.getDate()+di);return toLocalISODate(d); }
 function dayLabel(wn,di){ const w=WEEKS[wn-1];if(!w)return''; const d=new Date(w.startDate);d.setDate(d.getDate()+di);return d.getDate(); }
@@ -2157,6 +2284,7 @@ function renderMarket(market){
     html+='</tr>';
   });
   tbody.innerHTML=html;
+  ccPositionWeekOverlay();
 }
 
 // ── Spannable row with filter ──────────────────────────────────────────────
@@ -2444,6 +2572,7 @@ function renderGlobal(){
   });
 
   body.innerHTML=html;
+  ccPositionWeekOverlay();
 }
 
 // ── View cache ─────────────────────────────────────────────────────────────
