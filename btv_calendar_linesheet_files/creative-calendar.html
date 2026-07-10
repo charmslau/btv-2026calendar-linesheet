@@ -353,6 +353,7 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
       <button class="fp" id="fp-del" onclick="toggleStatusFilter('Delivered')">Delivered</button>
     </div>
     <span class="filter-count" id="filterCount"></span>
+    <button class="fp" onclick="ccGoToToday()" title="Jump to this week">Today</button>
     <button class="fp" onclick="btvExportGlobalGridXLS()" title="Exports the Global tab's grid — only the markets currently selected above, or all markets if none are selected">⬇ Export Grid (Excel)</button>
     <span class="clear-filter" onclick="clearFilters()">✕ Clear</span>
   </div>
@@ -671,6 +672,7 @@ const WEEKS = (function(){
   }
   return out;
 })();
+const CC_YEAR = WEEKS[Math.floor(WEEKS.length/2)].startDate.getFullYear();
 
 const MONTH_STARTS={1:1,2:5,3:10,4:14,5:18,6:22,7:27,8:31,9:36,10:40,11:44,12:48};
 
@@ -1110,7 +1112,7 @@ function renderMarketingRow(market,row,gc){
         date:(spanEntry.startDateISO?formatDateWithDay(spanEntry.startDateISO):weekStartDateLabel(w.n))+' → Wk'+wEnd,
         title:spanEntry.title,summary:spanEntry.notes,
         badgeLabel:spanEntry.status==='published'?'Published':'Draft',
-        badgeClass:'s-'+(spanEntry.status||'draft'),accentMkt:market,
+        badgeClass:'s-'+(spanEntry.status||'draft'),accentMkt:market,entryId:spanEntry.id,
         onclick:`openMarketingViewModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();`
       });
     }
@@ -1119,7 +1121,7 @@ function renderMarketingRow(market,row,gc){
         date:e.startDateISO?formatDateWithDay(e.startDateISO):weekStartDateLabel(w.n),
         title:e.title,summary:e.notes,
         badgeLabel:e.status==='published'?'Published':'Draft',
-        badgeClass:'s-'+(e.status||'draft'),accentMkt:market,
+        badgeClass:'s-'+(e.status||'draft'),accentMkt:market,entryId:e.id,
         onclick:`openMarketingViewModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();`
       });
     });
@@ -1448,7 +1450,9 @@ function saveMarketingEntry(){
     links:document.getElementById('mLinks').value.split('\n').map(l=>l.trim()).filter(Boolean),
   };
   const status=document.getElementById('mStatus').value;
-  const startWeek=dateToWeekNum(startDateISO)||1;
+  const _mr=ccResolveWeek(startDateISO);
+  if(_mr.outOfRange){ errEl.textContent='Start date ('+_mr.dateStr+') falls outside the '+CC_YEAR+' calendar. Please pick a date within '+CC_YEAR+'.'; return; }
+  const startWeek=_mr.weekNum;
   const weekId=weekIdForWeekNum(startWeek);
   const startDate=formatDate(startDateISO), endDate=endDateISO?formatDate(endDateISO):'';
   const notes=buildMarketingNotes(d);
@@ -1477,7 +1481,10 @@ function saveMarketingEntry(){
   saveMarketingState(marketingState);
   pushMarketingToBtvCalendar(item,status);
   closeMarketingModal();
-  renderCurrent();
+  // The entry may have just moved to a different week or market than where the modal
+  // was opened from — switch to the right tab and scroll there so it never looks lost.
+  if(currentTab!=='global' && currentTab!==market) switchTab(market); else renderCurrent();
+  ccJumpToWeek(startWeek, item.id);
 }
 
 function deleteMarketingEntry(){
@@ -1899,7 +1906,7 @@ function buildRichCard(opts){
   // instead of one lumped paragraph.
   const summaryLine=opts.summaryHtml?`<div class="rcard-summary">${opts.summaryHtml}</div>`:(opts.summary?`<div class="rcard-summary">${esc(opts.summary)}</div>`:'');
   const badge=opts.badgeLabel?`<span class="rcard-badge ${opts.badgeClass||''}">${esc(opts.badgeLabel)}</span>`:'';
-  return `<div class="rcard ${mktAccentClass(opts.accentMkt)}"${opts.onclick?` onclick="${opts.onclick}"`:''} title="${esc(opts.hoverText||opts.title||'')}">
+  return `<div class="rcard ${mktAccentClass(opts.accentMkt)}"${opts.entryId?` data-entry-id="${esc(opts.entryId)}"`:''}${opts.onclick?` onclick="${opts.onclick}"`:''} title="${esc(opts.hoverText||opts.title||'')}">
     ${dateLine}
     <div class="rcard-title">${esc(opts.title||'')}</div>
     ${summaryLine}
@@ -1952,6 +1959,42 @@ function bulletListHtml(text){
   return '<ul>'+lines.map(l=>'<li>'+mdInline(l.replace(/^[-•]\s*/,''))+'</li>').join('')+'</ul>';
 }
 function dateToWeekNum(iso){ if(!iso)return 0; const d=new Date(iso+'T00:00:00'),wk1=new Date(2025,11,29),n=Math.floor((d-wk1)/(7*86400000))+1; return(n>=1&&n<=53)?n:0; }
+// Resolves a date to a week number, but — unlike bare dateToWeekNum — flags out-of-range
+// dates instead of letting callers silently fall back to Week 1 or leave the entry on its
+// old week while the date field shows something else. That silent fallback was what made
+// entries look "missing": the date the user typed didn't match where the entry actually sat.
+function ccResolveWeek(dateStr){
+  if(!dateStr) return { weekNum: 0, outOfRange: false };
+  const wn = dateToWeekNum(dateStr);
+  if(!wn) return { weekNum: 0, outOfRange: true, dateStr: dateStr };
+  return { weekNum: wn, outOfRange: false };
+}
+// Scrolls the currently-active tab's table to the given week column (and briefly
+// highlights the entry if entryId is given) so a saved date change is always visible
+// instead of silently landing off-screen.
+function ccGoToToday(){
+  const todayISO=toLocalISODate(new Date());
+  const wn=dateToWeekNum(todayISO);
+  if(!wn){ ccToast("Today isn't within the "+CC_YEAR+" calendar."); return; }
+  ccJumpToWeek(wn);
+}
+function ccJumpToWeek(weekNum, entryId){
+  if(!weekNum) return;
+  requestAnimationFrame(function(){
+    const panel = document.querySelector('.view-panel.active');
+    if(!panel) return;
+    const target = entryId
+      ? panel.querySelector('[data-entry-id="' + entryId + '"]')
+      : panel.querySelector('th[data-wk="' + weekNum + '"]');
+    if(!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    if(entryId){
+      const old = target.style.outline;
+      target.style.outline = '2px solid #DB6256';
+      setTimeout(function(){ target.style.outline = old; }, 2500);
+    }
+  });
+}
 function dayOfWeek(iso){ if(!iso)return -1; return(new Date(iso+'T00:00:00').getDay()+6)%7; }
 function isoForWeekDay(wn,di){ const w=WEEKS[wn-1];if(!w)return''; const d=new Date(w.startDate);d.setDate(d.getDate()+di);return toLocalISODate(d); }
 function dayLabel(wn,di){ const w=WEEKS[wn-1];if(!w)return''; const d=new Date(w.startDate);d.setDate(d.getDate()+di);return d.getDate(); }
@@ -2027,7 +2070,7 @@ function buildThead(){
   let h=`<tr><th class="row-head">Row</th>`;
   WEEKS.forEach(w=>{
     const isM=Object.values(MONTH_STARTS).includes(w.n);
-    h+=`<th${isM?' class="m-first"':''}>Wk ${w.n}<span class="wk-range">${w.range}</span></th>`;
+    h+=`<th data-wk="${w.n}"${isM?' class="m-first"':''}>Wk ${w.n}<span class="wk-range">${w.range}</span></th>`;
   });
   return h+'</tr>';
 }
@@ -2109,7 +2152,7 @@ function renderSpannableRow(market, row, gc){
           date:(spanEntry.date?formatDateWithDay(spanEntry.date):weekStartDateLabel(w.n))+' → Wk'+spanEntry.weekEnd,
           title:spanEntry.title,summaryHtml:commEntrySummaryHtml(row.key,spanEntry),hoverText:commEntryHoverText(row.key,spanEntry),
           badgeLabel:spanEntry.status,badgeClass:statusClass(spanEntry.status).replace('c-','s-'),
-          accentMkt:market,
+          accentMkt:market,entryId:spanEntry.id,
           onclick:`openEditModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();`
         });
       }
@@ -2118,7 +2161,7 @@ function renderSpannableRow(market, row, gc){
           date:e.date?formatDateWithDay(e.date):weekStartDateLabel(w.n),
           title:e.title,summaryHtml:commEntrySummaryHtml(row.key,e),hoverText:commEntryHoverText(row.key,e),
           badgeLabel:e.status,badgeClass:statusClass(e.status).replace('c-','s-'),
-          accentMkt:market,
+          accentMkt:market,entryId:e.id,
           onclick:`openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();`
         });
       });
@@ -2127,7 +2170,7 @@ function renderSpannableRow(market, row, gc){
       // colour by market instead of status for those rows.
       const chipCls=e=>row.group==='context'?(MKT_CSS[market]||'c-ns'):statusClass(e.status);
       if(spanEntry&&matchesFilter(spanEntry)){
-        chips+=`<div class="chip ${chipCls(spanEntry)}" onclick="openEditModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();">
+        chips+=`<div class="chip ${chipCls(spanEntry)}" data-entry-id="${esc(spanEntry.id)}" onclick="openEditModal('${esc(spanEntry.id)}','${esc(market)}');event.stopPropagation();">
           <span class="date-tag">${esc(spanEntry.date?formatDateWithDay(spanEntry.date):weekStartDateLabel(w.n))}</span>
           <span class="span-tag">→Wk${spanEntry.weekEnd}</span>
           ${spanEntry._seeded?'<span class="seeded-tag">●</span>':''}
@@ -2136,7 +2179,7 @@ function renderSpannableRow(market, row, gc){
         </div>`;
       }
       starts.filter(e=>(!e.weekEnd||e.weekEnd<=e.week)&&matchesFilter(e)).forEach(e=>{
-        chips+=`<div class="chip ${chipCls(e)}" onclick="openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();" title="${esc(e.title)}">
+        chips+=`<div class="chip ${chipCls(e)}" data-entry-id="${esc(e.id)}" onclick="openEditModal('${esc(e.id)}','${esc(market)}');event.stopPropagation();" title="${esc(e.title)}">
           <span class="date-tag">${esc(e.date?formatDateWithDay(e.date):weekStartDateLabel(w.n))}</span>
           ${e._seeded?'<span class="seeded-tag">●</span>':''}
           ${e.pillar?`<span class="pillar-tag">${esc(e.pillar)}</span>`:''}
@@ -2144,7 +2187,7 @@ function renderSpannableRow(market, row, gc){
         </div>`;
       });
     }
-    html+=`<td${colspanAttr} class="${gc}" onclick="openAddModal('${esc(market)}','${esc(row.key)}',${w.n})">${chips}${chips?`<span class="add-chip" onclick="openAddModal('${esc(market)}','${esc(row.key)}',${w.n});event.stopPropagation();">+</span>`:''}</td>`;
+    html+=`<td${colspanAttr} class="${gc}" onclick="openAddModal('${esc(market)}','${esc(row.key)}',${w.n},'${isoForWeekDay(w.n,0)}')">${chips}${chips?`<span class="add-chip" onclick="openAddModal('${esc(market)}','${esc(row.key)}',${w.n},'${isoForWeekDay(w.n,0)}');event.stopPropagation();">+</span>`:''}</td>`;
   });
   return html;
 }
@@ -2560,9 +2603,10 @@ function saveEntry(){
     const startDate=document.getElementById('fCtxStartDate').value;
     const endDate=document.getElementById('fCtxEndDate').value;
     if(!startDate){errEl.textContent='Please choose a start date.';return;}
-    const startWn=dateToWeekNum(startDate);
+    const _sr=ccResolveWeek(startDate);
+    if(_sr.outOfRange){ errEl.textContent='Start date ('+_sr.dateStr+') falls outside the '+CC_YEAR+' calendar. Please pick a date within '+CC_YEAR+'.'; return; }
     const endWn=endDate?dateToWeekNum(endDate):0;
-    const finalWeek=(startWn>=1&&startWn<=53)?startWn:1;
+    const finalWeek=_sr.weekNum;
     const finalWeekEnd=(endWn>finalWeek&&endWn<=53)?endWn:null;
     fields={week:finalWeek,weekEnd:finalWeekEnd,date:startDate,startDate,endDate:endDate||startDate,
       pillar:'',edmMarket:'',edmType:'',kol:'',promo:'',perfObj:'',brief:'',links:[],owner:'',status:''};
@@ -2579,21 +2623,39 @@ function saveEntry(){
     const links=document.getElementById('fLinks').value.split('\n').map(l=>l.trim()).filter(Boolean);
     const owner=document.getElementById('fOwner').value.trim();
     const status=NO_STATUS_ROWS.has(row)?'':document.getElementById('fStatus').value;
-    let finalWeek=week; if(date){const wn=dateToWeekNum(date);if(wn>=1&&wn<=53)finalWeek=wn;}
+    let finalWeek=week;
+    if(date){
+      const _dr=ccResolveWeek(date);
+      if(_dr.outOfRange){ errEl.textContent='Date ('+_dr.dateStr+') falls outside the '+CC_YEAR+' calendar. Please pick a date within '+CC_YEAR+'.'; return; }
+      if(_dr.weekNum) finalWeek=_dr.weekNum;
+    }
     const finalWeekEnd=(weekEnd&&weekEnd>finalWeek)?weekEnd:null;
     fields={week:finalWeek,weekEnd:finalWeekEnd,date,pillar,edmMarket:edmM,edmType:edmT,kol,promo,perfObj,brief,links,owner,status};
   }
 
+  let entryId;
   if(modalEntry){
+    entryId=modalEntry.id;
+    const prevMarket=modalEntry.market;
     Object.assign(modalEntry,{title,market,row},fields,{_seeded:false,updated:new Date().toISOString()});
+    if(prevMarket!==market){
+      state[prevMarket]=(state[prevMarket]||[]).filter(x=>x.id!==modalEntry.id);
+      state[market]=state[market]||[];
+      state[market].unshift(modalEntry);
+    }
   } else {
+    entryId=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
     state[market]=state[market]||[];
     state[market].unshift(Object.assign({
-      id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+      id:entryId,
       title,market,row
     },fields,{_seeded:false,created:new Date().toISOString(),updated:new Date().toISOString()}));
   }
-  saveState();closeModal();renderCurrent();
+  saveState();closeModal();
+  // The entry may have just moved to a different week or market than where the modal
+  // was opened from — switch to the right tab and scroll there so it never looks lost.
+  if(currentTab!=='global' && currentTab!==market) switchTab(market); else renderCurrent();
+  ccJumpToWeek(fields.week, entryId);
 }
 
 function deleteEntry(){

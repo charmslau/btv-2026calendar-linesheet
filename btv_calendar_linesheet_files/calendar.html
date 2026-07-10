@@ -3134,6 +3134,8 @@ body.btv-dashboard-mode #quarterGroup{display:none!important}
       </select>
     </div>
 
+    <button id="todayBtn" title="Jump to this week" style="background:#fff;color:#111;border:1.5px solid #d6d2cc;padding:8px 14px;font-size:12px;font-weight:700;letter-spacing:.05em;border-radius:10px;cursor:pointer;align-self:flex-end">Today</button>
+
     <button id="undoBtn" title="Undo previous edit" style="background:#fff;color:#111;border:1.5px solid #d6d2cc;padding:7px 12px;font-size:17px;border-radius:10px;cursor:pointer;line-height:1;align-self:flex-end">&#8592;</button>
 
     <div style="position:relative;align-self:flex-end" id="btvDlDropWrap">
@@ -7564,6 +7566,75 @@ function findWeekIdForDate(dateStr){
 
 }
 
+// Local-timezone-safe "YYYY-MM-DD" (no UTC shift). Week ids themselves are built via
+// cur.toISOString().slice(0,10) (see buildWeeks below), which rolls back to the PREVIOUS
+// calendar day in UTC+ timezones (SG/TH/ID/PH/JP/CN — this app's own markets). That's left
+// as-is because it's the storage key every existing entry and creative-calendar.html's
+// bridge already rely on — changing it needs a data migration, not a quick fix here. But it
+// means a week's id string is not safe to reuse AS a calendar date (feeding it back through
+// findWeekIdForDate lands a week early). Use this + weekMondayLocalISO for anything that
+// needs the week's TRUE Monday date, e.g. prefilling a date <input>.
+function localISODate(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function weekMondayLocalISO(weekId){
+  const w = ALL_WEEKS.find(x => x.id === weekId);
+  return w ? localISODate(w.start) : "";
+}
+
+// Resolves which week a saved entry should live under. Returns outOfRange:true
+// (instead of silently keeping the old week) when a non-blank date doesn't fall
+// inside this calendar year, so the caller can warn the user instead of the
+// entry quietly staying in its old spot while its date field shows the new value.
+function btvResolveTargetWeek(dateStr, fallbackWeekId){
+  if(!dateStr) return { weekId: fallbackWeekId, outOfRange: false };
+  const wk = findWeekIdForDate(dateStr);
+  if(!wk) return { weekId: fallbackWeekId, outOfRange: true, dateStr: dateStr };
+  return { weekId: wk, outOfRange: false };
+}
+
+// Makes sure the given weekId is actually visible under the current view
+// (Month/Quarter/PDF-window filters + search text can all hide the week an
+// entry just moved to, which is what made saved entries look "missing").
+// Clears whichever filter would hide it, re-renders, then scrolls to and
+// briefly highlights the entry (or the week column if no entryId given).
+function btvJumpToWeek(weekId, entryId){
+  if(!weekId) return;
+  const wk = ALL_WEEKS.find(w => w.id === weekId);
+  if(!wk) return;
+
+  pdfPrintFromToday = false;
+  pdfPrintStartMonth = null;
+
+  const vm = e("viewMode");
+  if(vm){
+    if(vm.value === "month" && e("monthSelect") && e("monthSelect").value !== wk.month){
+      e("monthSelect").value = wk.month;
+    } else if(vm.value === "quarter" && e("quarterSelect") && e("quarterSelect").value !== wk.quarter){
+      e("quarterSelect").value = wk.quarter;
+    } else if(vm.value === "pdf3"){
+      vm.value = "full";
+    }
+  }
+
+  const si = document.getElementById('searchInput');
+  if(si && si.value) si.value = '';
+
+  render();
+
+  requestAnimationFrame(function(){
+    const target = entryId
+      ? document.querySelector('[data-entry-id="' + entryId + '"]')
+      : document.querySelector('[data-drop-week="' + weekId + '"]');
+    if(!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    if(entryId){
+      target.classList.add('expanded');
+      const old = target.style.outline;
+      target.style.outline = '2px solid #DB6256';
+      setTimeout(function(){ target.style.outline = old; target.classList.remove('expanded'); }, 2500);
+    }
+  });
+}
+
 function loadState(){
 
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
@@ -8471,6 +8542,7 @@ function buildWeeks(){
 }
 
 const ALL_WEEKS = buildWeeks();
+const CAL_YEAR = new Date(ALL_WEEKS[Math.floor(ALL_WEEKS.length/2)].start).getFullYear();
 
 const state = loadState();
   window._btvState = state;
@@ -9324,7 +9396,7 @@ function buildGlobalForm(existing, weekId){
 
       <div class="field span6"><label>Launch Title<span class="team-badge merch">Merch</span></label><input id="launchTitle" type="text" value="${esc(existing?.launchTitle || "")}"></div>
 
-      <div class="field span3"><label>Launch Date<span class="required-star">*</span><span class="team-badge merch">Merch</span></label><input id="launchDate" type="date" value="${esc(existing?.launchDate || "")}"></div>
+      <div class="field span3"><label>Launch Date<span class="required-star">*</span><span class="team-badge merch">Merch</span></label><input id="launchDate" type="date" value="${esc(existing?.launchDate || (!existing && weekId ? weekMondayLocalISO(weekId) : ""))}"></div>
 
       <div class="field span3"><label>Priority</label>
 
@@ -9663,7 +9735,7 @@ function renderRestockLine(line, i){
 
 }
 
-function buildRestockForm(existing){
+function buildRestockForm(existing, weekId){
 
   const selected = existing?.allMarkets ? GLOBAL_MARKETS : (existing?.markets || []);
 
@@ -9683,7 +9755,7 @@ function buildRestockForm(existing){
 
       </div>
 
-      <div class="field span4"><label>ETA<span class="team-badge merch">Merch</span></label><input id="eta" type="date" value="${esc(existing?.etaISO || "")}"></div>
+      <div class="field span4"><label>ETA<span class="team-badge merch">Merch</span></label><input id="eta" type="date" value="${esc(existing?.etaISO || (!existing && weekId ? weekMondayLocalISO(weekId) : ""))}"></div>
 
       <div class="field span4"><label>Priority<span class="team-badge merch">Merch</span></label>
         <select id="keyLevel">
@@ -9701,7 +9773,7 @@ function buildRestockForm(existing){
 
 }
 
-function buildEventForm(existing){
+function buildEventForm(existing, weekId){
 
   return `
 
@@ -9715,7 +9787,7 @@ function buildEventForm(existing){
 
           <input id="title" type="text" placeholder="Title" value="${esc(existing?.title || "")}">
 
-          <input id="startDate" type="date" value="${esc(existing?.startDateISO || "")}">
+          <input id="startDate" type="date" value="${esc(existing?.startDateISO || (!existing && weekId ? weekMondayLocalISO(weekId) : ""))}">
 
           <input id="endDate" type="date" value="${esc(existing?.endDateISO || "")}" class="${existing?.tillSoldOut ? 'disabled-date' : ''}" ${existing?.tillSoldOut ? 'disabled' : ''}>
 
@@ -9739,7 +9811,7 @@ function buildEventForm(existing){
 
 }
 
-function buildStoreOpeningForm(existing){
+function buildStoreOpeningForm(existing, weekId){
 
   return `
 
@@ -9771,7 +9843,7 @@ function buildStoreOpeningForm(existing){
 
         <label>Target Open Date</label>
 
-        <input id="targetOpenDate" type="date" value="${esc(existing?.targetOpenDate || "")}">
+        <input id="targetOpenDate" type="date" value="${esc(existing?.targetOpenDate || (!existing && weekId ? weekMondayLocalISO(weekId) : ""))}">
 
       </div>
 
@@ -10453,11 +10525,11 @@ window.openEditor = function(section, weekId, entryId){
 
   if(section === "global" || section === "china") inner = buildGlobalForm(existing, weekId) + actions(existing, section);
 
-  else if(section === "restocks") inner = buildRestockForm(existing) + actions(existing, section);
+  else if(section === "restocks") inner = buildRestockForm(existing, weekId) + actions(existing, section);
 
-  else if(section === "store_openings") inner = buildStoreOpeningForm(existing) + actions(existing, section);
+  else if(section === "store_openings") inner = buildStoreOpeningForm(existing, weekId) + actions(existing, section);
 
-  else inner = buildEventForm(existing) + actions(existing, section);
+  else inner = buildEventForm(existing, weekId) + actions(existing, section);
 
   e("modalBody").innerHTML = inner;
 
@@ -10826,7 +10898,9 @@ window.openEditor = function(section, weekId, entryId){
 
       payload.keyLevel = e("keyLevel").value;
 
-      targetWeekId = findWeekIdForDate(payload.launchDate) || targetWeekId;
+      { const _r = btvResolveTargetWeek(payload.launchDate, targetWeekId);
+        if(_r.outOfRange){ alert('Launch Date (' + _r.dateStr + ') falls outside the ' + CAL_YEAR + ' calendar. Please pick a date within ' + CAL_YEAR + '.'); if(_cfmBtnEl){ _cfmBtnEl.disabled=false; _cfmBtnEl.textContent='Confirm'; } return; }
+        targetWeekId = _r.weekId; }
 
       payload.lines = getCurrentProductLines().filter(x => x.category || x.productName || x.colour || x.size || x.price);
 
@@ -10880,7 +10954,9 @@ window.openEditor = function(section, weekId, entryId){
 
       payload.eta = payload.etaISO ? fmtDDMMM(payload.etaISO) : "";
 
-      targetWeekId = findWeekIdForDate(payload.etaISO) || targetWeekId;
+      { const _r = btvResolveTargetWeek(payload.etaISO, targetWeekId);
+        if(_r.outOfRange){ alert('ETA (' + _r.dateStr + ') falls outside the ' + CAL_YEAR + ' calendar. Please pick a date within ' + CAL_YEAR + '.'); if(_cfmBtnEl){ _cfmBtnEl.disabled=false; _cfmBtnEl.textContent='Confirm'; } return; }
+        targetWeekId = _r.weekId; }
 
     } else if(section === "store_openings") {
 
@@ -10894,7 +10970,9 @@ window.openEditor = function(section, weekId, entryId){
 
       payload.storeAddress = e("storeAddress").value.trim();
 
-      targetWeekId = findWeekIdForDate(payload.targetOpenDate) || targetWeekId;
+      { const _r = btvResolveTargetWeek(payload.targetOpenDate, targetWeekId);
+        if(_r.outOfRange){ alert('Target Open Date (' + _r.dateStr + ') falls outside the ' + CAL_YEAR + ' calendar. Please pick a date within ' + CAL_YEAR + '.'); if(_cfmBtnEl){ _cfmBtnEl.disabled=false; _cfmBtnEl.textContent='Confirm'; } return; }
+        targetWeekId = _r.weekId; }
 
     } else {
 
@@ -10910,7 +10988,9 @@ window.openEditor = function(section, weekId, entryId){
 
       payload.endDate = payload.endDateISO ? fmtDDMMM(payload.endDateISO) : "";
 
-      targetWeekId = findWeekIdForDate(payload.startDateISO || payload.endDateISO) || targetWeekId;
+      { const _r = btvResolveTargetWeek(payload.startDateISO || payload.endDateISO, targetWeekId);
+        if(_r.outOfRange){ alert('Date (' + _r.dateStr + ') falls outside the ' + CAL_YEAR + ' calendar. Please pick a date within ' + CAL_YEAR + '.'); if(_cfmBtnEl){ _cfmBtnEl.disabled=false; _cfmBtnEl.textContent='Confirm'; } return; }
+        targetWeekId = _r.weekId; }
 
       const selectedMarkets = checkedByName("eventMarkets");
 
@@ -11094,7 +11174,9 @@ window.openEditor = function(section, weekId, entryId){
     if (typeof window.btvClearEditing === 'function') window.btvClearEditing();
     e("modal").classList.remove("show");
 
-    render();
+    // The entry may have just moved to a week hidden by the current Month/Quarter/
+    // search filter — jump there so a saved date change never looks like data loss.
+    btvJumpToWeek(targetWeekId, payload.id);
 
     if(e("globalMarketingView")) renderGlobalMarketingView();
 
@@ -11912,6 +11994,13 @@ e("viewMode").addEventListener("change", render);
 e("monthSelect").addEventListener("change", render);
 
 e("quarterSelect").addEventListener("change", render);
+
+e("todayBtn").addEventListener("click", () => {
+  const todayISO = localISODate(new Date());
+  const weekId = findWeekIdForDate(todayISO);
+  if(!weekId){ alert("Today isn't within the " + CAL_YEAR + " calendar."); return; }
+  btvJumpToWeek(weekId);
+});
 
 e("undoBtn").addEventListener("click", () => {
 

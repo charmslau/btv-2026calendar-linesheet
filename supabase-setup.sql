@@ -38,17 +38,17 @@ create policy "Authenticated users can update app_state"
 -- ── 2. user_profiles ─────────────────────────────────────────
 
 create table if not exists public.user_profiles (
-  id             uuid        primary key references auth.users(id) on delete cascade,
-  email          text,
-  can_access_cal boolean     not null default true,
-  can_access_ls  boolean     not null default true,
-  created_at     timestamptz not null default now()
+  id                        uuid        primary key references auth.users(id) on delete cascade,
+  email                     text,
+  can_access_product_calendar boolean  not null default true,
+  can_access_linesheet      boolean     not null default true,
+  created_at                timestamptz not null default now()
 );
 
 -- If table already existed with default false, update the defaults
 alter table public.user_profiles
-  alter column can_access_cal set default true,
-  alter column can_access_ls  set default true;
+  alter column can_access_product_calendar set default true,
+  alter column can_access_linesheet        set default true;
 
 alter table public.user_profiles enable row level security;
 
@@ -87,7 +87,7 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.user_profiles (id, email, can_access_cal, can_access_ls)
+  insert into public.user_profiles (id, email, can_access_product_calendar, can_access_linesheet)
   values (new.id, new.email, true, true)
   on conflict (id) do nothing;
   return new;
@@ -106,24 +106,24 @@ create trigger on_auth_user_created
 -- Safe to re-run — only updates rows that are currently blocked.
 
 update public.user_profiles
-set can_access_cal = true,
-    can_access_ls  = true
-where can_access_cal = false
-   or can_access_ls  = false;
+set can_access_product_calendar = true,
+    can_access_linesheet        = true
+where can_access_product_calendar = false
+   or can_access_linesheet        = false;
 
 -- Also ensure your own account has access.
-insert into public.user_profiles (id, email, can_access_cal, can_access_ls)
+insert into public.user_profiles (id, email, can_access_product_calendar, can_access_linesheet)
 select id, email, true, true
 from auth.users
 where email = 'charmaine.lau.btv@gmail.com'
 on conflict (id) do update
-  set can_access_cal = true,
-      can_access_ls  = true;
+  set can_access_product_calendar = true,
+      can_access_linesheet        = true;
 
 -- ── Diagnostic: see all accounts and their access ────────────
 -- Run this separately to check who has access and who doesn't:
 --
---   select email, can_access_cal, can_access_ls, created_at
+--   select email, can_access_product_calendar, can_access_linesheet, created_at
 --   from public.user_profiles
 --   order by created_at;
 --
@@ -177,12 +177,16 @@ $$;
 -- ── 7. Viewer / Editor permission columns ────────────────────
 -- These let admins set per-user edit access for each module.
 -- can_access_* controls visibility; can_edit_* controls write access.
+-- Column names match the site's tab names exactly:
+--   Product Calendar Input -> can_access_product_calendar / can_edit_product_calendar
+--   Global Calendar         -> can_access_global_calendar  / can_edit_global_calendar
+--   Linesheet               -> can_access_linesheet        / can_edit_linesheet
 
 alter table public.user_profiles
-  add column if not exists can_access_creative boolean not null default true,
-  add column if not exists can_edit_cal        boolean not null default true,
-  add column if not exists can_edit_creative   boolean not null default true,
-  add column if not exists can_edit_ls         boolean not null default true;
+  add column if not exists can_access_global_calendar  boolean not null default true,
+  add column if not exists can_edit_product_calendar   boolean not null default true,
+  add column if not exists can_edit_global_calendar    boolean not null default true,
+  add column if not exists can_edit_linesheet          boolean not null default true;
 
 
 -- ── 10. Storage bucket for Marketing event images ────────────

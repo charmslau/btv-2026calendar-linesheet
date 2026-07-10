@@ -596,9 +596,9 @@ html, body {
   }
 
   function _startSyncInCalFrame(session, activeModule) {
-    var _ec = _profile && _profile.can_edit_cal      !== false;
-    var _ee = _profile && _profile.can_edit_creative !== false;
-    var _el = _profile && _profile.can_edit_ls       !== false;
+    var _ec = _profile && _profile.can_edit_product_calendar !== false;
+    var _ee = _profile && _profile.can_edit_global_calendar  !== false;
+    var _el = _profile && _profile.can_edit_linesheet        !== false;
     var activeFrameId = activeModule === 'cal' ? _getCalFrameId() : 'frame-' + activeModule;
     _startSyncInFrame('frame-cal-2026', session, _ec, activeFrameId === 'frame-cal-2026');
     _startSyncInFrame('frame-cal-2027', session, _ec, activeFrameId === 'frame-cal-2027');
@@ -700,9 +700,9 @@ html, body {
 
   function _canAccess(mod) {
     if (!_profile) return true; // no profile yet → show everything until we know
-    if (mod === 'cal')      return _profile.can_access_cal !== false;
-    if (mod === 'creative') return _profile.can_access_creative !== false;
-    return _profile.can_access_ls !== false;
+    if (mod === 'cal')      return _profile.can_access_product_calendar !== false;
+    if (mod === 'creative') return _profile.can_access_global_calendar !== false;
+    return _profile.can_access_linesheet !== false;
   }
 
   function _refreshOverlay() {
@@ -1015,12 +1015,12 @@ html, body {
       var bg = i % 2 === 0 ? 'background:#f8f6f2' : '';
       return '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;' + bg + '">'
         + '<span style="flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (u.email || '') + '">' + (u.email || u.id.substring(0, 8) + '…') + '</span>'
-        + '<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox"' + (u.can_access_cal !== false ? ' checked' : '') + ' onchange="_btvUMToggle(\'' + u.id + '\',\'can_access_cal\',this.checked)"> Mgmt Cal</label>'
-        + '<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;color:#777"><input type="checkbox"' + (u.can_edit_cal !== false ? ' checked' : '') + ' onchange="_btvUMToggle(\'' + u.id + '\',\'can_edit_cal\',this.checked)"> edit</label>'
-        + '<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox"' + (u.can_access_creative !== false ? ' checked' : '') + ' onchange="_btvUMToggle(\'' + u.id + '\',\'can_access_creative\',this.checked)"> Creative</label>'
-        + '<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;color:#777"><input type="checkbox"' + (u.can_edit_creative !== false ? ' checked' : '') + ' onchange="_btvUMToggle(\'' + u.id + '\',\'can_edit_creative\',this.checked)"> edit</label>'
-        + '<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox"' + (u.can_access_ls !== false ? ' checked' : '') + ' onchange="_btvUMToggle(\'' + u.id + '\',\'can_access_ls\',this.checked)"> LS</label>'
-        + '<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;color:#777"><input type="checkbox"' + (u.can_edit_ls !== false ? ' checked' : '') + ' onchange="_btvUMToggle(\'' + u.id + '\',\'can_edit_ls\',this.checked)"> edit</label>'
+        + '<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer" title="Product Calendar Input — access"><input type="checkbox"' + (u.can_access_product_calendar !== false ? ' checked' : '') + ' onchange="_btvUMToggle(\'' + u.id + '\',\'can_access_product_calendar\',this.checked)"> Product Cal</label>'
+        + '<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;color:#777" title="Product Calendar Input — edit"><input type="checkbox"' + (u.can_edit_product_calendar !== false ? ' checked' : '') + ' onchange="_btvUMToggle(\'' + u.id + '\',\'can_edit_product_calendar\',this.checked)"> edit</label>'
+        + '<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer" title="Global Calendar — access"><input type="checkbox"' + (u.can_access_global_calendar !== false ? ' checked' : '') + ' onchange="_btvUMToggle(\'' + u.id + '\',\'can_access_global_calendar\',this.checked)"> Global Cal</label>'
+        + '<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;color:#777" title="Global Calendar — edit"><input type="checkbox"' + (u.can_edit_global_calendar !== false ? ' checked' : '') + ' onchange="_btvUMToggle(\'' + u.id + '\',\'can_edit_global_calendar\',this.checked)"> edit</label>'
+        + '<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer" title="Linesheet — access"><input type="checkbox"' + (u.can_access_linesheet !== false ? ' checked' : '') + ' onchange="_btvUMToggle(\'' + u.id + '\',\'can_access_linesheet\',this.checked)"> Linesheet</label>'
+        + '<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;color:#777" title="Linesheet — edit"><input type="checkbox"' + (u.can_edit_linesheet !== false ? ' checked' : '') + ' onchange="_btvUMToggle(\'' + u.id + '\',\'can_edit_linesheet\',this.checked)"> edit</label>'
         + '</div>';
     }).join('');
   }
