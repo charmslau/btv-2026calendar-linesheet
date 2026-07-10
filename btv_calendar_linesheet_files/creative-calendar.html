@@ -43,6 +43,10 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
   background:var(--btn);color:var(--muted);cursor:pointer;transition:all .15s}
 .seed-btn:hover{border-color:#777;color:var(--text)}
 .seed-btn.active{background:#111;color:#fff;border-color:#111}
+.today-btn{font-size:13px;font-weight:800;padding:9px 18px;border:none;border-radius:10px;
+  background:#c43030;color:#fff;cursor:pointer;letter-spacing:.02em;transition:background .15s;
+  display:flex;align-items:center;gap:6px}
+.today-btn:hover{background:#a82626}
 
 /* ── Tab bar ── */
 .tab-bar{flex-shrink:0;display:flex;align-items:center;gap:2px;
@@ -62,13 +66,19 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
   font:inherit;font-size:11.5px;background:#fff;color:var(--text);outline:none;
   width:180px;transition:border-color .15s}
 .filter-search:focus{border-color:var(--text)}
+.filter-panel{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:#fff;border:1.5px solid var(--grid);border-radius:10px;padding:5px 12px 5px 6px}
+.filter-panel-lbl{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  color:#fff;background:var(--muted);border-radius:6px;padding:3px 7px;flex-shrink:0}
 .filter-group{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .filter-lbl{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.fp{padding:3px 9px;border:1.5px solid var(--grid);border-radius:20px;
+.fp{padding:3px 9px 3px 7px;border:1.5px dashed var(--grid);border-radius:7px;
   font:inherit;font-size:10px;font-weight:700;cursor:pointer;background:#fff;
-  color:var(--muted);transition:all .12s}
+  color:var(--muted);transition:all .12s;display:inline-flex;align-items:center;gap:4px}
+.fp::before{content:"\2610";font-size:11px}
 .fp:hover{border-color:#999;color:var(--text)}
-.fp.on{border-color:currentColor;color:var(--text);background:#fff}
+.fp.on{border-style:solid;border-color:currentColor;color:var(--text);background:#fff}
+.fp.on::before{content:"\2611"}
 .fp.fp-sg.on{background:var(--mkt-sg-bg);color:var(--mkt-sg-tx);border-color:var(--mkt-sg-bd)}
 .fp.fp-th.on{background:var(--mkt-th-bg);color:var(--mkt-th-tx);border-color:var(--mkt-th-bd)}
 .fp.fp-id.on{background:var(--mkt-id-bg);color:var(--mkt-id-tx);border-color:var(--mkt-id-bd)}
@@ -82,6 +92,10 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
 .clear-filter{font-size:10px;color:var(--muted);cursor:pointer;padding:3px 8px;
   border:1px solid transparent;border-radius:6px}
 .clear-filter:hover{color:#c43030;border-color:#f5c6c6}
+.export-btn{padding:5px 12px;border:1.5px solid var(--grid);border-radius:8px;
+  font:inherit;font-size:10.5px;font-weight:700;cursor:pointer;background:#fff;
+  color:var(--muted);transition:all .12s;margin-left:auto}
+.export-btn:hover{border-color:#999;color:var(--text)}
 
 /* ── Legend ── */
 .legend{flex-shrink:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
@@ -318,6 +332,7 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
     <span class="page-title">Global Calendar</span>
     <span class="page-sub">2026 — Beyond The Vines · DO DESIGN, DO LIFE.</span>
     <div class="topbar-right">
+      <button class="today-btn" onclick="ccGoToToday()" title="Jump to the week that contains today's date">&#128197; Today</button>
       <button class="seed-btn" onclick="confirmSeed()" title="Load all 2026 launch data from CREATIVE CAL 2026.xlsx">&#x21BA; Load Excel Data</button>
     </div>
   </div>
@@ -334,28 +349,30 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
   <!-- Filter bar -->
   <div class="filter-bar">
     <input type="text" id="filterSearch" class="filter-search" placeholder="&#x1F50D; Search entries…" oninput="applyFilters()">
-    <div class="filter-group" id="filterGroupMarket">
-      <span class="filter-lbl">Market:</span>
-      <button class="fp fp-all on" id="fp-all" onclick="toggleMarketFilter('all')">All</button>
-      <button class="fp fp-sg" id="fp-sg" onclick="toggleMarketFilter('SG')">SG</button>
-      <button class="fp fp-th" id="fp-th" onclick="toggleMarketFilter('TH')">TH</button>
-      <button class="fp fp-id" id="fp-id" onclick="toggleMarketFilter('ID')">ID</button>
-      <button class="fp fp-ph" id="fp-ph" onclick="toggleMarketFilter('PH')">PH</button>
-      <button class="fp fp-jp" id="fp-jp" onclick="toggleMarketFilter('JP')">JP</button>
-      <button class="fp fp-cn" id="fp-cn" onclick="toggleMarketFilter('CN')">CN</button>
+    <div class="filter-panel" id="filterPanel" title="Tick to narrow down which entries are shown below — this does not switch tabs">
+      <span class="filter-panel-lbl">&#9660; Filter</span>
+      <div class="filter-group" id="filterGroupMarket">
+        <span class="filter-lbl">Market:</span>
+        <button class="fp fp-all on" id="fp-all" onclick="toggleMarketFilter('all')">All</button>
+        <button class="fp fp-sg" id="fp-sg" onclick="toggleMarketFilter('SG')">SG</button>
+        <button class="fp fp-th" id="fp-th" onclick="toggleMarketFilter('TH')">TH</button>
+        <button class="fp fp-id" id="fp-id" onclick="toggleMarketFilter('ID')">ID</button>
+        <button class="fp fp-ph" id="fp-ph" onclick="toggleMarketFilter('PH')">PH</button>
+        <button class="fp fp-jp" id="fp-jp" onclick="toggleMarketFilter('JP')">JP</button>
+        <button class="fp fp-cn" id="fp-cn" onclick="toggleMarketFilter('CN')">CN</button>
+      </div>
+      <div class="filter-group" id="filterGroupStatus">
+        <span class="filter-lbl">Status:</span>
+        <button class="fp" id="fp-ns" onclick="toggleStatusFilter('Not Started')">Not Started</button>
+        <button class="fp" id="fp-ip" onclick="toggleStatusFilter('In Progress')">In Progress</button>
+        <button class="fp" id="fp-ir" onclick="toggleStatusFilter('In Review')">In Review</button>
+        <button class="fp" id="fp-ap" onclick="toggleStatusFilter('Approved')">Approved</button>
+        <button class="fp" id="fp-del" onclick="toggleStatusFilter('Delivered')">Delivered</button>
+      </div>
+      <span class="filter-count" id="filterCount"></span>
+      <span class="clear-filter" onclick="clearFilters()">✕ Clear</span>
     </div>
-    <div class="filter-group" id="filterGroupStatus">
-      <span class="filter-lbl">Status:</span>
-      <button class="fp" id="fp-ns" onclick="toggleStatusFilter('Not Started')">Not Started</button>
-      <button class="fp" id="fp-ip" onclick="toggleStatusFilter('In Progress')">In Progress</button>
-      <button class="fp" id="fp-ir" onclick="toggleStatusFilter('In Review')">In Review</button>
-      <button class="fp" id="fp-ap" onclick="toggleStatusFilter('Approved')">Approved</button>
-      <button class="fp" id="fp-del" onclick="toggleStatusFilter('Delivered')">Delivered</button>
-    </div>
-    <span class="filter-count" id="filterCount"></span>
-    <button class="fp" onclick="ccGoToToday()" title="Jump to this week">Today</button>
-    <button class="fp" onclick="btvExportGlobalGridXLS()" title="Exports the Global tab's grid — only the markets currently selected above, or all markets if none are selected">⬇ Export Grid (Excel)</button>
-    <span class="clear-filter" onclick="clearFilters()">✕ Clear</span>
+    <button class="export-btn" onclick="btvExportGlobalGridXLS()" title="Exports the Global tab's grid — only the markets currently selected above, or all markets if none are selected">⬇ Export Grid (Excel)</button>
   </div>
 
   <!-- Legend -->
@@ -1721,7 +1738,9 @@ function exportMarketingEntry(){
     field('Communication',ev.comms,false),
     field('T&Cs',ev.tnc,true),
   ].join('');
-  // Uploaded images render clean — no card background, border or shadow around them.
+  // Uploaded images are capped to a small thumbnail size (object-fit:cover) and laid out
+  // 2-per-row, so a handful of photos plus the activation's text fields still fit on one
+  // screen/printed page instead of the photos alone pushing the export onto a second page.
   const sideImages=(ev.images||[]).map(img=>{
     const caption=img.title?('<div class="export-img-caption">'+esc(img.title)+'</div>'):'';
     return '<div class="export-img-wrap"><img src="'+esc(img.url)+'">'+caption+'</div>';
@@ -1733,26 +1752,34 @@ function exportMarketingEntry(){
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(ev.title)}</title>
 <style>
 *{box-sizing:border-box}
-body{font-family:'Everett','Helvetica Neue',Helvetica,Arial,sans-serif;margin:0;padding:40px 44px;color:#111;background:#fff}
-.export-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+@page{size:A4 landscape;margin:12mm}
+body{font-family:'Everett','Helvetica Neue',Helvetica,Arial,sans-serif;margin:0;padding:28px 36px;color:#111;background:#fff}
+.export-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
 .export-crumb{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#888}
 .export-status{display:inline-block;padding:4px 16px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff}
 .export-status.live{background:#3ba55d}
 .export-status.draft{background:#999}
-h1{font-size:28px;font-weight:600;margin:0 0 24px;line-height:1.2}
-.export-grid{display:flex;gap:40px;align-items:flex-start}
-.export-main{flex:1.2;min-width:0}
-.export-side{flex:1;min-width:0}
-.export-field{margin-bottom:16px}
-.export-field h2{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#555;margin:0 0 4px}
-.export-field p{margin:0;font-size:13px;line-height:1.5;color:#222}
-.export-field ul{margin:0;padding-left:16px;font-size:13px;line-height:1.5;color:#222}
-.export-field li{margin-bottom:3px}
-.export-footer{margin-top:24px;padding-top:12px;border-top:1px solid #eee;font-size:10.5px;color:#888}
-.export-img-wrap{margin-bottom:18px}
-.export-img-wrap img{width:100%;display:block}
-.export-img-caption{font-size:11px;color:#888;margin-top:6px}
-@media print{ body{padding:18px} }
+h1{font-size:24px;font-weight:600;margin:0 0 16px;line-height:1.2}
+.export-grid{display:flex;gap:32px;align-items:flex-start}
+.export-main{flex:1.3;min-width:0}
+.export-side{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-content:flex-start;gap:10px}
+.export-field{margin-bottom:11px}
+.export-field h2{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#555;margin:0 0 3px}
+.export-field p{margin:0;font-size:12px;line-height:1.4;color:#222}
+.export-field ul{margin:0;padding-left:16px;font-size:12px;line-height:1.4;color:#222}
+.export-field li{margin-bottom:2px}
+.export-footer{margin-top:16px;padding-top:10px;border-top:1px solid #eee;font-size:10px;color:#888}
+/* Photos are capped to small thumbnails, 2-per-row, cropped to fill (object-fit:cover) —
+   so any number of uploaded photos stays compact instead of stretching the export past
+   one screen/page. */
+.export-img-wrap{flex:0 0 calc(50% - 5px);max-width:calc(50% - 5px)}
+.export-img-wrap img{width:100%;height:120px;object-fit:cover;border-radius:6px;display:block}
+.export-img-caption{font-size:10px;color:#888;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media print{
+  body{padding:10mm}
+  .export-grid{page-break-inside:avoid}
+  .export-img-wrap img{height:100px}
+}
 </style>
 </head><body>
 <div class="export-top">
@@ -2224,10 +2251,19 @@ const GLOBAL_BTV_ROWS=[
   {key:'g_store', label:'Store Opening', mkts:null,                  sections:['store_openings']},
 ];
 
+// Every 'communication' key in ROW_DEFS must appear in exactly one of these srcKeys arrays,
+// or entries added to that row on a per-market tab will silently never show up on the Global
+// tab. Checked at runtime just below (see checkGlobalCreativeRowsCoverage).
 const GLOBAL_CREATIVE_ROWS=[
-  {key:'soc', label:'Social / Content',        srcKeys:['ig_grid','ig_stories','ig_mkt','tiktok','line','red_xhs','wechat']},
+  {key:'soc', label:'Social / Content',        srcKeys:['ig_grid','ig_stories','ig_mkt','tiktok','line','red_xhs','wechat','livestream']},
   {key:'edm', label:'Channel (EDM / Media)',    srcKeys:['edm','media_ooh']},
+  {key:'instore_perf', label:'In-Mall & Performance Marketing', srcKeys:['in_mall','mall_social','perf_tier1','perf_tier2','perf_tier3']},
 ];
+(function checkGlobalCreativeRowsCoverage(){
+  const covered=new Set(GLOBAL_CREATIVE_ROWS.flatMap(r=>r.srcKeys));
+  const missing=ROW_DEFS.filter(r=>r.group==='communication').map(r=>r.key).filter(k=>!covered.has(k));
+  if(missing.length) console.warn('[Global Calendar] These communication rows are not wired into GLOBAL_CREATIVE_ROWS and will not appear on the Global tab:', missing);
+})();
 
 // Core helper: collect entries for a set of markets + row keys at a week,
 // group by normalised title → deduplicate with yellow for multi-market matches.
@@ -2484,16 +2520,11 @@ function switchTab(name){
   document.querySelectorAll('.view-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById(name==='global'?'tabGlobal':'tab'+name)?.classList.add('active');
   document.getElementById(name==='global'?'panelGlobal':'panel'+name)?.classList.add('active');
-  // Per-market views: show search only; global view: show all filter controls
+  // Per-market views: show search only; global view: show the whole filter panel
+  // (market + status pills) since those filters only make sense on the consolidated view.
   const isGlobal = name==='global';
-  const mktGrp = document.getElementById('filterGroupMarket');
-  const stsGrp = document.getElementById('filterGroupStatus');
-  const cntEl  = document.getElementById('filterCount');
-  const clrEl  = document.querySelector('.clear-filter');
-  if(mktGrp) mktGrp.style.display = isGlobal ? '' : 'none';
-  if(stsGrp) stsGrp.style.display = isGlobal ? '' : 'none';
-  if(cntEl)  cntEl.style.display  = isGlobal ? '' : 'none';
-  if(clrEl)  clrEl.style.display  = isGlobal ? '' : 'none';
+  const panelEl = document.getElementById('filterPanel');
+  if(panelEl) panelEl.style.display = isGlobal ? '' : 'none';
   if(name==='global') renderGlobal(); else renderMarket(name);
 }
 
