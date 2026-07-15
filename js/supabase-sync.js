@@ -294,6 +294,50 @@
       });
   }
 
+  // A single save action (e.g. saving a product with many variants) can call
+  // localStorage.setItem for the SAME key (like btvLinesheetChangeLog) dozens of
+  // times in one synchronous pass. Firing an immediate Supabase upsert for every
+  // one of those was enough on its own to blow past the browser's per-origin
+  // connection limit (net::ERR_INSUFFICIENT_RESOURCES / "Failed to fetch" spam).
+  // Debounce per key so a burst of writes collapses into a single upsert
+  // carrying the latest value, and chain onto any still-in-flight upsert for
+  // that key so writes can't complete out of order.
+  const WRITE_DEBOUNCE_MS = 400;
+  const _pendingWrites = {}; // key -> { parsed, timer }
+  const _inFlight       = {}; // key -> Promise
+
+  function _flushWrite(key) {
+    const pending = _pendingWrites[key];
+    if (!pending) return;
+    delete _pendingWrites[key];
+    const prior = _inFlight[key] || Promise.resolve();
+    const run = prior.then(function () {
+      const now = new Date().toISOString();
+      return _upsertAppState(key, pending.parsed, now, 0);
+    });
+    _inFlight[key] = run.then(function () {
+      if (_inFlight[key] === run) delete _inFlight[key];
+    });
+  }
+
+  function _scheduleWrite(key, parsed) {
+    const existing = _pendingWrites[key];
+    if (existing) clearTimeout(existing.timer);
+    _pendingWrites[key] = {
+      parsed: parsed,
+      timer: setTimeout(function () { _flushWrite(key); }, WRITE_DEBOUNCE_MS),
+    };
+  }
+
+  // Best-effort: push any still-pending debounced writes immediately when the
+  // tab is hidden/closed, so a save made right before a tab switch isn't lost.
+  window.addEventListener('pagehide', function () {
+    Object.keys(_pendingWrites).forEach(function (key) {
+      clearTimeout(_pendingWrites[key].timer);
+      _flushWrite(key);
+    });
+  });
+
   function setupWriteInterceptor() {
     if (_interceptorInstalled) return;
     _interceptorInstalled = true;
@@ -303,8 +347,7 @@
       if (!navigator.onLine) return; // queued for reconnect sync
       let parsed;
       try { parsed = JSON.parse(value); } catch (e) { parsed = value; }
-      const now = new Date().toISOString();
-      _upsertAppState(key, parsed, now, 0);
+      _scheduleWrite(key, parsed);
     };
   }
 
