@@ -16402,12 +16402,15 @@ window.btvReloadAndRender = function() {
   var _lastField = null;  // { key, val, ts } — last field value left, broadcast to peers
   var _hbIntervalId  = null; // 2s UI-refresh heartbeat, so btvLsPresenceTeardown can stop it
   var _rtIntervalId  = null; // 30s re-track keepalive, so btvLsPresenceTeardown can stop it
+  var _reconnectTimer = null; // debounces reconnect attempts after a dropped channel
+  var _lastSession    = null; // kept so a dropped channel can reconnect without a fresh init call
 
   // ── Init ────────────────────────────────────────────────────────────────
 
   window.btvLsPresenceInit = async function (session) {
     console.log('[BTV LS] btvLsPresenceInit called, _ch already=', !!_ch, 'user=', session && session.user && session.user.email);
     if (_ch) return; // already running
+    _lastSession = session;
     _uid   = session.user.id;
     _email = session.user.email || '';
 
@@ -16448,6 +16451,22 @@ window.btvReloadAndRender = function() {
             if (typeof _btvLsSetSharedLaunchLock === 'function') _btvLsSetSharedLaunchLock(window._btvCurrentLaunchItem);
             if (_ch) _ch.track({ email: _email, item: _item, field: _field, dirty: !!(window._btvFormDirty), launchItem: window._btvCurrentLaunchItem || null, ts: Date.now() });
           }, 30000);
+          if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          // Channel dropped — stop its timers and clear the reference so a stale,
+          // dead channel object doesn't sit here blocking btvLsPresenceInit's
+          // "if (_ch) return" guard until the next tab pause/resume happens to
+          // clear it. Reconnect on the same 8s cadence supabase-sync.js uses.
+          console.warn('[BTV LS Presence] Channel lost (' + status + ') — will reconnect in 8 s');
+          if (_hbIntervalId) { clearInterval(_hbIntervalId); _hbIntervalId = null; }
+          if (_rtIntervalId) { clearInterval(_rtIntervalId); _rtIntervalId = null; }
+          _ch = null;
+          if (!_reconnectTimer && _lastSession) {
+            _reconnectTimer = setTimeout(function () {
+              _reconnectTimer = null;
+              window.btvLsPresenceInit(_lastSession);
+            }, 8000);
+          }
         } else {
           console.log('[BTV LS Presence] Status:', status);
         }
@@ -16459,6 +16478,7 @@ window.btvReloadAndRender = function() {
   // btvLsPresenceInit re-creates everything on the next resume (it's a no-op if _ch
   // already exists, so it's safe to call again after this teardown clears it).
   window.btvLsPresenceTeardown = function () {
+    if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
     if (_ch) { try { _ch.untrack(); _ch.unsubscribe(); } catch (e) {} _ch = null; }
     if (_hbIntervalId) { clearInterval(_hbIntervalId); _hbIntervalId = null; }
     if (_rtIntervalId) { clearInterval(_rtIntervalId); _rtIntervalId = null; }
@@ -16584,6 +16604,8 @@ window.btvReloadAndRender = function() {
   var _uid       = null;
   var _channel   = null;
   var _retryMs   = [1000, 3000]; // mirrors supabase-sync.js's write-retry pattern
+  var _lastSession    = null; // kept so a dropped channel can reconnect without a fresh init call
+  var _reconnectTimer = null; // debounces reconnect attempts after a dropped channel
 
   function _rowToProduct(row) {
     var p = Object.assign({}, row.data || {});
@@ -16647,6 +16669,7 @@ window.btvReloadAndRender = function() {
   window.btvLsProductsInit = async function (session) {
     _sb = window._btvSb;
     if (!_sb) return;
+    _lastSession = session;
     _uid = session && session.user && session.user.id;
 
     await _fetchAll(); // also serves as the resume-catch-up when re-activated
@@ -16656,10 +16679,27 @@ window.btvReloadAndRender = function() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'linesheet_products' }, _applyRealtimeChange)
       .subscribe(function (status) {
         console.log('[BTV LS Products] Realtime:', status);
+        if (status === 'SUBSCRIBED') {
+          if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          // Channel dropped — clear the reference so a stale, dead channel object
+          // doesn't sit here blocking the "if (_channel) return" guard above until
+          // the next tab pause/resume happens to clear it. Reconnect on the same
+          // 8s cadence supabase-sync.js uses for its own channels.
+          console.warn('[BTV LS Products] Channel lost (' + status + ') — will reconnect in 8 s');
+          _channel = null;
+          if (!_reconnectTimer && _lastSession) {
+            _reconnectTimer = setTimeout(function () {
+              _reconnectTimer = null;
+              window.btvLsProductsInit(_lastSession);
+            }, 8000);
+          }
+        }
       });
   };
 
   window.btvLsProductsTeardown = function () {
+    if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
     if (_channel) { try { _channel.unsubscribe(); } catch (e) {} _channel = null; }
   };
 

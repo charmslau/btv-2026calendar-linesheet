@@ -664,7 +664,21 @@
   async function _goLive() {
     if (_liveActive || !_sb) return;
     _liveActive = true;
-    const pulled = await _pullLatest(); // catch up on anything missed while paused
+    // Every page renders once, synchronously, straight from whatever's already in
+    // localStorage — on a brand-new device (or a slow connection) that first render
+    // can be empty/stale, and _pullLatest below is what corrects it a moment later.
+    // Without this bar that correction happens silently, so on a slow network the
+    // page just *looks* broken/incomplete until the user happens to refresh again
+    // after the pull has had time to finish. Show/hide it exactly like the other
+    // sync-health bars above (offline / write-fail) so there's visible feedback for
+    // the gap instead of a silent swap.
+    _showBar('btv-loading-bar', '⏳ <span>Loading latest data…</span>', '#e0edff', '#1e3a5f');
+    let pulled;
+    try {
+      pulled = await _pullLatest(); // catch up on anything missed while paused
+    } finally {
+      _hideBar('btv-loading-bar');
+    }
     if (!pulled) { _liveActive = false; return; }
     await setupRealtime();
     setupPolling();
