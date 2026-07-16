@@ -679,6 +679,45 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
   </div>
 </div>
 
+<!-- Duplicate Marketing Entry modal — country / date / row picker for Retail &
+     Digital Activation entries (same pattern as duplicateModal above). -->
+<div class="modal-overlay" id="mktDuplicateModal">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeMktDuplicateModal()">&times;</button>
+    <div class="modal-title">Duplicate Activation</div>
+    <div class="modal-sub">All fields are copied — choose where the copy should land</div>
+
+    <label class="f-lbl" for="mDupDate">Start Date</label>
+    <input type="date" id="mDupDate" class="f-inp">
+
+    <div class="f-row">
+      <div>
+        <label class="f-lbl" for="mDupMarket">Country</label>
+        <select id="mDupMarket" class="f-sel">
+          <option value="SG">SG</option><option value="TH">TH</option>
+          <option value="ID">ID</option><option value="PH">PH</option>
+          <option value="JP">JP</option><option value="CN">CN</option>
+        </select>
+      </div>
+      <div>
+        <label class="f-lbl" for="mDupRow">Row / Type</label>
+        <select id="mDupRow" class="f-sel">
+          <option value="Brand Events">Brand Events</option>
+          <option value="Community Activation">Community Activation</option>
+          <option value="Retail Events">Retail Activation</option>
+          <option value="Digital Activations">Digital Activation</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="f-actions">
+      <button class="btn-primary" onclick="confirmMktDuplicate()">Duplicate</button>
+      <button class="btn-ghost" onclick="closeMktDuplicateModal()">Cancel</button>
+    </div>
+    <div id="mDupErr" style="font-size:11px;color:#c43030;margin-top:7px;min-height:0"></div>
+  </div>
+</div>
+
 <!-- Marketing event modal (Brand Events / Community / Retail / Digital Activation) —
      shares calendar-2026-marketing-workflow-v1 with the BTV Management Calendar. -->
 <div class="modal-overlay" id="marketingModal">
@@ -726,6 +765,7 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
       <button class="btn-primary" onclick="saveMarketingEntry()">Save</button>
       <button class="btn-ghost" onclick="closeMarketingModal()">Cancel</button>
       <button class="btn-ghost" id="mExportBtn" onclick="exportMarketingEntry()">Export</button>
+      <button class="btn-ghost" id="mDuplicateBtn" style="display:none" onclick="openMktDuplicateModal()">Duplicate</button>
       <button class="btn-danger" id="mDeleteBtn" style="display:none" onclick="deleteMarketingEntry()">Delete</button>
     </div>
     <div id="mModalErr" style="font-size:11px;color:#c43030;margin-top:7px;min-height:0"></div>
@@ -1458,6 +1498,7 @@ function openMarketingAddModal(market,rowKey,week){
   _resetMarketingFormFields();
   renderMarketingImagesList();
   document.getElementById('mDeleteBtn').style.display='none';
+  document.getElementById('mDuplicateBtn').style.display='none';
   document.getElementById('mExportBtn').style.display='';
   document.getElementById('marketingModal').classList.add('show');
   setTimeout(()=>document.getElementById('mTitle').focus(),60);
@@ -1497,6 +1538,7 @@ function openMarketingEditModal(item){
   document.getElementById('mModalErr').textContent='';
   renderMarketingImagesList();
   document.getElementById('mDeleteBtn').style.display='';
+  document.getElementById('mDuplicateBtn').style.display='';
   document.getElementById('mExportBtn').style.display='';
   document.getElementById('marketingModal').classList.add('show');
 }
@@ -1665,6 +1707,75 @@ function deleteMarketingEntry(){
   pushMarketingToBtvCalendar(marketingModalEntry,'draft'); // removes any previously-pushed BTV Calendar copy
   closeMarketingModal();
   renderCurrent();
+}
+
+// ── Duplicate Marketing Entry ──────────────────────────────────────────────
+// Copies the currently-open Retail / Digital Activation entry into a chosen
+// country, date, and row — all content fields are preserved.
+
+function openMktDuplicateModal(){
+  if (window._btvCanEdit === false) { ccToast('You have view-only access to the Global Calendar'); return; }
+  if(!marketingModalEntry) return;
+  document.getElementById('mDupDate').value = marketingModalEntry.startDateISO || '';
+  document.getElementById('mDupMarket').value = marketingModalEntry.market || 'SG';
+  document.getElementById('mDupRow').value = marketingModalEntry.row || 'Retail Events';
+  document.getElementById('mDupErr').textContent = '';
+  document.getElementById('mktDuplicateModal').classList.add('show');
+}
+
+function closeMktDuplicateModal(){
+  document.getElementById('mktDuplicateModal').classList.remove('show');
+}
+
+function confirmMktDuplicate(){
+  if (window._btvCanEdit === false) { ccToast('You have view-only access to the Global Calendar'); return; }
+  if(!marketingModalEntry) return;
+  const src = marketingModalEntry;
+  const startDateISO = document.getElementById('mDupDate').value;
+  const market = document.getElementById('mDupMarket').value;
+  const row = document.getElementById('mDupRow').value;
+  const errEl = document.getElementById('mDupErr');
+
+  if(!startDateISO){ errEl.textContent='Please choose a start date.'; return; }
+  const _r = ccResolveWeek(startDateISO);
+  if(_r.outOfRange){ errEl.textContent='Date falls outside the '+CC_YEAR+' calendar. Please pick a date within '+CC_YEAR+'.'; return; }
+
+  const startWeek = _r.weekNum;
+  const weekId = weekIdForWeekNum(startWeek);
+  const startDate = formatDate(startDateISO);
+
+  // Build a new entry copying all content fields from the source
+  const newId = Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const newEntry = Object.assign({}, src, {
+    id: newId,
+    market, row, weekId, startDate, startDateISO,
+    // End date: shift by the same duration as the source, if it had one
+    endDateISO: (src.endDateISO && src.startDateISO && src.endDateISO > src.startDateISO)
+      ? (function(){
+          const dur = new Date(src.endDateISO) - new Date(src.startDateISO);
+          return new Date(new Date(startDateISO).getTime() + dur).toISOString().slice(0,10);
+        })()
+      : startDateISO,
+    endDate: '', // will be recalculated on next save
+    images: (src.images||[]).slice(), // shallow copy of image refs
+    status: 'draft', // always start the copy as draft
+    linkedMarketingId: newId,
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+    _seeded: false,
+  });
+  // Fix endDate display string
+  newEntry.endDate = newEntry.endDateISO ? formatDate(newEntry.endDateISO) : '';
+
+  marketingState[market] = marketingState[market] || [];
+  marketingState[market].unshift(newEntry);
+  saveMarketingState(marketingState);
+
+  closeMktDuplicateModal();
+  closeMarketingModal();
+  ccToast('Duplicated to '+market+' · '+((ROW_DEFS.find(r=>r.key===row)||{}).label||row)+' · Wk '+startWeek);
+  if(currentTab!=='global' && currentTab!==market) switchTab(market); else renderCurrent();
+  ccJumpToWeek(startWeek, newId);
 }
 
 // ── Image upload (Supabase Storage — bucket: creative-marketing) ───────────
@@ -2953,7 +3064,7 @@ document.getElementById('fDate').addEventListener('change',function(){
 
 // ── Keyboard ──────────────────────────────────────────────────────────────
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeModal();closeViewModal();closeMarketingModal();closeDuplicateModal();}
+  if(e.key==='Escape'){closeModal();closeViewModal();closeMarketingModal();closeDuplicateModal();closeMktDuplicateModal();}
 });
 
 // ── Supabase sync ─────────────────────────────────────────────────────────
