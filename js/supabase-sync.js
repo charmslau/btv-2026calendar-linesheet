@@ -81,6 +81,7 @@
   let _userEmail            = null;
   let _started              = false;
   let _interceptorInstalled = false;
+  let _hasEverPulled        = false; // true after the first _pullLatest completes in this iframe
   let _realtimeChannel      = null;
   let _realtimeConnected    = false; // true only while the postgres_changes channel is SUBSCRIBED; gates the polling fallback below
   let _presenceIntervalId   = null;  // tracks the 3-second dispatch interval so it can be cleared on reconnect
@@ -668,7 +669,9 @@
         try {
           if (typeof window.btvReloadAndRender === 'function') window.btvReloadAndRender();
           else if (typeof window._btvCalRender === 'function') window._btvCalRender();
-        } catch (e) {}
+        } catch (e) {
+          console.error('[BTV Sync] btvReloadAndRender error after pull:', e);
+        }
       } else {
         console.log('[BTV Sync] Local state already up to date.');
       }
@@ -707,20 +710,52 @@
   async function _goLive() {
     if (_liveActive || !_sb) return;
     _liveActive = true;
-    // Every page renders once, synchronously, straight from whatever's already in
-    // localStorage — on a brand-new device (or a slow connection) that first render
-    // can be empty/stale, and _pullLatest below is what corrects it a moment later.
-    // Without this bar that correction happens silently, so on a slow network the
-    // page just *looks* broken/incomplete until the user happens to refresh again
-    // after the pull has had time to finish. Show/hide it exactly like the other
-    // sync-health bars above (offline / write-fail) so there's visible feedback for
-    // the gap instead of a silent swap.
-    _showBar('btv-loading-bar', '⏳ <span>Loading latest data…</span>', '#e0edff', '#1e3a5f');
+    // Every page renders once from whatever is already in localStorage before
+    // btvSyncStart is called — on a new device or after another user has made
+    // changes this "first render" is stale/empty. _pullLatest below fetches the
+    // authoritative data from Supabase and re-renders, but without a visual guard
+    // the stale content is briefly visible.
+    //
+    // On the FIRST _goLive call in this iframe (initial load or first tab switch),
+    // cover the page with a full-screen overlay so users never see the stale render.
+    // On subsequent calls (later tab switches) the data is likely only seconds old,
+    // so we use the lighter loading-bar instead.
+    var _isFirstPull = !_hasEverPulled;
+    if (_isFirstPull && document.body) {
+      var _ov = document.createElement('div');
+      _ov.id = 'btv-pull-overlay';
+      _ov.style.cssText = [
+        'position:fixed;inset:0;z-index:9998;background:#f7f6f3;',
+        'display:flex;align-items:center;justify-content:center;',
+        'flex-direction:column;gap:14px;pointer-events:none;',
+      ].join('');
+      _ov.innerHTML = [
+        '<div style="font-size:10px;font-weight:800;letter-spacing:.24em;',
+          'text-transform:uppercase;color:#333;',
+          "font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;\">BTV PLANNER</div>",
+        '<div style="width:28px;height:28px;border:2.5px solid #e0ddd8;',
+          'border-top-color:#333;border-radius:50%;',
+          'animation:_btvOvSpin .7s linear infinite;"></div>',
+        '<style>@keyframes _btvOvSpin{to{transform:rotate(360deg)}}</style>',
+      ].join('');
+      document.body.appendChild(_ov);
+      // Safety net — remove overlay after 8 s even if _pullLatest never resolves
+      setTimeout(function () {
+        var el = document.getElementById('btv-pull-overlay');
+        if (el) el.remove();
+      }, 8000);
+    } else {
+      _showBar('btv-loading-bar', '⏳ <span>Loading latest data…</span>', '#e0edff', '#1e3a5f');
+    }
+
     let pulled;
     try {
       pulled = await _pullLatest(); // catch up on anything missed while paused
     } finally {
+      _hasEverPulled = true;
       _hideBar('btv-loading-bar');
+      var _ovEl = document.getElementById('btv-pull-overlay');
+      if (_ovEl) _ovEl.remove();
     }
     if (!pulled) { _liveActive = false; return; }
     await setupRealtime();
