@@ -615,9 +615,67 @@ html,body{height:100%;font-family:'Everett','Helvetica Neue',Helvetica,Arial,san
     <div class="f-actions">
       <button class="btn-primary" onclick="saveEntry()">Save</button>
       <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-ghost" id="duplicateBtn" style="display:none" onclick="openDuplicateModal()">Duplicate</button>
       <button class="btn-danger" id="deleteBtn" style="display:none" onclick="deleteEntry()">Delete</button>
     </div>
     <div id="modalErr" style="font-size:11px;color:#c43030;margin-top:7px;min-height:0"></div>
+  </div>
+</div>
+
+<!-- Duplicate Entry modal — copies the currently-open entry into a different
+     date / country / row without having to re-fill the whole Add Entry form. -->
+<div class="modal-overlay" id="duplicateModal">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeDuplicateModal()">&times;</button>
+    <div class="modal-title">Duplicate Entry</div>
+    <div class="modal-sub">Choose where the copy should land</div>
+
+    <label class="f-lbl" for="dupDate">Date</label>
+    <input type="date" id="dupDate" class="f-inp">
+
+    <div class="f-row">
+      <div>
+        <label class="f-lbl" for="dupMarket">Country</label>
+        <select id="dupMarket" class="f-sel">
+          <option value="SG">SG</option><option value="TH">TH</option>
+          <option value="ID">ID</option><option value="PH">PH</option>
+          <option value="JP">JP</option><option value="CN">CN</option>
+        </select>
+      </div>
+      <div>
+        <label class="f-lbl" for="dupRow">Row / Category</label>
+        <select id="dupRow" class="f-sel">
+          <optgroup label="— Context">
+            <option value="theme">Theme / Season</option>
+            <option value="key_moments">Key Moments</option>
+            <option value="public_holidays">Public Holidays</option>
+          </optgroup>
+          <optgroup label="— Communication">
+            <option value="edm">EDM (Email)</option>
+            <option value="ig_grid">IG Grid</option>
+            <option value="ig_stories">IG Stories</option>
+            <option value="ig_mkt">IG Marketing Tag-ons</option>
+            <option value="tiktok">TikTok</option>
+            <option value="line">LINE</option>
+            <option value="red_xhs">RED / Xiaohongshu</option>
+            <option value="wechat">WeChat Official</option>
+            <option value="livestream">Livestreaming</option>
+            <option value="media_ooh">Media / OOH</option>
+            <option value="in_mall">In-Mall Visibility</option>
+            <option value="mall_social">Mall's Social Media Visibility</option>
+            <option value="perf_tier1">Performance Marketing Tier 1</option>
+            <option value="perf_tier2">Performance Marketing Tier 2</option>
+            <option value="perf_tier3">Performance Marketing Tier 3</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+
+    <div class="f-actions">
+      <button class="btn-primary" onclick="confirmDuplicate()">Duplicate</button>
+      <button class="btn-ghost" onclick="closeDuplicateModal()">Cancel</button>
+    </div>
+    <div id="dupErr" style="font-size:11px;color:#c43030;margin-top:7px;min-height:0"></div>
   </div>
 </div>
 
@@ -2712,6 +2770,7 @@ function openAddModal(market,rowKey,week,dateIso){
   document.getElementById('fLinks').value='';document.getElementById('fOwner').value='';
   document.getElementById('fStatus').value='Not Started';
   document.getElementById('deleteBtn').style.display='none';
+  document.getElementById('duplicateBtn').style.display='none';
   document.getElementById('modalErr').textContent='';
   onRowChange();
   document.getElementById('entryModal').classList.add('show');
@@ -2741,6 +2800,7 @@ function openEditModal(id,market){
   document.getElementById('fLinks').value=(e.links||[]).join('\n');document.getElementById('fOwner').value=e.owner||'';
   document.getElementById('fStatus').value=e.status||'Not Started';
   document.getElementById('deleteBtn').style.display='';
+  document.getElementById('duplicateBtn').style.display='';
   document.getElementById('modalErr').textContent='';
   onRowChange();
   document.getElementById('entryModal').classList.add('show');
@@ -2825,6 +2885,66 @@ function deleteEntry(){
   saveState();closeModal();renderCurrent();
 }
 
+// ── Duplicate entry ──────────────────────────────────────────────────────
+// Copies the entry currently open in the edit modal into a (possibly
+// different) date/country/row without re-filling the whole form. Defaults
+// the three fields to the source entry's own values so "duplicate in place"
+// (e.g. same slot, different date) only requires changing what's actually
+// changing.
+
+function openDuplicateModal(){
+  if (window._btvCanEdit === false) { ccToast('You have view-only access to the Global Calendar'); return; }
+  if(!modalEntry) return;
+  document.getElementById('dupDate').value = modalEntry.date || modalEntry.startDate || weekNumToISO(modalEntry.week) || '';
+  document.getElementById('dupMarket').value = modalEntry.market;
+  document.getElementById('dupRow').value = modalEntry.row;
+  document.getElementById('dupErr').textContent = '';
+  document.getElementById('duplicateModal').classList.add('show');
+}
+
+function closeDuplicateModal(){
+  document.getElementById('duplicateModal').classList.remove('show');
+}
+
+function confirmDuplicate(){
+  if(!modalEntry) return;
+  const src = modalEntry;
+  const dateVal = document.getElementById('dupDate').value;
+  const market = document.getElementById('dupMarket').value;
+  const row = document.getElementById('dupRow').value;
+  const errEl = document.getElementById('dupErr');
+  if(!dateVal){ errEl.textContent='Please choose a date.'; return; }
+  const _r = ccResolveWeek(dateVal);
+  if(_r.outOfRange){ errEl.textContent='Date ('+_r.dateStr+') falls outside the '+CC_YEAR+' calendar. Please pick a date within '+CC_YEAR+'.'; return; }
+
+  // Mirrors saveEntry()'s two field shapes: Context rows only carry a date range,
+  // Communication rows carry the full content-production field set.
+  let fields;
+  if(SIMPLE_CONTEXT_ROWS.has(row)){
+    fields={week:_r.weekNum,weekEnd:null,date:dateVal,startDate:dateVal,endDate:dateVal,
+      pillar:'',edmMarket:'',edmType:'',kol:'',promo:'',perfObj:'',brief:'',links:[],owner:'',status:''};
+  } else {
+    fields={week:_r.weekNum,weekEnd:null,date:dateVal,
+      pillar:src.pillar||'',edmMarket:src.edmMarket||'All',edmType:src.edmType||'Launch',
+      kol:src.kol||'',promo:src.promo||'',perfObj:src.perfObj||'',
+      brief:src.brief||'',links:(src.links||[]).slice(),owner:src.owner||'',
+      status:NO_STATUS_ROWS.has(row)?'':(src.status||'Not Started')};
+  }
+
+  const newId=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  state[market]=state[market]||[];
+  state[market].unshift(Object.assign({
+    id:newId, title:src.title, market, row
+  },fields,{_seeded:false,created:new Date().toISOString(),updated:new Date().toISOString()}));
+
+  saveState();
+  closeDuplicateModal();
+  closeModal();
+  ccToast('Duplicated to '+market+' · Wk '+fields.week);
+  if(currentTab!=='global' && currentTab!==market) switchTab(market); else renderCurrent();
+  ccJumpToWeek(fields.week, newId);
+}
+
 // ── Auto-derive week from date ─────────────────────────────────────────────
 document.getElementById('fDate').addEventListener('change',function(){
   const wn=dateToWeekNum(this.value);
@@ -2833,7 +2953,7 @@ document.getElementById('fDate').addEventListener('change',function(){
 
 // ── Keyboard ──────────────────────────────────────────────────────────────
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeModal();closeViewModal();closeMarketingModal();}
+  if(e.key==='Escape'){closeModal();closeViewModal();closeMarketingModal();closeDuplicateModal();}
 });
 
 // ── Supabase sync ─────────────────────────────────────────────────────────
