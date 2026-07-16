@@ -16834,7 +16834,15 @@ window.btvReloadAndRender = function() {
     if (!_sb || !list || !list.length) return false;
     _upsertInProgress = true;
     var now  = new Date().toISOString();
-    var rows = list.map(function (p) {
+    // Deduplicate by id — PostgreSQL throws "ON CONFLICT DO UPDATE command cannot
+    // affect a row a second time" if the same id appears more than once in a chunk.
+    var seen = {};
+    var deduped = list.filter(function (p) {
+      if (!p.id || seen[p.id]) return false;
+      seen[p.id] = true;
+      return true;
+    });
+    var rows = deduped.map(function (p) {
       return { id: p.id, group_id: p.groupId || p.id, data: _stripImagesForRemote(p), updated_at: now, updated_by: _uid };
     });
     var total    = rows.length;
