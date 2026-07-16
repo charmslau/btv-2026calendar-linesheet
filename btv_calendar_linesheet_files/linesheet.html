@@ -16600,13 +16600,44 @@ window.btvReloadAndRender = function() {
 (function () {
   'use strict';
 
-  var _sb        = null; // reuses window._btvSb — no separate connection needed
-  var _uid       = null;
-  var _channel   = null;
-  var _retryMs   = [1000, 3000]; // mirrors supabase-sync.js's write-retry pattern
-  var _lastSession    = null; // kept so a dropped channel can reconnect without a fresh init call
-  var _reconnectTimer = null; // debounces reconnect attempts after a dropped channel
+  var _sb             = null;  // reuses window._btvSb — no separate connection needed
+  var _uid            = null;
+  var _channel        = null;
+  var _lastSession    = null;  // kept so a dropped channel can reconnect without a fresh init call
+  var _reconnectTimer = null;  // debounces reconnect attempts after a dropped channel
+  var _upsertInProgress = false; // prevents _fetchAll from overwriting products mid-write
 
+  // Retry delays: 3 attempts with increasing backoff.
+  // Also adds a 300 ms inter-chunk pause so rapid sequential upserts don't
+  // exhaust the Supabase connection pool.
+  var _retryMs      = [2000, 5000, 10000];
+  var _CHUNK        = 25;   // rows per upsert call — kept small to stay under payload limits
+  var _CHUNK_PAUSE  = 300;  // ms between consecutive chunk upserts
+
+  // ── Status banner helpers ──────────────────────────────────────────────────
+  var BAR_CSS = 'position:fixed;top:0;left:0;right:0;z-index:10001;display:flex;align-items:center;' +
+    'justify-content:center;gap:10px;padding:7px 16px;font-size:12px;font-weight:600;' +
+    "box-shadow:0 2px 8px rgba(0,0,0,.18);font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;";
+
+  function _showSyncBar(msg, bg, fg) {
+    if (!document.body) return;
+    var el = document.getElementById('btv-lsp-sync-bar');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'btv-lsp-sync-bar';
+      document.body.insertBefore(el, document.body.firstChild);
+    }
+    el.style.cssText = BAR_CSS + 'background:' + bg + ';color:' + fg + ';';
+    el.innerHTML = msg;
+    el.style.display = 'flex';
+  }
+
+  function _hideSyncBar() {
+    var el = document.getElementById('btv-lsp-sync-bar');
+    if (el) el.style.display = 'none';
+  }
+
+  // ── Row ↔ product conversion ───────────────────────────────────────────────
   function _rowToProduct(row) {
     var p = Object.assign({}, row.data || {});
     p.id = row.id;
@@ -16614,15 +16645,74 @@ window.btvReloadAndRender = function() {
     return p;
   }
 
+  // Strip base64 image fields before sending to Supabase — they can be
+  // several hundred KB each and quickly push a chunk over the HTTP body limit.
+  // Images remain in the local `products` array and in localStorage; they are
+  // restored from localStorage when _fetchAll merges remote rows back in.
+  function _stripImagesForRemote(p) {
+    var out = Object.assign({}, p);
+    if (out.productImg  && out.productImg.length  > 512) out.productImg  = '';
+    if (out.lookbookImg && out.lookbookImg.length > 512) out.lookbookImg = '';
+    return out;
+  }
+
+  // ── Fetch all products from Supabase ──────────────────────────────────────
+  // • Never overwrites local products while a write is in flight.
+  // • After loading remote rows, merges back local images (stripped before write).
+  // • If local storage has products Supabase doesn't know about (e.g. a previous
+  //   write failed), those rows are pushed up so they aren't silently lost.
   async function _fetchAll() {
     if (!_sb) return;
+    if (_upsertInProgress) {
+      console.log('[BTV LS Products] _fetchAll skipped — upsert in progress');
+      return;
+    }
+
     var res = await _sb.from('linesheet_products').select('id,group_id,data,updated_at,updated_by');
-    if (res.error) { console.warn('[BTV LS Products] fetch error:', res.error.message); return; }
-    products = (res.data || []).map(_rowToProduct);
+    if (res.error) {
+      console.warn('[BTV LS Products] fetch error:', res.error.code, res.error.message);
+      _showSyncBar('⚠ Could not load shared products: ' + (res.error.message || res.error.code) +
+        '. Showing locally cached data.', '#fee2e2', '#7f1d1d');
+      setTimeout(_hideSyncBar, 8000);
+      return;
+    }
+
+    var remoteRows = (res.data || []).map(_rowToProduct);
+    var remoteIds  = new Set(remoteRows.map(function (p) { return p.id; }));
+
+    // Build a map from the current in-memory products so we can restore
+    // local-only images that were stripped before the last upsert.
+    var localMap = {};
+    products.forEach(function (p) { localMap[p.id] = p; });
+
+    // Restore local images into the remote rows
+    var merged = remoteRows.map(function (p) {
+      var local = localMap[p.id];
+      if (!local) return p;
+      if (!p.productImg  && local.productImg)  p.productImg  = local.productImg;
+      if (!p.lookbookImg && local.lookbookImg) p.lookbookImg = local.lookbookImg;
+      return p;
+    });
+
+    // Products that exist locally but not yet in Supabase (write may have failed
+    // previously) — push them up now, silently, without blocking the render.
+    var localOnlyRows = products.filter(function (p) { return p.id && !remoteIds.has(p.id); });
+    if (localOnlyRows.length) {
+      console.log('[BTV LS Products] Pushing', localOnlyRows.length, 'local-only rows to Supabase');
+      // Fire-and-forget: don't await so render isn't delayed
+      window.btvLsUpsertProducts(localOnlyRows).catch(function (e) {
+        console.warn('[BTV LS Products] Background push of local-only rows failed:', e);
+      });
+      // Include them in the merged set so the UI shows them immediately
+      localOnlyRows.forEach(function (p) { merged.push(p); });
+    }
+
+    products = merged;
     try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch (e) {}
     _rerenderAll();
   }
 
+  // ── UI re-render ──────────────────────────────────────────────────────────
   function _rerenderAll() {
     if (typeof updateCount === 'function') updateCount();
     if (typeof populateCategoryFilter === 'function') populateCategoryFilter();
@@ -16631,7 +16721,9 @@ window.btvReloadAndRender = function() {
     if (document.getElementById('changeLogList') && typeof renderDashboard === 'function') renderDashboard();
   }
 
+  // ── Realtime row-level change handler ────────────────────────────────────
   function _applyRealtimeChange(payload) {
+    if (_upsertInProgress) return; // our own writes — skip to avoid flip-flop
     if (payload.eventType === 'DELETE') {
       var oldId = payload.old && payload.old.id;
       if (!oldId) return;
@@ -16640,12 +16732,17 @@ window.btvReloadAndRender = function() {
       var row = payload.new;
       if (!row) return;
       var p = _rowToProduct(row);
+      // Restore local images if the remote row has them stripped
+      var existing = products.find(function (pr) { return pr.id === p.id; });
+      if (existing) {
+        if (!p.productImg  && existing.productImg)  p.productImg  = existing.productImg;
+        if (!p.lookbookImg && existing.lookbookImg) p.lookbookImg = existing.lookbookImg;
+      }
       var idx = products.findIndex(function (pr) { return pr.id === p.id; });
       if (idx >= 0) products[idx] = p; else products.push(p);
     }
     try { localStorage.setItem('btv_linesheet_products', JSON.stringify(products)); } catch (e) {}
 
-    // Same "don't disrupt an open edit" guard the rest of the app already uses.
     var changedGroupId = payload.eventType === 'DELETE'
       ? (payload.old && payload.old.group_id)
       : (payload.new && payload.new.group_id);
@@ -16658,14 +16755,13 @@ window.btvReloadAndRender = function() {
       if (formOpenOnThisGroup && !(typeof _btvFormDirty !== 'undefined' && _btvFormDirty) && typeof _btvRefreshFormFromSaved === 'function') {
         _btvRefreshFormFromSaved(openGroupId);
       }
-      // Still refresh the background tables even while a form is open, as long as it's
-      // not the group currently being edited — no reason to hide unrelated updates.
       if (!formOpenOnThisGroup) _rerenderAll();
       return;
     }
     _rerenderAll();
   }
 
+  // ── Init / teardown ───────────────────────────────────────────────────────
   window.btvLsProductsInit = async function (session) {
     _sb = window._btvSb;
     if (!_sb) return;
@@ -16682,10 +16778,6 @@ window.btvReloadAndRender = function() {
         if (status === 'SUBSCRIBED') {
           if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          // Channel dropped — clear the reference so a stale, dead channel object
-          // doesn't sit here blocking the "if (_channel) return" guard above until
-          // the next tab pause/resume happens to clear it. Reconnect on the same
-          // 8s cadence supabase-sync.js uses for its own channels.
           console.warn('[BTV LS Products] Channel lost (' + status + ') — will reconnect in 8 s');
           _channel = null;
           if (!_reconnectTimer && _lastSession) {
@@ -16703,6 +16795,9 @@ window.btvReloadAndRender = function() {
     if (_channel) { try { _channel.unsubscribe(); } catch (e) {} _channel = null; }
   };
 
+  // ── Retry wrapper ─────────────────────────────────────────────────────────
+  // Shows the ACTUAL Supabase error (code + message) in the alert so failures
+  // are diagnosable without opening DevTools.
   async function _withRetry(fn, label, attempt) {
     attempt = attempt || 0;
     try {
@@ -16710,28 +16805,70 @@ window.btvReloadAndRender = function() {
       if (res && res.error) throw res.error;
       return true;
     } catch (err) {
+      var errDetail = (err && (err.message || err.code || JSON.stringify(err))) || 'unknown error';
       if (attempt < _retryMs.length) {
-        console.warn('[BTV LS Products] ' + label + ' failed (attempt ' + (attempt + 1) + '), retrying:', err && err.message || err);
+        console.warn('[BTV LS Products] ' + label + ' failed (attempt ' + (attempt + 1) + '/' + (_retryMs.length + 1) + '):', errDetail);
         await new Promise(function (resolve) { setTimeout(resolve, _retryMs[attempt]); });
         return _withRetry(fn, label, attempt + 1);
       }
-      console.error('[BTV LS Products] ' + label + ' failed after retries:', err && err.message || err);
-      alert('Could not save to the shared linesheet (' + label + ' failed after retrying). Your change is only on this device — please check your connection and try again.');
+      console.error('[BTV LS Products] ' + label + ' failed after all retries:', errDetail);
+      // Show the actual Supabase error so it can be diagnosed
+      alert(
+        'Could not save to the shared linesheet — ' + label + ' failed.\n\n' +
+        'Error: ' + errDetail + '\n\n' +
+        'Your change is saved locally on this device.\n' +
+        'Common causes:\n' +
+        '• Not signed in (refresh and log in again)\n' +
+        '• Supabase RLS policies missing — re-run supabase-linesheet-products-migration.sql\n' +
+        '• Temporary network issue — try again in a moment'
+      );
       return false;
     }
   }
 
-  // Upserts one or more products — used by every place that changes a specific
-  // product (form save, checkboxes, approvals) instead of rewriting the whole list.
-  window.btvLsUpsertProducts = function (list) {
-    if (!_sb || !list || !list.length) return Promise.resolve(false);
-    var now = new Date().toISOString();
+  // ── Upsert (batched) ──────────────────────────────────────────────────────
+  // Sends rows in small chunks with a pause between each to avoid connection-
+  // pool exhaustion. Images are stripped from the remote payload to keep each
+  // chunk under Supabase's HTTP body limit; they stay in the local array.
+  window.btvLsUpsertProducts = async function (list) {
+    if (!_sb || !list || !list.length) return false;
+    _upsertInProgress = true;
+    var now  = new Date().toISOString();
     var rows = list.map(function (p) {
-      return { id: p.id, group_id: p.groupId || p.id, data: p, updated_at: now, updated_by: _uid };
+      return { id: p.id, group_id: p.groupId || p.id, data: _stripImagesForRemote(p), updated_at: now, updated_by: _uid };
     });
-    return _withRetry(function () { return _sb.from('linesheet_products').upsert(rows, { onConflict: 'id' }); }, 'save');
+    var total    = rows.length;
+    var chunkNum = 0;
+    var totalChunks = Math.ceil(total / _CHUNK);
+    try {
+      for (var i = 0; i < rows.length; i += _CHUNK) {
+        let chunk = rows.slice(i, i + _CHUNK); // `let` for unambiguous closure capture
+        chunkNum++;
+        if (total > _CHUNK) {
+          _showSyncBar('⏳ Syncing products to shared database… ' + chunkNum + ' / ' + totalChunks,
+            '#e0edff', '#1e3a5f');
+        }
+        var ok = await _withRetry(function () {
+          return _sb.from('linesheet_products').upsert(chunk, { onConflict: 'id' });
+        }, 'save');
+        if (!ok) { _upsertInProgress = false; _hideSyncBar(); return false; }
+        // Brief pause between chunks so we don't flood the connection pool
+        if (i + _CHUNK < rows.length) {
+          await new Promise(function (resolve) { setTimeout(resolve, _CHUNK_PAUSE); });
+        }
+      }
+    } finally {
+      _upsertInProgress = false;
+      _hideSyncBar();
+    }
+    if (total > _CHUNK) {
+      _showSyncBar('✓ ' + total + ' products synced to shared database.', '#dcfce7', '#166534');
+      setTimeout(_hideSyncBar, 4000);
+    }
+    return true;
   };
 
+  // ── Delete helpers ────────────────────────────────────────────────────────
   window.btvLsDeleteProducts = function (ids) {
     if (!_sb || !ids || !ids.length) return Promise.resolve(false);
     return _withRetry(function () { return _sb.from('linesheet_products').delete().in('id', ids); }, 'delete');
@@ -16742,16 +16879,39 @@ window.btvReloadAndRender = function() {
     return _withRetry(function () { return _sb.from('linesheet_products').delete().eq('group_id', groupId); }, 'delete');
   };
 
-  // Full-list replace for JSON import: an intentional, explicit bulk operation
-  // (the user is warned and confirms before this runs) — diffed against the
-  // current table so it only deletes rows that truly aren't in the new set.
+  // ── Full-list replace (JSON import) ───────────────────────────────────────
+  // Diffs against the current table so it only removes rows truly absent from
+  // the imported file — never a blind wipe.
   window.btvLsReplaceAllProducts = async function (newList) {
-    if (!_sb) return false;
-    var keepIds = new Set(newList.map(function (p) { return p.id; }));
+    if (!_sb) {
+      alert('Cannot sync: not connected to the shared database. Please refresh and sign in again.');
+      return false;
+    }
+    var keepIds    = new Set(newList.map(function (p) { return p.id; }));
     var existingIds = products.map(function (p) { return p.id; });
-    var toDelete = existingIds.filter(function (id) { return !keepIds.has(id); });
+    var toDelete   = existingIds.filter(function (id) { return !keepIds.has(id); });
     if (toDelete.length) await window.btvLsDeleteProducts(toDelete);
     return window.btvLsUpsertProducts(newList);
+  };
+
+  // ── Diagnostic helper (call from browser console: btvLsTestConnection()) ──
+  window.btvLsTestConnection = async function () {
+    if (!_sb) { console.error('[BTV LS] _sb is null — sync not initialised'); return; }
+    console.log('[BTV LS] Testing SELECT on linesheet_products…');
+    var sel = await _sb.from('linesheet_products').select('id').limit(1);
+    if (sel.error) { console.error('[BTV LS] SELECT failed:', sel.error.code, sel.error.message); }
+    else           { console.log('[BTV LS] SELECT OK — row count from Supabase:', sel.data.length, '(limit 1 applied)'); }
+
+    var testId  = '__btv_test_' + Date.now();
+    console.log('[BTV LS] Testing INSERT on linesheet_products…');
+    var ins = await _sb.from('linesheet_products').insert({ id: testId, group_id: testId, data: { _test: true }, updated_at: new Date().toISOString(), updated_by: _uid });
+    if (ins.error) { console.error('[BTV LS] INSERT failed:', ins.error.code, ins.error.message); return; }
+    console.log('[BTV LS] INSERT OK');
+
+    console.log('[BTV LS] Testing DELETE…');
+    var del = await _sb.from('linesheet_products').delete().eq('id', testId);
+    if (del.error) { console.error('[BTV LS] DELETE failed:', del.error.code, del.error.message); }
+    else           { console.log('[BTV LS] DELETE OK — all permissions verified ✓'); }
   };
 })();
 
