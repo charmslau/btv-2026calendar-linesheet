@@ -95,6 +95,13 @@
   // Used for version-conflict detection.
   const _lastPullTimes = {};
 
+  // Tracks keys with locally-written changes that haven't yet been confirmed saved
+  // to Supabase. While a key is in this set, applyRow and _pullLatest won't overwrite
+  // local storage with remote data — our in-flight write is the authoritative version.
+  // Cleared on successful upsert; stays set on write-failure so the user's data is
+  // preserved locally until they retry.
+  const _dirtyKeys = new Set();
+
   // ── Status bars ────────────────────────────────────────────────────────────
   // Persistent banners at the top of the iframe for sync health states.
 
@@ -143,17 +150,27 @@
     // Push any local changes that may have been made while offline
     if (!_sb || !_userId) return;
     setTimeout(async function () {
-      const rows = SYNCED_KEYS
-        .filter(function (k) { return localStorage.getItem(k) !== null; })
+      // Only push keys we KNOW have locally-unsaved changes (_dirtyKeys).
+      // Pushing every synced key unconditionally risks overwriting a teammate's
+      // newer save with our stale local copy of a key we didn't actually change.
+      const rows = [..._dirtyKeys]
+        .filter(function (k) { return SYNCED_KEYS.includes(k) && localStorage.getItem(k) !== null; })
         .map(function (key) {
           const raw = localStorage.getItem(key);
           let parsed; try { parsed = JSON.parse(raw); } catch (e) { parsed = raw; }
           return { key, value: parsed, updated_at: new Date().toISOString(), updated_by: _userId };
         });
-      if (!rows.length) return;
+      if (!rows.length) {
+        _showBar('btv-online-bar', '✓ Back online.', '#dcfce7', '#166534');
+        setTimeout(function () { _hideBar('btv-online-bar'); }, 4000);
+        return;
+      }
       const { error } = await _sb.from('app_state').upsert(rows, { onConflict: 'key' });
       if (!error) {
-        rows.forEach(function (r) { _lastPullTimes[r.key] = r.updated_at; });
+        rows.forEach(function (r) {
+          _lastPullTimes[r.key] = r.updated_at;
+          _dirtyKeys.delete(r.key); // confirmed saved
+        });
         _showBar('btv-online-bar', '✓ Back online — all changes have been synced.', '#dcfce7', '#166534');
         setTimeout(function () { _hideBar('btv-online-bar'); }, 5000);
       }
@@ -256,6 +273,15 @@
     if (updatedAt) _lastPullTimes[key] = updatedAt;
     if (localStorage.getItem(key) === val) return; // nothing changed
 
+    // Guard: if we have a locally-pending write for this key, our version is newer.
+    // Don't let the incoming remote value (which may not yet include our change)
+    // overwrite local storage — our in-flight or pending-retry write will win.
+    if (_dirtyKeys.has(key)) {
+      console.warn('[BTV Sync] applyRow: skipping remote overwrite of dirty key:', key,
+        '— local has unsaved changes; in-flight write takes precedence.');
+      return;
+    }
+
     _origSetItem(key, val);
     if (!RENDER_KEYS.includes(key)) return;
     // Only re-render and toast for changes from someone else.
@@ -284,6 +310,7 @@
       .then(function (res) {
         if (res.error) throw res.error;
         _lastPullTimes[key] = now; // our own save — update baseline
+        _dirtyKeys.delete(key);   // confirmed saved — remote may now overwrite safely
         _hideBar('btv-write-fail-bar'); // clear any previous failure
       })
       .catch(function (err) {
@@ -348,7 +375,10 @@
     localStorage.setItem = function (key, value) {
       _origSetItem(key, value);
       if (!SYNCED_KEYS.includes(key) || !_sb) return;
-      if (!navigator.onLine) return; // queued for reconnect sync
+      // Mark dirty immediately — even if offline — so that applyRow / _pullLatest
+      // won't overwrite local storage with a stale remote value while our write is pending.
+      _dirtyKeys.add(key);
+      if (!navigator.onLine) return; // will be pushed to Supabase when _onOnline fires
       let parsed;
       try { parsed = JSON.parse(value); } catch (e) { parsed = value; }
       _scheduleWrite(key, parsed);
@@ -617,6 +647,15 @@
       let changed = false;
       data.forEach(function (row) {
         if (row.updated_at) _lastPullTimes[row.key] = row.updated_at;
+
+        // Guard: if local has an unsaved pending write for this key, our version is
+        // newer than what Supabase is returning (or Supabase may not have it yet).
+        // Skip the overwrite — our in-flight / retry write will push local → remote.
+        if (_dirtyKeys.has(row.key)) {
+          console.log('[BTV Sync] _pullLatest: skipping dirty key:', row.key);
+          return;
+        }
+
         const val =
           typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
         if (localStorage.getItem(row.key) !== val) {
@@ -800,7 +839,10 @@
       });
     const { error } = await _sb.from('app_state').upsert(rows, { onConflict: 'key' });
     if (error) { console.error('[BTV Sync] Force-push error:', error.message); return; }
-    rows.forEach(function (r) { _lastPullTimes[r.key] = r.updated_at; });
+    rows.forEach(function (r) {
+      _lastPullTimes[r.key] = r.updated_at;
+      _dirtyKeys.delete(r.key); // confirmed saved via force push
+    });
     _hideBar('btv-write-fail-bar');
     console.log('[BTV Sync] Force-pushed', rows.length, 'keys.');
     showToast('Sync complete — ' + rows.length + ' keys pushed to Supabase.');
