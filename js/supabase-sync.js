@@ -98,8 +98,12 @@
   // ── Status bars ────────────────────────────────────────────────────────────
   // Persistent banners at the top of the iframe for sync health states.
 
+  // pointer-events:none so this overlay never blocks clicks on whatever's underneath
+  // it (every page's sticky top nav sits at the same top:0 as this bar) — any button
+  // placed inside the bar's HTML (e.g. Retry Sync below) opts back in with its own
+  // inline pointer-events:auto.
   const BAR_CSS = [
-    'position:fixed;top:0;left:0;right:0;z-index:10000;',
+    'position:fixed;top:0;left:0;right:0;z-index:10000;pointer-events:none;',
     'display:flex;align-items:center;justify-content:center;gap:12px;',
     'padding:7px 16px;font-size:12px;font-weight:600;line-height:1.4;',
     "font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;",
@@ -173,10 +177,10 @@
       '⚠ <span><strong>Save failed</strong> for <em>' + key + '</em>: ' + errMsg +
       '. Your change may not have reached teammates.</span>' +
       '<button onclick="window.btvForceSync&&window.btvForceSync()" ' +
-      'style="background:#ef4444;color:#fff;border:none;border-radius:5px;' +
+      'style="pointer-events:auto;background:#ef4444;color:#fff;border:none;border-radius:5px;' +
       'padding:3px 10px;font-size:11px;cursor:pointer;font-weight:700">Retry Sync</button>' +
       '<button onclick="document.getElementById(\'btv-write-fail-bar\').style.display=\'none\'" ' +
-      'style="background:none;border:1px solid #b91c1c;border-radius:5px;' +
+      'style="pointer-events:auto;background:none;border:1px solid #b91c1c;border-radius:5px;' +
       'padding:3px 8px;font-size:11px;cursor:pointer;color:#7f1d1d">Dismiss</button>',
       '#fee2e2', '#7f1d1d'
     );

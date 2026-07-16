@@ -16615,7 +16615,11 @@ window.btvReloadAndRender = function() {
   var _CHUNK_PAUSE  = 300;  // ms between consecutive chunk upserts
 
   // ── Status banner helpers ──────────────────────────────────────────────────
-  var BAR_CSS = 'position:fixed;top:0;left:0;right:0;z-index:10001;display:flex;align-items:center;' +
+  // pointer-events:none so this overlay never blocks clicks on the sticky topbar
+  // nav (Product Form / Master Data / Linesheet View) sitting underneath it at
+  // the same top:0 — this bar is purely informational and has no buttons of its
+  // own, so nothing needs to opt back in with pointer-events:auto.
+  var BAR_CSS = 'position:fixed;top:0;left:0;right:0;z-index:10001;pointer-events:none;display:flex;align-items:center;' +
     'justify-content:center;gap:10px;padding:7px 16px;font-size:12px;font-weight:600;' +
     "box-shadow:0 2px 8px rgba(0,0,0,.18);font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;";
 
