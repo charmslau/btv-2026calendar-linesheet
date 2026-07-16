@@ -256,4 +256,34 @@ select cron.schedule(
 );
 
 
+-- ── 12. Lock down user_profiles UPDATE to admins only ────────
+-- Previously "Authenticated users can update profiles" used "using (true)",
+-- meaning ANY logged-in user could grant themselves (or anyone else) full
+-- access via a direct client call — the admin passcode in the User
+-- Management panel is a client-side-only UI gate and was never actually
+-- enforced by the database. This adds a real is_admin column and rewrites
+-- the UPDATE policy to check it server-side.
+
+alter table public.user_profiles
+  add column if not exists is_admin boolean not null default false;
+
+drop policy if exists "Authenticated users can update profiles" on public.user_profiles;
+
+create policy "Admins can update any profile"
+  on public.user_profiles for update
+  to authenticated
+  using (
+    exists (
+      select 1 from public.user_profiles p
+      where p.id = auth.uid() and p.is_admin
+    )
+  );
+
+-- Grant admin to your own account. Add more emails here (or run this
+-- update manually) for anyone else who should be able to manage users.
+update public.user_profiles
+set is_admin = true
+where email = 'charmaine.lau.btv@gmail.com';
+
+
 -- ── Done! ─────────────────────────────────────────────────────
