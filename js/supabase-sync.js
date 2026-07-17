@@ -35,7 +35,7 @@
     'calendar-2026-working-v5-history',
     'calendar-2026-working-v5-versions',
     'calendar-2026-working-v5-changelog',
-    'calendar-2026-marketing-workflow-v1',
+    'calendar-2026-marketing-workflow-v1', // blob fallback kept for non-CC pages; CC page uses per-entry tables
     'calendar-2026-markdown-bars-v1',
     'calendar-2027-working-v5',
     'calendar-2027-working-v5-history',
@@ -43,11 +43,17 @@
     'calendar-2027-working-v5-changelog',
     'calendar-2027-marketing-workflow-v1',
     'calendar-2027-markdown-bars-v1',
-    'creative-cal-2026-v1',
+    // creative-cal-2026-v1 removed — Global Calendar entries now live in the
+    // global_cal_entries table (one row per entry) and are synced by the
+    // btvCcEntriesInit / btvCcEntriesTeardown module in creative-calendar.html.
+    // Keeping it here would cause the blob-level write interceptor to race
+    // against the per-entry writes.
     'linesheetCalendarData',
     'launchListMaster',
     'btvLinesheetChangeLog',
-    'btv_product_data',
+    // btv_product_data removed — it is only READ in linesheet.html and never written,
+    // so syncing it would push empty/undefined data on every reconnect. If this key
+    // is written by a future module, add it back then.
     // btv_linesheet_products is deliberately NOT here — it's synced as individual
     // rows in its own linesheet_products table (see the per-row sync module in
     // linesheet.html), not as a whole-blob app_state key. Re-adding it here would
@@ -68,8 +74,9 @@
     'linesheetCalendarData',
     'launchListMaster',
     'btvLinesheetChangeLog',
-    'btv_product_data',
-    // btv_linesheet_products intentionally excluded — see comment in SYNCED_KEYS above.
+    // btv_product_data excluded — never written, see SYNCED_KEYS comment.
+    // btv_linesheet_products excluded — per-row table, see SYNCED_KEYS comment.
+    // creative-cal-2026-v1 excluded — per-entry tables, see SYNCED_KEYS comment.
     'btv-edit-locks-v1',
   ];
 
@@ -172,6 +179,9 @@
           _lastPullTimes[r.key] = r.updated_at;
           _dirtyKeys.delete(r.key); // confirmed saved
         });
+        // Now pull to pick up any changes teammates made while we were offline.
+        // (Realtime is not available offline, so we may have missed live updates.)
+        await _pullLatest();
         _showBar('btv-online-bar', '✓ Back online — all changes have been synced.', '#dcfce7', '#166534');
         setTimeout(function () { _hideBar('btv-online-bar'); }, 5000);
       }
@@ -291,7 +301,9 @@
     try {
       if (typeof window.btvReloadAndRender === 'function') window.btvReloadAndRender();
       else if (typeof window._btvCalRender === 'function') window._btvCalRender();
-    } catch (e) {}
+    } catch (e) {
+      console.error('[BTV Sync] applyRow: btvReloadAndRender threw on remote update for key:', key, e);
+    }
     showToast('Calendar updated by another team member');
   }
 
@@ -618,7 +630,9 @@
             typeof row.value === 'string' ? row.value : JSON.stringify(row.value);
           applyRow(row.key, val, row.updated_by, row.updated_at);
         });
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[BTV Sync] Polling fallback error:', e.message || e);
+      }
     }, 15000);
   }
 
@@ -639,6 +653,21 @@
         showError(
           'Supabase <strong>app_state</strong> table not found. ' +
           'Run <strong>supabase-setup.sql</strong> in your Supabase SQL Editor.'
+        );
+      } else {
+        // Show a visible warning so users know they may be looking at stale data.
+        // Include a Refresh button so they can retry without hunting for the browser refresh.
+        _showBar(
+          'btv-pull-fail-bar',
+          '⚠ <span><strong>Could not load latest data</strong> — you may be seeing a stale version. ' +
+          error.message + '</span>' +
+          '<button onclick="location.reload()" ' +
+          'style="pointer-events:auto;background:#1e3a5f;color:#fff;border:none;border-radius:5px;' +
+          'padding:3px 10px;font-size:11px;cursor:pointer;font-weight:700">Refresh</button>' +
+          '<button onclick="document.getElementById(\'btv-pull-fail-bar\').style.display=\'none\'" ' +
+          'style="pointer-events:auto;background:none;border:1px solid #1e3a5f;border-radius:5px;' +
+          'padding:3px 8px;font-size:11px;cursor:pointer;color:#1e3a5f">Dismiss</button>',
+          '#e0edff', '#1e3a5f'
         );
       }
       return false;
@@ -727,7 +756,10 @@
       _ov.style.cssText = [
         'position:fixed;inset:0;z-index:9998;background:#f7f6f3;',
         'display:flex;align-items:center;justify-content:center;',
-        'flex-direction:column;gap:14px;pointer-events:none;',
+        'flex-direction:column;gap:14px;',
+        // pointer-events intentionally left at default (auto) so the overlay
+        // blocks all clicks while the pull is in flight — prevents users from
+        // interacting with stale content during the 8-second safety window.
       ].join('');
       _ov.innerHTML = [
         '<div style="font-size:10px;font-weight:800;letter-spacing:.24em;',
@@ -757,10 +789,18 @@
       var _ovEl = document.getElementById('btv-pull-overlay');
       if (_ovEl) _ovEl.remove();
     }
-    if (!pulled) { _liveActive = false; return; }
+    // If _goPaused was called while _pullLatest was in flight (e.g. user switched tabs
+    // during the initial load), abort — don't set up Realtime/Presence/Polling on a
+    // hidden tab. The connections will be started when the user switches back.
+    if (!pulled || !_liveActive) { _liveActive = false; return; }
     await setupRealtime();
     setupPolling();
     await setupPresence();
+    // Let creative-calendar.html initialize its per-entry sync (global_cal_entries +
+    // marketing_entries tables). Only runs on that page — other pages don't define it.
+    if (typeof window.btvCcEntriesInit === 'function') {
+      await window.btvCcEntriesInit(_session);
+    }
     // Let the linesheet initialize its own presence system if defined
     if (typeof window.btvLsPresenceInit === 'function') {
       await window.btvLsPresenceInit(_session);
@@ -785,6 +825,8 @@
     if (_presenceIntervalId) { clearInterval(_presenceIntervalId); _presenceIntervalId = null; }
     if (_presenceReconnTimer) { clearTimeout(_presenceReconnTimer); _presenceReconnTimer = null; }
     if (_pollingIntervalId) { clearInterval(_pollingIntervalId); _pollingIntervalId = null; }
+    // Tear down the Global Calendar's per-entry Realtime channels when hidden.
+    if (typeof window.btvCcEntriesTeardown === 'function') window.btvCcEntriesTeardown();
     // Linesheet runs its own separate presence channel (see comment in setupPresence) —
     // tear it down too, otherwise a backgrounded Linesheet tab would keep it alive.
     if (typeof window.btvLsPresenceTeardown === 'function') window.btvLsPresenceTeardown();
@@ -864,23 +906,37 @@
 
   window.btvForceSync = async function () {
     if (!_sb) { console.warn('[BTV Sync] Not started.'); return; }
-    const rows = SYNCED_KEYS
-      .filter(function (k) { return localStorage.getItem(k) !== null; })
-      .map(function (key) {
-        const raw = localStorage.getItem(key);
-        let parsed; try { parsed = JSON.parse(raw); } catch (e) { parsed = raw; }
-        const now = new Date().toISOString();
-        return { key, value: parsed, updated_at: now, updated_by: _userId };
-      });
+    // Only push keys that have locally-unsaved changes (_dirtyKeys).
+    // Pushing every synced key risks overwriting a teammate's newer save with a stale
+    // local copy of a key this user didn't actually change (e.g., clicking "Retry Sync"
+    // after a linesheet write failure would otherwise also push a stale calendar blob).
+    const dirtyToSync = [..._dirtyKeys].filter(function (k) {
+      return SYNCED_KEYS.includes(k) && localStorage.getItem(k) !== null;
+    });
+    if (!dirtyToSync.length) {
+      showToast('Nothing to sync — all local changes are already saved.');
+      _hideBar('btv-write-fail-bar');
+      return;
+    }
+    const rows = dirtyToSync.map(function (key) {
+      const raw = localStorage.getItem(key);
+      let parsed; try { parsed = JSON.parse(raw); } catch (e) { parsed = raw; }
+      const now = new Date().toISOString();
+      return { key, value: parsed, updated_at: now, updated_by: _userId };
+    });
     const { error } = await _sb.from('app_state').upsert(rows, { onConflict: 'key' });
-    if (error) { console.error('[BTV Sync] Force-push error:', error.message); return; }
+    if (error) {
+      console.error('[BTV Sync] Force-push error:', error.message);
+      _showWriteFailure('force-sync', error.message);
+      return;
+    }
     rows.forEach(function (r) {
       _lastPullTimes[r.key] = r.updated_at;
-      _dirtyKeys.delete(r.key); // confirmed saved via force push
+      _dirtyKeys.delete(r.key); // confirmed saved
     });
     _hideBar('btv-write-fail-bar');
-    console.log('[BTV Sync] Force-pushed', rows.length, 'keys.');
-    showToast('Sync complete — ' + rows.length + ' keys pushed to Supabase.');
+    console.log('[BTV Sync] Force-pushed', rows.length, 'key(s):', dirtyToSync.join(', '));
+    showToast('Sync complete — ' + rows.length + ' change(s) pushed to Supabase.');
   };
 
   window.btvFetchChangeLog = async function (limit) {

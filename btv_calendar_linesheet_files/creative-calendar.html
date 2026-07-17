@@ -1199,9 +1199,23 @@ const SEED_DATA=[
 const MARKETING_STORAGE_KEY = 'calendar-2026-marketing-workflow-v1';
 const MARKETING_ROW_DEFS = ROW_DEFS.filter(r=>r.marketingRow);
 
+// Tracks whether a remote Supabase update is being applied — prevents saveMarketingState
+// from re-uploading data we just received (write-back loop guard).
+// Declared here (before saveMarketingState) so it's in scope for both save functions.
+let _ccApplyingRemote = false;
+
 function loadMarketingState(){ try{ return JSON.parse(localStorage.getItem(MARKETING_STORAGE_KEY))||{SG:[],TH:[],ID:[],PH:[],JP:[],CN:[]}; }catch(e){ return {SG:[],TH:[],ID:[],PH:[],JP:[],CN:[]}; } }
-function saveMarketingState(v){ localStorage.setItem(MARKETING_STORAGE_KEY,JSON.stringify(v)); }
+
+function saveMarketingState(v){
+  localStorage.setItem(MARKETING_STORAGE_KEY, JSON.stringify(v));
+  // Per-entry sync: diff against previous state and push only changed/deleted entries.
+  // Skip if this call is applying a remote Supabase update (prevents write-back loop).
+  if (!_ccApplyingRemote) _ccDiffAndSyncMarketing(v);
+  _prevMktStateJson = JSON.stringify(v);
+}
+
 let marketingState = loadMarketingState();
+let _prevMktStateJson = JSON.stringify(marketingState); // snapshot for per-entry diffing
 
 function getMarketingEntries(market){ return marketingState[market]||[]; }
 function marketingWeek(item){ return dateToWeekNum(item.startDateISO||item.weekId)||0; }
@@ -2064,6 +2078,7 @@ h1{font-size:24px;font-weight:600;margin:0 0 16px;line-height:1.2}
 // ── State ──────────────────────────────────────────────────────────────────
 
 let state = loadState();
+let _prevStateJson = JSON.stringify(state); // snapshot for per-entry diffing (see sync IIFE below)
 let currentTab = 'global';
 let modalEntry = null;
 let _viewCache = {};
@@ -2072,7 +2087,12 @@ let _viewCache = {};
 let F = { search:'', markets: new Set(), statuses: new Set() };
 
 function loadState(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY))||{}; }catch{ return {}; } }
-function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // Per-entry sync: diff against previous state and push only changed/deleted entries.
+  if (!_ccApplyingRemote) _ccDiffAndSyncEntries();
+  _prevStateJson = JSON.stringify(state);
+}
 function getMarketEntries(m){ return state[m]||[]; }
 function getCellEntries(m, rowKey, wn){
   return getMarketEntries(m).filter(e=>
@@ -3072,6 +3092,291 @@ window.btvRender=function(){state=loadState();marketingState=loadMarketingState(
 window.btvReloadAndRender=window.btvRender;
 window._btvCalRender=window.btvRender;
 window.btvSyncStorageKey=STORAGE_KEY;
+
+// ── Per-entry diff helpers ─────────────────────────────────────────────────
+// Called by saveState() / saveMarketingState() to push only the entries that
+// actually changed, rather than the entire blob. This eliminates the race
+// condition where two simultaneous saves wipe out each other's entry.
+
+function _ccDiffAndSyncEntries(){
+  if (typeof window.btvCcUpsertEntries !== 'function') return; // sync not init yet
+  var prev = {};
+  try { prev = JSON.parse(_prevStateJson) || {}; } catch(e) {}
+  var upserts = [], deletedIds = [];
+
+  // Collect every id that exists in the current state (to detect market switches)
+  var allNewIds = new Set();
+  Object.values(state).forEach(function(arr){
+    if (Array.isArray(arr)) arr.forEach(function(e){ if(e.id) allNewIds.add(e.id); });
+  });
+
+  var allMkts = new Set(Object.keys(prev).concat(Object.keys(state)));
+  allMkts.forEach(function(mkt){
+    var prevArr = prev[mkt] || [];
+    var newArr  = Array.isArray(state[mkt]) ? state[mkt] : [];
+    // Entries that are new or changed
+    newArr.forEach(function(e){
+      if (!e.id) return;
+      var p = prevArr.find(function(x){ return x.id === e.id; });
+      if (!p || JSON.stringify(p) !== JSON.stringify(e)) upserts.push(e);
+    });
+    // Entries that were deleted (and didn't just move to another market)
+    prevArr.forEach(function(p){
+      if (!p.id) return;
+      if (!allNewIds.has(p.id)) deletedIds.push(p.id);
+    });
+  });
+
+  // Deduplicate upserts (same entry can appear in multiple market diffs when market changes)
+  var seen = {};
+  upserts = upserts.filter(function(e){
+    if (seen[e.id]) return false;
+    seen[e.id] = true;
+    return true;
+  });
+
+  if (upserts.length)    window.btvCcUpsertEntries(upserts);
+  if (deletedIds.length) window.btvCcDeleteEntries(deletedIds);
+}
+
+function _ccDiffAndSyncMarketing(v){
+  if (typeof window.btvMktUpsertEntries !== 'function') return;
+  var prev = {};
+  try { prev = JSON.parse(_prevMktStateJson) || {}; } catch(e) {}
+  var upserts = [], deletedIds = [];
+
+  var allNewIds = new Set();
+  Object.values(v).forEach(function(arr){
+    if (Array.isArray(arr)) arr.forEach(function(e){ if(e.id) allNewIds.add(e.id); });
+  });
+
+  var allMkts = new Set(Object.keys(prev).concat(Object.keys(v)));
+  allMkts.forEach(function(mkt){
+    var prevArr = prev[mkt] || [];
+    var newArr  = Array.isArray(v[mkt]) ? v[mkt] : [];
+    newArr.forEach(function(e){
+      if (!e.id) return;
+      var p = prevArr.find(function(x){ return x.id === e.id; });
+      if (!p || JSON.stringify(p) !== JSON.stringify(e)) upserts.push(e);
+    });
+    prevArr.forEach(function(p){
+      if (!p.id) return;
+      if (!allNewIds.has(p.id)) deletedIds.push(p.id);
+    });
+  });
+
+  var seen = {};
+  upserts = upserts.filter(function(e){
+    if (seen[e.id]) return false;
+    seen[e.id] = true;
+    return true;
+  });
+
+  if (upserts.length)    window.btvMktUpsertEntries(upserts);
+  if (deletedIds.length) window.btvMktDeleteEntries(deletedIds);
+}
+
+// ── Per-entry Realtime sync IIFE ──────────────────────────────────────────
+// Mirrors the linesheet_products architecture: one Supabase row per entry,
+// Realtime subscription for live per-entry updates.
+// Called by supabase-sync.js _goLive / _goPaused (btvCcEntriesInit / btvCcEntriesTeardown).
+(function(){
+  'use strict';
+
+  var _sb       = null;
+  var _uid      = null;
+  var _gcCh     = null;  // Realtime channel: global_cal_entries
+  var _mktCh    = null;  // Realtime channel: marketing_entries
+
+  // ── Fetch all entries from Supabase and rebuild in-memory state ────────────
+  async function _fetchAll(){
+    // ── Global Calendar entries ──
+    var gcRes = await _sb.from('global_cal_entries')
+      .select('id, market, data, updated_at');
+    if (!gcRes.error && gcRes.data && gcRes.data.length > 0) {
+      var newState = {};
+      gcRes.data.forEach(function(row){
+        newState[row.market] = newState[row.market] || [];
+        newState[row.market].push(Object.assign({}, row.data, { id: row.id, market: row.market }));
+      });
+      _ccApplyingRemote = true;
+      try {
+        Object.keys(state).forEach(function(k){ delete state[k]; });
+        Object.assign(state, newState);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        _prevStateJson = JSON.stringify(state);
+      } finally { _ccApplyingRemote = false; }
+    } else if (gcRes.error) {
+      console.error('[BTV CC] _fetchAll global_cal_entries error:', gcRes.error.message);
+    }
+
+    // ── Marketing Workflow entries ──
+    var mktRes = await _sb.from('marketing_entries')
+      .select('id, market, data, updated_at');
+    if (!mktRes.error && mktRes.data && mktRes.data.length > 0) {
+      var newMkt = { SG:[], TH:[], ID:[], PH:[], JP:[], CN:[] };
+      mktRes.data.forEach(function(row){
+        newMkt[row.market] = newMkt[row.market] || [];
+        newMkt[row.market].push(Object.assign({}, row.data, { id: row.id, market: row.market }));
+      });
+      _ccApplyingRemote = true;
+      try {
+        Object.keys(marketingState).forEach(function(k){ delete marketingState[k]; });
+        Object.assign(marketingState, newMkt);
+        localStorage.setItem(MARKETING_STORAGE_KEY, JSON.stringify(marketingState));
+        _prevMktStateJson = JSON.stringify(marketingState);
+      } finally { _ccApplyingRemote = false; }
+    } else if (mktRes.error) {
+      console.error('[BTV CC] _fetchAll marketing_entries error:', mktRes.error.message);
+    }
+
+    // Re-render with fresh data
+    if (typeof window.btvRender === 'function') window.btvRender();
+  }
+
+  // ── Apply a single global_cal_entries change from Realtime ─────────────────
+  function _applyGcEntry(payload){
+    _ccApplyingRemote = true;
+    try {
+      if (payload.eventType === 'DELETE') {
+        // REPLICA IDENTITY DEFAULT: payload.old only has the PK (id).
+        // Scan all markets to find and remove the entry.
+        var delId = payload.old && payload.old.id;
+        if (delId) {
+          Object.keys(state).forEach(function(mkt){
+            if (Array.isArray(state[mkt]))
+              state[mkt] = state[mkt].filter(function(e){ return e.id !== delId; });
+          });
+        }
+      } else {
+        var row   = payload.new;
+        var entry = Object.assign({}, row.data, { id: row.id, market: row.market });
+        // Remove from all markets first (handles market-change edits)
+        Object.keys(state).forEach(function(mkt){
+          if (Array.isArray(state[mkt]))
+            state[mkt] = state[mkt].filter(function(e){ return e.id !== row.id; });
+        });
+        state[row.market] = state[row.market] || [];
+        state[row.market].unshift(entry);
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      _prevStateJson = JSON.stringify(state);
+      if (typeof window.btvRender === 'function') window.btvRender();
+    } catch(e) {
+      console.error('[BTV CC] _applyGcEntry error:', e);
+    } finally {
+      _ccApplyingRemote = false;
+    }
+  }
+
+  // ── Apply a single marketing_entries change from Realtime ──────────────────
+  function _applyMktEntry(payload){
+    _ccApplyingRemote = true;
+    try {
+      if (payload.eventType === 'DELETE') {
+        var delId = payload.old && payload.old.id;
+        if (delId) {
+          Object.keys(marketingState).forEach(function(mkt){
+            if (Array.isArray(marketingState[mkt]))
+              marketingState[mkt] = marketingState[mkt].filter(function(e){ return e.id !== delId; });
+          });
+        }
+      } else {
+        var row   = payload.new;
+        var entry = Object.assign({}, row.data, { id: row.id, market: row.market });
+        Object.keys(marketingState).forEach(function(mkt){
+          if (Array.isArray(marketingState[mkt]))
+            marketingState[mkt] = marketingState[mkt].filter(function(e){ return e.id !== row.id; });
+        });
+        marketingState[row.market] = marketingState[row.market] || [];
+        marketingState[row.market].unshift(entry);
+      }
+      localStorage.setItem(MARKETING_STORAGE_KEY, JSON.stringify(marketingState));
+      _prevMktStateJson = JSON.stringify(marketingState);
+      if (typeof window.btvRender === 'function') window.btvRender();
+    } catch(e) {
+      console.error('[BTV CC] _applyMktEntry error:', e);
+    } finally {
+      _ccApplyingRemote = false;
+    }
+  }
+
+  // ── Public API — called by supabase-sync.js ────────────────────────────────
+
+  window.btvCcUpsertEntries = async function(entries){
+    if (!_sb || !_uid) return;
+    var rows = entries.map(function(e){
+      return { id: e.id, market: e.market, data: e,
+               updated_at: new Date().toISOString(), updated_by: _uid };
+    });
+    var res = await _sb.from('global_cal_entries').upsert(rows, { onConflict: 'id' });
+    if (res.error) console.error('[BTV CC] Upsert error:', res.error.message);
+  };
+
+  window.btvCcDeleteEntries = async function(ids){
+    if (!_sb || !_uid || !ids.length) return;
+    var res = await _sb.from('global_cal_entries').delete().in('id', ids);
+    if (res.error) console.error('[BTV CC] Delete error:', res.error.message);
+  };
+
+  window.btvMktUpsertEntries = async function(entries){
+    if (!_sb || !_uid) return;
+    var rows = entries.map(function(e){
+      return { id: e.id, market: e.market, data: e,
+               updated_at: new Date().toISOString(), updated_by: _uid };
+    });
+    var res = await _sb.from('marketing_entries').upsert(rows, { onConflict: 'id' });
+    if (res.error) console.error('[BTV Mkt] Upsert error:', res.error.message);
+  };
+
+  window.btvMktDeleteEntries = async function(ids){
+    if (!_sb || !_uid || !ids.length) return;
+    var res = await _sb.from('marketing_entries').delete().in('id', ids);
+    if (res.error) console.error('[BTV Mkt] Delete error:', res.error.message);
+  };
+
+  window.btvCcEntriesInit = async function(session){
+    if (!window._btvSb) {
+      console.warn('[BTV CC] _btvSb not available — per-entry sync skipped.');
+      return;
+    }
+    _sb  = window._btvSb;
+    _uid = session.user.id;
+
+    // Fetch current state from per-entry tables and re-render
+    await _fetchAll();
+
+    // Subscribe to Realtime for live per-entry changes from teammates
+    if (!_gcCh) {
+      _gcCh = _sb.channel('btv_gc_entries_v1')
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'global_cal_entries' },
+          function(payload){ _applyGcEntry(payload); })
+        .subscribe(function(status){
+          console.log('[BTV CC] global_cal_entries Realtime:', status);
+        });
+    }
+
+    if (!_mktCh) {
+      _mktCh = _sb.channel('btv_mkt_entries_v1')
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'marketing_entries' },
+          function(payload){ _applyMktEntry(payload); })
+        .subscribe(function(status){
+          console.log('[BTV Mkt] marketing_entries Realtime:', status);
+        });
+    }
+
+    console.log('[BTV CC] Per-entry sync active.');
+  };
+
+  window.btvCcEntriesTeardown = function(){
+    if (_gcCh)  { try { _gcCh.unsubscribe();  } catch(e){} _gcCh  = null; }
+    if (_mktCh) { try { _mktCh.unsubscribe(); } catch(e){} _mktCh = null; }
+    console.log('[BTV CC] Per-entry sync paused.');
+  };
+
+})();
 
 // ── Init ─────────────────────────────────────────────────────────────────
 document.getElementById('fWeek').innerHTML=buildWeekOpts(1);
