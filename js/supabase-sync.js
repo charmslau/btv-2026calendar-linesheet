@@ -80,6 +80,26 @@
     'btv-edit-locks-v1',
   ];
 
+  // Per-page blob-sync exclusions ─────────────────────────────────────────────
+  // A page can declare window.BTV_SYNC_EXCLUDE (array of key strings) in an
+  // inline <script> BEFORE this file loads to remove specific keys from the
+  // generic app_state blob-sync path. Each iframe has its own window, so this
+  // only affects the page that declares it.
+  //
+  // creative-calendar.html sets:
+  //   window.BTV_SYNC_EXCLUDE = ['calendar-2026-marketing-workflow-v1']
+  // because that page syncs marketing entries via the per-entry marketing_entries
+  // table (btvMktUpsertEntries / btvMktDeleteEntries). Running the blob write
+  // interceptor in parallel on that page caused two races:
+  //   a) double-write: per-entry + blob upsert for the same save
+  //   b) blob Realtime from another page overwrites marketingState in memory,
+  //      causing the next diff to false-detect deletions of per-entry items.
+  const _pageExcludes = new Set(
+    Array.isArray(window.BTV_SYNC_EXCLUDE) ? window.BTV_SYNC_EXCLUDE : []
+  );
+  const _SYNCED_KEYS = SYNCED_KEYS.filter(function (k) { return !_pageExcludes.has(k); });
+  const _RENDER_KEYS = RENDER_KEYS.filter(function (k) { return !_pageExcludes.has(k); });
+
   // Capture the real setItem before we intercept it
   const _origSetItem = localStorage.setItem.bind(localStorage);
 
@@ -162,7 +182,7 @@
       // Pushing every synced key unconditionally risks overwriting a teammate's
       // newer save with our stale local copy of a key we didn't actually change.
       const rows = [..._dirtyKeys]
-        .filter(function (k) { return SYNCED_KEYS.includes(k) && localStorage.getItem(k) !== null; })
+        .filter(function (k) { return _SYNCED_KEYS.includes(k) && localStorage.getItem(k) !== null; })
         .map(function (key) {
           const raw = localStorage.getItem(key);
           let parsed; try { parsed = JSON.parse(raw); } catch (e) { parsed = raw; }
@@ -294,7 +314,7 @@
     }
 
     _origSetItem(key, val);
-    if (!RENDER_KEYS.includes(key)) return;
+    if (!_RENDER_KEYS.includes(key)) return;
     // Only re-render and toast for changes from someone else.
     const isOtherUser = fromUserId && fromUserId !== _userId;
     if (!isOtherUser) return;
@@ -387,7 +407,7 @@
     _interceptorInstalled = true;
     localStorage.setItem = function (key, value) {
       _origSetItem(key, value);
-      if (!SYNCED_KEYS.includes(key) || !_sb) return;
+      if (!_SYNCED_KEYS.includes(key) || !_sb) return;
       // Mark dirty immediately — even if offline — so that applyRow / _pullLatest
       // won't overwrite local storage with a stale remote value while our write is pending.
       _dirtyKeys.add(key);
@@ -432,7 +452,7 @@
         function (payload) {
           if (!payload.new) return;
           const key = payload.new.key;
-          if (!SYNCED_KEYS.includes(key)) return;
+          if (!_SYNCED_KEYS.includes(key)) return;
           const val =
             typeof payload.new.value === 'string'
               ? payload.new.value
@@ -623,7 +643,7 @@
         const { data } = await _sb
           .from('app_state')
           .select('key, value, updated_by, updated_at')
-          .in('key', RENDER_KEYS);
+          .in('key', _RENDER_KEYS);
         if (!data) return;
         data.forEach(function (row) {
           const val =
@@ -645,7 +665,7 @@
     const { data, error } = await _sb
       .from('app_state')
       .select('key, value, updated_at')
-      .in('key', SYNCED_KEYS);
+      .in('key', _SYNCED_KEYS);
 
     if (error) {
       console.error('[BTV Sync] Pull error:', error.message);
@@ -707,7 +727,7 @@
     } else {
       // Supabase is empty — push local data up as first migration
       console.log('[BTV Sync] Supabase empty — pushing local data up…');
-      const rows = SYNCED_KEYS
+      const rows = _SYNCED_KEYS
         .filter(function (k) { return localStorage.getItem(k) !== null; })
         .map(function (key) {
           const raw = localStorage.getItem(key);
@@ -911,7 +931,7 @@
     // local copy of a key this user didn't actually change (e.g., clicking "Retry Sync"
     // after a linesheet write failure would otherwise also push a stale calendar blob).
     const dirtyToSync = [..._dirtyKeys].filter(function (k) {
-      return SYNCED_KEYS.includes(k) && localStorage.getItem(k) !== null;
+      return _SYNCED_KEYS.includes(k) && localStorage.getItem(k) !== null;
     });
     if (!dirtyToSync.length) {
       showToast('Nothing to sync — all local changes are already saved.');

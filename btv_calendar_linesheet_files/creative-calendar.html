@@ -6,6 +6,15 @@
 <title>Global Calendar 2026</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../js/supabase-config.js"></script>
+<script>
+  // Opt this page out of the generic blob sync for the marketing-workflow key.
+  // creative-calendar.html manages marketing entries via the per-entry
+  // marketing_entries table (btvMktUpsertEntries). Leaving the key in the blob
+  // path caused: (a) a double-write per save, and (b) a blob Realtime event
+  // from calendar.html overwriting in-memory marketingState without the
+  // per-entry items, then the next diff falsely deleting those items.
+  window.BTV_SYNC_EXCLUDE = ['calendar-2026-marketing-workflow-v1'];
+</script>
 <script src="../js/supabase-sync.js"></script>
 <style>
 :root{
@@ -3088,7 +3097,13 @@ document.addEventListener('keydown',e=>{
 });
 
 // ── Supabase sync ─────────────────────────────────────────────────────────
-window.btvRender=function(){state=loadState();marketingState=loadMarketingState();renderCurrent();};
+window.btvRender=function(){
+  state=loadState();marketingState=loadMarketingState();
+  // Re-apply any locally-pending (not-yet-Supabase-confirmed) entries so a blob
+  // Realtime overwrite of localStorage never wipes them from the UI.
+  if(typeof window.btvCcApplyPendingToState==='function') window.btvCcApplyPendingToState();
+  renderCurrent();
+};
 window.btvReloadAndRender=window.btvRender;
 window._btvCalRender=window.btvRender;
 window.btvSyncStorageKey=STORAGE_KEY;
@@ -3183,10 +3198,123 @@ function _ccDiffAndSyncMarketing(v){
 (function(){
   'use strict';
 
-  var _sb       = null;
-  var _uid      = null;
-  var _gcCh     = null;  // Realtime channel: global_cal_entries
-  var _mktCh    = null;  // Realtime channel: marketing_entries
+  var _sb   = null;
+  var _uid  = null;
+  var _gcCh  = null;  // Realtime channel: global_cal_entries
+  var _mktCh = null;  // Realtime channel: marketing_entries
+
+  // ── Pending-entry maps (entries in-flight, not yet Supabase-confirmed) ────
+  // Keyed by entry id. Populated immediately on save; cleared on Realtime confirm.
+  // btvCcApplyPendingToState() and _fetchAll() both re-apply these on top of any
+  // Supabase snapshot so a blob Realtime overwrite can never wipe unsaved work.
+  var _pendingGcEntries  = new Map();
+  var _pendingMktEntries = new Map();
+
+  // ── Write-fail error bar ─────────────────────────────────────────────────
+  function _showCcBar(msg){
+    var bar = document.getElementById('btv-cc-write-fail-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'btv-cc-write-fail-bar';
+      bar.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);' +
+        'background:#c0392b;color:#fff;padding:10px 20px;border-radius:8px;z-index:9999;' +
+        'display:flex;align-items:center;gap:12px;font-family:sans-serif;font-size:13px;' +
+        'box-shadow:0 2px 8px rgba(0,0,0,.3);';
+      var txt = document.createElement('span');
+      txt.id = 'btv-cc-write-fail-msg';
+      var btn = document.createElement('button');
+      btn.textContent = 'Retry';
+      btn.style.cssText = 'background:#fff;color:#c0392b;border:none;border-radius:4px;' +
+        'padding:4px 10px;cursor:pointer;font-weight:bold;';
+      btn.onclick = function(){ window.btvCcRetryPending(); };
+      bar.appendChild(txt);
+      bar.appendChild(btn);
+      document.body.appendChild(bar);
+    }
+    document.getElementById('btv-cc-write-fail-msg').textContent = msg;
+    bar.style.display = 'flex';
+  }
+
+  function _hideCcBar(){
+    var bar = document.getElementById('btv-cc-write-fail-bar');
+    if (bar) bar.style.display = 'none';
+  }
+
+  // ── Utility ───────────────────────────────────────────────────────────────
+  function _delay(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+  // ── Upsert with retry (3 attempts: 0 ms / 1 s / 3 s backoff) ─────────────
+  async function _upsertWithRetry(table, rows, pendingMap, entries){
+    var delays = [0, 1000, 3000];
+    for (var i = 0; i < delays.length; i++) {
+      if (delays[i]) await _delay(delays[i]);
+      var res = await _sb.from(table).upsert(rows, { onConflict: 'id' });
+      if (!res.error) {
+        // Confirmed — remove from pending map and clear error bar
+        entries.forEach(function(e){ pendingMap.delete(e.id); });
+        _hideCcBar();
+        return;
+      }
+      console.warn('[BTV CC] ' + table + ' upsert attempt ' + (i + 1) + ' failed:', res.error.message);
+    }
+    // All 3 attempts failed — surface error bar with Retry button
+    _showCcBar('Save failed — some changes may not be saved. Click Retry.');
+    console.error('[BTV CC] ' + table + ' upsert failed after 3 attempts.');
+  }
+
+  // ── Re-apply pending entries on top of in-memory state ───────────────────
+  // Called from btvRender() so that a blob Realtime overwrite of localStorage
+  // never wipes unconfirmed entries from the UI between the save and the
+  // Supabase Realtime confirmation arriving.
+  window.btvCcApplyPendingToState = function(){
+    if (_pendingGcEntries.size === 0 && _pendingMktEntries.size === 0) return;
+
+    _pendingGcEntries.forEach(function(entry, id){
+      var mkt = entry.market;
+      if (!mkt) return;
+      Object.keys(state).forEach(function(m){
+        if (Array.isArray(state[m]))
+          state[m] = state[m].filter(function(e){ return e.id !== id; });
+      });
+      state[mkt] = state[mkt] || [];
+      state[mkt].unshift(entry);
+    });
+
+    _pendingMktEntries.forEach(function(entry, id){
+      var mkt = entry.market;
+      if (!mkt) return;
+      Object.keys(marketingState).forEach(function(m){
+        if (Array.isArray(marketingState[m]))
+          marketingState[m] = marketingState[m].filter(function(e){ return e.id !== id; });
+      });
+      marketingState[mkt] = marketingState[mkt] || [];
+      marketingState[mkt].unshift(entry);
+    });
+
+    // Update snapshots so the next diff sees the combined (confirmed + pending) state
+    _prevStateJson    = JSON.stringify(state);
+    _prevMktStateJson = JSON.stringify(marketingState);
+  };
+
+  // ── Retry button handler ─────────────────────────────────────────────────
+  window.btvCcRetryPending = function(){
+    if (_pendingGcEntries.size) {
+      var gcEntries = Array.from(_pendingGcEntries.values());
+      var gcRows = gcEntries.map(function(e){
+        return { id: e.id, market: e.market, data: e,
+                 updated_at: new Date().toISOString(), updated_by: _uid };
+      });
+      _upsertWithRetry('global_cal_entries', gcRows, _pendingGcEntries, gcEntries);
+    }
+    if (_pendingMktEntries.size) {
+      var mktEntries = Array.from(_pendingMktEntries.values());
+      var mktRows = mktEntries.map(function(e){
+        return { id: e.id, market: e.market, data: e,
+                 updated_at: new Date().toISOString(), updated_by: _uid };
+      });
+      _upsertWithRetry('marketing_entries', mktRows, _pendingMktEntries, mktEntries);
+    }
+  };
 
   // ── Fetch all entries from Supabase and rebuild in-memory state ────────────
   async function _fetchAll(){
@@ -3198,6 +3326,17 @@ function _ccDiffAndSyncMarketing(v){
       gcRes.data.forEach(function(row){
         newState[row.market] = newState[row.market] || [];
         newState[row.market].push(Object.assign({}, row.data, { id: row.id, market: row.market }));
+      });
+      // Re-apply any pending (not-yet-Realtime-confirmed) entries on top of Supabase snapshot
+      // so tab-switch _fetchAll calls never wipe in-flight saves from the UI.
+      _pendingGcEntries.forEach(function(entry, id){
+        var mkt = entry.market;
+        if (!mkt) return;
+        Object.keys(newState).forEach(function(m){
+          newState[m] = newState[m].filter(function(e){ return e.id !== id; });
+        });
+        newState[mkt] = newState[mkt] || [];
+        newState[mkt].unshift(entry);
       });
       _ccApplyingRemote = true;
       try {
@@ -3218,6 +3357,16 @@ function _ccDiffAndSyncMarketing(v){
       mktRes.data.forEach(function(row){
         newMkt[row.market] = newMkt[row.market] || [];
         newMkt[row.market].push(Object.assign({}, row.data, { id: row.id, market: row.market }));
+      });
+      // Re-apply pending marketing entries on top of Supabase snapshot
+      _pendingMktEntries.forEach(function(entry, id){
+        var mkt = entry.market;
+        if (!mkt) return;
+        Object.keys(newMkt).forEach(function(m){
+          newMkt[m] = newMkt[m].filter(function(e){ return e.id !== id; });
+        });
+        newMkt[mkt] = newMkt[mkt] || [];
+        newMkt[mkt].unshift(entry);
       });
       _ccApplyingRemote = true;
       try {
@@ -3240,9 +3389,9 @@ function _ccDiffAndSyncMarketing(v){
     try {
       if (payload.eventType === 'DELETE') {
         // REPLICA IDENTITY DEFAULT: payload.old only has the PK (id).
-        // Scan all markets to find and remove the entry.
         var delId = payload.old && payload.old.id;
         if (delId) {
+          _pendingGcEntries.delete(delId);  // confirmed delete — clear from pending
           Object.keys(state).forEach(function(mkt){
             if (Array.isArray(state[mkt]))
               state[mkt] = state[mkt].filter(function(e){ return e.id !== delId; });
@@ -3251,6 +3400,7 @@ function _ccDiffAndSyncMarketing(v){
       } else {
         var row   = payload.new;
         var entry = Object.assign({}, row.data, { id: row.id, market: row.market });
+        _pendingGcEntries.delete(row.id);  // Realtime arrival = Supabase confirmed
         // Remove from all markets first (handles market-change edits)
         Object.keys(state).forEach(function(mkt){
           if (Array.isArray(state[mkt]))
@@ -3276,6 +3426,7 @@ function _ccDiffAndSyncMarketing(v){
       if (payload.eventType === 'DELETE') {
         var delId = payload.old && payload.old.id;
         if (delId) {
+          _pendingMktEntries.delete(delId);  // confirmed delete
           Object.keys(marketingState).forEach(function(mkt){
             if (Array.isArray(marketingState[mkt]))
               marketingState[mkt] = marketingState[mkt].filter(function(e){ return e.id !== delId; });
@@ -3284,6 +3435,7 @@ function _ccDiffAndSyncMarketing(v){
       } else {
         var row   = payload.new;
         var entry = Object.assign({}, row.data, { id: row.id, market: row.market });
+        _pendingMktEntries.delete(row.id);  // confirmed
         Object.keys(marketingState).forEach(function(mkt){
           if (Array.isArray(marketingState[mkt]))
             marketingState[mkt] = marketingState[mkt].filter(function(e){ return e.id !== row.id; });
@@ -3304,33 +3456,41 @@ function _ccDiffAndSyncMarketing(v){
   // ── Public API — called by supabase-sync.js ────────────────────────────────
 
   window.btvCcUpsertEntries = async function(entries){
-    if (!_sb || !_uid) return;
+    // Add to pending immediately — even before _sb is ready (pre-init saves).
+    // _fetchAll and btvCcApplyPendingToState will re-apply them until confirmed.
+    entries.forEach(function(e){ if (e.id) _pendingGcEntries.set(e.id, e); });
+    if (!_sb || !_uid) return;  // will be flushed in btvCcEntriesInit
     var rows = entries.map(function(e){
       return { id: e.id, market: e.market, data: e,
                updated_at: new Date().toISOString(), updated_by: _uid };
     });
-    var res = await _sb.from('global_cal_entries').upsert(rows, { onConflict: 'id' });
-    if (res.error) console.error('[BTV CC] Upsert error:', res.error.message);
+    await _upsertWithRetry('global_cal_entries', rows, _pendingGcEntries, entries);
   };
 
   window.btvCcDeleteEntries = async function(ids){
-    if (!_sb || !_uid || !ids.length) return;
+    if (!ids.length) return;
+    // Remove from pending — a deleted entry is gone regardless of Supabase confirm
+    ids.forEach(function(id){ _pendingGcEntries.delete(id); });
+    if (!_sb || !_uid) return;
     var res = await _sb.from('global_cal_entries').delete().in('id', ids);
     if (res.error) console.error('[BTV CC] Delete error:', res.error.message);
   };
 
   window.btvMktUpsertEntries = async function(entries){
-    if (!_sb || !_uid) return;
+    // Add to pending immediately
+    entries.forEach(function(e){ if (e.id) _pendingMktEntries.set(e.id, e); });
+    if (!_sb || !_uid) return;  // will be flushed in btvCcEntriesInit
     var rows = entries.map(function(e){
       return { id: e.id, market: e.market, data: e,
                updated_at: new Date().toISOString(), updated_by: _uid };
     });
-    var res = await _sb.from('marketing_entries').upsert(rows, { onConflict: 'id' });
-    if (res.error) console.error('[BTV Mkt] Upsert error:', res.error.message);
+    await _upsertWithRetry('marketing_entries', rows, _pendingMktEntries, entries);
   };
 
   window.btvMktDeleteEntries = async function(ids){
-    if (!_sb || !_uid || !ids.length) return;
+    if (!ids.length) return;
+    ids.forEach(function(id){ _pendingMktEntries.delete(id); });
+    if (!_sb || !_uid) return;
     var res = await _sb.from('marketing_entries').delete().in('id', ids);
     if (res.error) console.error('[BTV Mkt] Delete error:', res.error.message);
   };
@@ -3343,8 +3503,26 @@ function _ccDiffAndSyncMarketing(v){
     _sb  = window._btvSb;
     _uid = session.user.id;
 
-    // Fetch current state from per-entry tables and re-render
+    // Fetch current state from per-entry tables (pending entries re-applied inside _fetchAll)
     await _fetchAll();
+
+    // Flush any entries that were saved before _sb was ready (pre-init window)
+    if (_pendingGcEntries.size) {
+      var gcEntries = Array.from(_pendingGcEntries.values());
+      var gcRows = gcEntries.map(function(e){
+        return { id: e.id, market: e.market, data: e,
+                 updated_at: new Date().toISOString(), updated_by: _uid };
+      });
+      await _upsertWithRetry('global_cal_entries', gcRows, _pendingGcEntries, gcEntries);
+    }
+    if (_pendingMktEntries.size) {
+      var mktEntries = Array.from(_pendingMktEntries.values());
+      var mktRows = mktEntries.map(function(e){
+        return { id: e.id, market: e.market, data: e,
+                 updated_at: new Date().toISOString(), updated_by: _uid };
+      });
+      await _upsertWithRetry('marketing_entries', mktRows, _pendingMktEntries, mktEntries);
+    }
 
     // Subscribe to Realtime for live per-entry changes from teammates
     if (!_gcCh) {
