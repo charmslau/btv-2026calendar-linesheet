@@ -5707,7 +5707,10 @@ function loadFromCalendar(notifyNew){
 
 
 
-      const __btvMakeKey = (n, c) => [(n||'').trim().toLowerCase(), (c||'').trim()].join('|');
+      // Grouping is by product NAME ONLY — colour and launch date never fork a product
+      // into a separate group, and category text differences must not either (a typo'd
+      // or re-cased category used to silently create a duplicate "product").
+      const __btvMakeKey = (n) => (n||'').trim().toLowerCase();
 
 
 
@@ -5727,7 +5730,7 @@ function loadFromCalendar(notifyNew){
 
 
 
-        const k = __btvMakeKey(p.name, p.category);
+        const k = __btvMakeKey(p.name);
 
 
 
@@ -5738,15 +5741,26 @@ function loadFromCalendar(notifyNew){
 
 
         if(k && !__btvKeyToGroupId.has(k)) __btvKeyToGroupId.set(k, p.groupId);
+      });
 
-
-
-
-
-
-
-
-
+      // Group-level shared-info fallback — if a colour's own row match fails below
+      // (calLineId gone, name/colour text changed, launch date shifted), it must not
+      // blank out description/fabric/washcare/pricing/measurements. Recover them from
+      // ANY other colour of the same product instead of only the exact row match, so
+      // a teammate's already-entered master data is never lost on the next sync.
+      const __btvSharedFields = ['description','washcare','fabric','measurementMatrix','measurementSummary','weightGrams','measurementInch','measurementCm','sgdNoGST','jp','idRrp','th','ph','cn','hscode','hscode10'];
+      const __btvGroupShared = {};
+      products.forEach(p => {
+        const nk = __btvMakeKey(p.name);
+        if(!nk) return;
+        if(!__btvGroupShared[nk]) __btvGroupShared[nk] = {};
+        const g = __btvGroupShared[nk];
+        __btvSharedFields.forEach(f => {
+          const v = p[f];
+          const vBlank = v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
+          const gBlank = g[f] === undefined || g[f] === null || g[f] === '' || (Array.isArray(g[f]) && g[f].length === 0);
+          if(!vBlank && gBlank) g[f] = v;
+        });
       });
 
 
@@ -5903,7 +5917,8 @@ function loadFromCalendar(notifyNew){
 
 
 
-        const __btvCompound = __btvMakeKey(row.productName, row.category);
+        const __btvCompound = __btvMakeKey(row.productName);
+        const __btvGS = __btvGroupShared[__btvCompound] || {};
 
 
 
@@ -6079,7 +6094,7 @@ function loadFromCalendar(notifyNew){
 
 
 
-          description:  existing ? existing.description  : "",
+          description:  existing ? existing.description  : (__btvGS.description || ""),
 
 
 
@@ -6089,7 +6104,7 @@ function loadFromCalendar(notifyNew){
 
 
 
-          washcare:     existing ? existing.washcare     : "",
+          washcare:     existing ? existing.washcare     : (__btvGS.washcare || ""),
 
 
 
@@ -6099,7 +6114,7 @@ function loadFromCalendar(notifyNew){
 
 
 
-          fabric:       existing ? existing.fabric       : "",
+          fabric:       existing ? existing.fabric       : (__btvGS.fabric || ""),
 
 
 
@@ -6109,7 +6124,7 @@ function loadFromCalendar(notifyNew){
 
 
 
-          measurementMatrix:   existing ? existing.measurementMatrix   : [],
+          measurementMatrix:   existing ? existing.measurementMatrix   : (__btvGS.measurementMatrix || []),
 
 
 
@@ -6119,7 +6134,13 @@ function loadFromCalendar(notifyNew){
 
 
 
-          measurementSummary:  existing ? existing.measurementSummary  : "—",
+          measurementSummary:  existing ? existing.measurementSummary  : (__btvGS.measurementSummary || "—"),
+
+          // These three were never carried over here — every calendar sync silently wiped
+          // them from every product, even when a teammate had already filled them in.
+          weightGrams:     existing ? existing.weightGrams     : (__btvGS.weightGrams || ""),
+          measurementInch: existing ? existing.measurementInch : (__btvGS.measurementInch || ""),
+          measurementCm:   existing ? existing.measurementCm   : (__btvGS.measurementCm || ""),
 
 
 
@@ -6159,7 +6180,7 @@ function loadFromCalendar(notifyNew){
 
 
 
-          sgdNoGST:     existing ? existing.sgdNoGST     : (row.sgdRrp ? (Number(row.sgdRrp)/1.09).toFixed(2) : ""),
+          sgdNoGST:     existing ? existing.sgdNoGST     : (__btvGS.sgdNoGST || (row.sgdRrp ? (Number(row.sgdRrp)/1.09).toFixed(2) : "")),
 
 
 
@@ -6169,7 +6190,7 @@ function loadFromCalendar(notifyNew){
 
 
 
-          jp:           existing ? existing.jp           : "",
+          jp:           existing ? existing.jp           : (__btvGS.jp || ""),
 
 
 
@@ -6179,7 +6200,7 @@ function loadFromCalendar(notifyNew){
 
 
 
-          idRrp:        existing ? existing.idRrp        : "",
+          idRrp:        existing ? existing.idRrp        : (__btvGS.idRrp || ""),
 
 
 
@@ -6189,7 +6210,7 @@ function loadFromCalendar(notifyNew){
 
 
 
-          th:           existing ? existing.th           : "",
+          th:           existing ? existing.th           : (__btvGS.th || ""),
 
 
 
@@ -6199,7 +6220,7 @@ function loadFromCalendar(notifyNew){
 
 
 
-          ph:           existing ? existing.ph           : "",
+          ph:           existing ? existing.ph           : (__btvGS.ph || ""),
 
 
 
@@ -6209,7 +6230,7 @@ function loadFromCalendar(notifyNew){
 
 
 
-          cn:           existing ? existing.cn           : "",
+          cn:           existing ? existing.cn           : (__btvGS.cn || ""),
 
 
 
@@ -6219,7 +6240,7 @@ function loadFromCalendar(notifyNew){
 
 
 
-          hscode:       existing ? existing.hscode       : "",
+          hscode:       existing ? existing.hscode       : (__btvGS.hscode || ""),
 
 
 
@@ -6229,7 +6250,7 @@ function loadFromCalendar(notifyNew){
 
 
 
-          hscode10:     existing ? existing.hscode10     : "",
+          hscode10:     existing ? existing.hscode10     : (__btvGS.hscode10 || ""),
 
 
 
@@ -9719,7 +9740,9 @@ async function saveProductGroup(){
 
 
 
-    const __btvCat = document.getElementById('f_category').value || '';
+    // Grouping is by product NAME ONLY, matching the calendar-sync rebuild logic —
+    // category is no longer part of the match key so a re-cased or re-typed category
+    // can't fork this product into a second, duplicate group.
 
 
 
@@ -9739,7 +9762,7 @@ async function saveProductGroup(){
 
 
 
-      (p.name || '').trim().toLowerCase() === name.toLowerCase() &&
+      (p.name || '').trim().toLowerCase() === name.toLowerCase()
 
 
 
@@ -9749,7 +9772,7 @@ async function saveProductGroup(){
 
 
 
-      (p.category || '') === __btvCat
+
 
 
 
@@ -10215,7 +10238,14 @@ async function saveProductGroup(){
 
 
 
-    const existingItem = existingIndex >= 0 ? products[existingIndex] : null;
+    // Recover this variant's own prior row (by its stable variantLocalId) FIRST — the
+    // group's old rows were already filtered out of `products` above, so the SKU search
+    // below can never find them, and every edit-save was minting a brand-new database id
+    // for every variant even when nothing about it changed. That forced every edit to
+    // depend on the follow-up delete-old-id call succeeding, and any missed delete
+    // (offline, closed tab, race with another save) left a duplicate copy behind.
+    const __btvPrevVariant = v.variantLocalId ? __btvOldVariantsMap[v.variantLocalId] : null;
+    const existingItem = __btvPrevVariant || (existingIndex >= 0 ? products[existingIndex] : null);
 
 
 
