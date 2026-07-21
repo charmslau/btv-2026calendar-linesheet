@@ -5363,7 +5363,6 @@ function switchView(view){
                 _btvSetDirty(false);
               }
               if (typeof window.btvClearEditing === 'function') window.btvClearEditing();
-              _btvLsClearSharedLaunchLock(window._btvCurrentLaunchItem);
               window._btvCurrentLaunchItem = null;
               if (window._btvCurrentLsUnlocker) { window.removeEventListener('btv-presence-changed', window._btvCurrentLsUnlocker); window._btvCurrentLsUnlocker = null; }
               var _w = document.getElementById('btv-ls-presence-warn'); if (_w) _w.style.display = 'none';
@@ -11584,7 +11583,6 @@ function editGroup(groupId){
   var _btvLsKey = 'ls::group::' + groupId;
   window._btvCurrentGroupId = groupId; // keep window-scoped copy for presence listeners
   window._btvCurrentLaunchItem = _btvLsGetCalendarLaunchItem(groupId);
-  _btvLsSetSharedLaunchLock(window._btvCurrentLaunchItem);
   if (typeof window.btvSetEditing === 'function') window.btvSetEditing(_btvLsKey);
   // Apply per-field locks from any teammates currently focused on fields in this product
   if (typeof _btvLsApplyFieldLocks === 'function') _btvLsApplyFieldLocks(groupId);
@@ -12644,7 +12642,9 @@ function renderMaster(){
 
 
 
-  // Group by launch date
+  // Group by product NAME only (colours of the same product stay adjacent; category
+  // and launch date never split a product into separate groups). Launch date is a
+  // plain sortable column now — click its header to sort, it no longer groups rows.
 
 
 
@@ -12684,7 +12684,7 @@ function renderMaster(){
 
 
 
-    const key = p.launchDate || '—';
+    const key = (p.name || '').trim().toLowerCase() || '—';
 
 
 
@@ -12794,7 +12794,7 @@ function renderMaster(){
 
 
 
-    const groupLabel = dateKey !== '—' ? new Date(dateKey + 'T00:00:00').toLocaleDateString('en-SG', {day:'2-digit', month:'long', year:'numeric'}) : '—';
+    const groupLabel = (rows[0] && rows[0].name) || '—';
 
 
 
@@ -12804,7 +12804,7 @@ function renderMaster(){
 
 
 
-    let html = `<tr style="background:#f0ebe0"><td colspan="23" style="padding:8px 10px;font-weight:700;font-size:12px;color:#5a4e40;letter-spacing:.03em;border-bottom:2px solid #d7c9b2">📅 Launch Date: ${escapeHtml(groupLabel)}</td></tr>`;
+    let html = `<tr style="background:#f0ebe0"><td colspan="23" style="padding:8px 10px;font-weight:700;font-size:12px;color:#5a4e40;letter-spacing:.03em;border-bottom:2px solid #d7c9b2">${escapeHtml(groupLabel)}</td></tr>`;
 
 
 
@@ -13005,7 +13005,7 @@ function renderMaster(){
 
 
 
-        <td style="font-weight:700">${escapeHtml(p.name || '—')}</td>
+        <td style="font-weight:700;cursor:pointer;text-decoration:underline;text-decoration-style:dotted" onclick="editGroup('${escapeHtml(p.groupId||'')}')" title="Click to open in Product Form">${escapeHtml(p.name || '—')}</td>
 
 
 
@@ -16055,27 +16055,13 @@ function _btvLsMondayOf(dateStr) {
   return d.toISOString().slice(0, 10);
 }
 
-function _btvLsReadSharedLocks() {
-  try { return JSON.parse(localStorage.getItem('btv-edit-locks-v1') || '{}'); }
-  catch(e) { return {}; }
-}
-
-function _btvLsSetSharedLaunchLock(itemKey) {
-  if (!itemKey) return;
-  var locks = _btvLsReadSharedLocks();
-  var email = (typeof window.btvGetCurrentEmail === 'function' ? window.btvGetCurrentEmail() : '') || '';
-  locks[itemKey] = { email: email, ts: Date.now() };
-  localStorage.setItem('btv-edit-locks-v1', JSON.stringify(locks));
-}
-
-function _btvLsClearSharedLaunchLock(itemKey) {
-  if (!itemKey) return;
-  var locks = _btvLsReadSharedLocks();
-  if (locks[itemKey]) {
-    delete locks[itemKey];
-    localStorage.setItem('btv-edit-locks-v1', JSON.stringify(locks));
-  }
-}
+// _btvLsSetSharedLaunchLock/_btvLsClearSharedLaunchLock/_btvLsReadSharedLocks were removed —
+// they wrote to the shared 'btv-edit-locks-v1' key (synced+render-triggering in
+// supabase-sync.js) using calendar.html's own entry-id key format, so every
+// field edit here was forcing a full page re-render and input-lockout in every
+// open Product Calendar Input tab. Linesheet's real per-product lock is
+// _btvLsGetLockHolder() below, scoped to 'ls::group::'+groupId over its own
+// presence channel — that one is correct and untouched.
 
 function _btvLsRenderPresenceBar() {
   // Global online-user floating bar removed — field-level co-edit bar is used instead.
@@ -16478,7 +16464,6 @@ window.btvReloadAndRender = function() {
           _hbIntervalId = setInterval(_dispatch, 2000);           // heartbeat: refresh UI every 2 s
           if (_rtIntervalId) clearInterval(_rtIntervalId);
           _rtIntervalId = setInterval(function () {               // re-track every 30 s to keep alive
-            if (typeof _btvLsSetSharedLaunchLock === 'function') _btvLsSetSharedLaunchLock(window._btvCurrentLaunchItem);
             if (_ch) _ch.track({ email: _email, item: _item, field: _field, dirty: !!(window._btvFormDirty), launchItem: window._btvCurrentLaunchItem || null, ts: Date.now() });
           }, 30000);
           if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
@@ -16556,7 +16541,6 @@ window.btvReloadAndRender = function() {
   window.btvClearEditing = async function () {
     if (!_ch) return;
     _item  = null; _field = null;
-    if (typeof _btvLsClearSharedLaunchLock === 'function') _btvLsClearSharedLaunchLock(window._btvCurrentLaunchItem);
     window._btvCurrentLaunchItem = null;
     await _ch.track({ email: _email, item: null, field: null, dirty: false, launchItem: null, ts: Date.now() });
   };
@@ -16574,7 +16558,6 @@ window.btvReloadAndRender = function() {
       }
     }
     if (groupId) window._btvCurrentLaunchItem = _btvLsGetCalendarLaunchItem(groupId);
-    if (typeof _btvLsSetSharedLaunchLock === 'function') _btvLsSetSharedLaunchLock(window._btvCurrentLaunchItem);
     await _ch.track({ email: _email, item: _item, field: _field, dirty: !!(window._btvFormDirty), launchItem: window._btvCurrentLaunchItem || null, ts: Date.now(), lastField: _lastField });
   };
 

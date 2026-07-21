@@ -11592,15 +11592,14 @@ function _btvEmailColor(email) {
 }
 
 function _btvCalGetLockHolder(itemKey) {
+  // Only locks against another Product Calendar Input user editing the SAME
+  // entry (users[i].item). Editing a product in the Linesheet tab must never
+  // lock or disable anything here — Linesheet's own per-product lock is scoped
+  // entirely within linesheet.html (see _btvLsGetLockHolder there).
   var users = typeof window.btvGetOnlineUsers === 'function' ? window.btvGetOnlineUsers() : [];
   for (var i = 0; i < users.length; i++) {
-    if (users[i].item === itemKey || users[i].launchItem === itemKey) return users[i].email;
+    if (users[i].item === itemKey) return users[i].email;
   }
-  var locks = {};
-  try { locks = JSON.parse(localStorage.getItem('btv-edit-locks-v1') || '{}'); } catch(e) { locks = {}; }
-  var lock = locks[itemKey];
-  var myEmail = (typeof window.btvGetCurrentEmail === 'function' ? window.btvGetCurrentEmail() : null);
-  if (lock && lock.email && lock.email !== myEmail && (Date.now() - Number(lock.ts || 0)) < 90000) return lock.email;
   return null;
 }
 

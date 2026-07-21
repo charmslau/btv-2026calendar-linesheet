@@ -59,7 +59,6 @@
     // linesheet.html), not as a whole-blob app_state key. Re-adding it here would
     // reintroduce the whole-list-overwrite race condition that module exists to fix.
     'btv-admin-config-v1',
-    'btv-edit-locks-v1',
   ];
 
   // Keys that trigger a UI re-render when changed remotely.
@@ -77,7 +76,10 @@
     // btv_product_data excluded — never written, see SYNCED_KEYS comment.
     // btv_linesheet_products excluded — per-row table, see SYNCED_KEYS comment.
     // creative-cal-2026-v1 excluded — per-entry tables, see SYNCED_KEYS comment.
-    'btv-edit-locks-v1',
+    // btv-edit-locks-v1 removed entirely — it used calendar.html's own entry-id key
+    // format from inside linesheet.html, so every field edit there forced a full
+    // re-render + input lockout in every open Product Calendar Input tab. Linesheet's
+    // real per-product lock is presence-based and scoped to its own product records.
   ];
 
   // Per-page blob-sync exclusions ─────────────────────────────────────────────
